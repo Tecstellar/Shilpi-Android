@@ -85,7 +85,7 @@ const IntroVideoPlayer: React.FC<{ onEnd: () => void }> = ({ onEnd }) => {
 
   return (
     <VideoView
-      style={StyleSheet.absoluteFillObject}
+      style={StyleSheet.absoluteFill}
       player={player}
       nativeControls={false}
       contentFit="cover"
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   touchOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'flex-end',
     alignItems: 'center',
   },

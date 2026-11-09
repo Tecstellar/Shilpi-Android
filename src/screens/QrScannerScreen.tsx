@@ -74,7 +74,7 @@ export const QrScannerScreen: React.FC<QrScannerScreenProps> = ({ onSuccess, onC
 
       <View style={styles.cameraContainer}>
         <CameraView
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           facing="back"
           barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
           onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}

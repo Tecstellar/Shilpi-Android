@@ -24,7 +24,7 @@ export const LoginOtpScreen: React.FC<LoginOtpScreenProps> = ({ phone, onGoBack,
   const [timer, setTimer] = useState(30);
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState('');
-  const inputRef = useRef<TextInput>(null);
+  const inputRef = useRef<any>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {

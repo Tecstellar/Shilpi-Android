@@ -6,7 +6,7 @@ import { SplashScreen } from './src/screens/SplashScreen';
 import { LoginPhoneScreen } from './src/screens/LoginPhoneScreen';
 import { LoginOtpScreen } from './src/screens/LoginOtpScreen';
 import { OnboardingWizardScreen } from './src/screens/OnboardingWizardScreen';
-import { DashboardScreen } from './src/screens/DashboardScreen';
+import { MainAppContainer } from './src/screens/MainAppContainer';
 import { QrScannerScreen } from './src/screens/QrScannerScreen';
 
 type ScreenState = 'splash' | 'login_phone' | 'login_otp' | 'onboarding' | 'dashboard' | 'qr_scanner';
@@ -18,11 +18,12 @@ export default function App() {
   useEffect(() => {
     const checkAuthToken = async () => {
       const token = await AsyncStorage.getItem('@shilpi_token');
+      // If token exists, user can directly jump to dashboard if desired
     };
     checkAuthToken();
   }, []);
 
-  // Full-bleed edge-to-edge view for Splash video
+  // 1. Full-bleed edge-to-edge view for Splash video
   if (screen === 'splash') {
     return (
       <View style={styles.splashContainer}>
@@ -69,11 +70,14 @@ export default function App() {
         />
       )}
 
-      {/* 5. Main Authenticated Studio Dashboard */}
+      {/* 5. Main Prototype Authenticated Studio Experience (Tabs, Drawer, Screens & Sheets) */}
       {screen === 'dashboard' && (
-        <DashboardScreen
+        <MainAppContainer
           onOpenQrScanner={() => setScreen('qr_scanner')}
-          onNewBooking={() => console.log('New booking')}
+          onLogout={async () => {
+            await AsyncStorage.removeItem('@shilpi_token');
+            setScreen('login_phone');
+          }}
         />
       )}
 
