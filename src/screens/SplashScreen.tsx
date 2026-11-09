@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 
@@ -7,17 +7,34 @@ interface SplashScreenProps {
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
+  const finishedRef = useRef(false);
+
+  const safeFinish = () => {
+    if (!finishedRef.current) {
+      finishedRef.current = true;
+      onFinish();
+    }
+  };
+
   const player = useVideoPlayer(require('../../assets/Shilpi_Splash_Intro.mp4'), (p) => {
     p.loop = false;
     p.play();
   });
 
   useEffect(() => {
+    // 1. Listen to natural video completion
     const subscription = player.addListener('playToEnd', () => {
-      onFinish();
+      safeFinish();
     });
+
+    // 2. Fallback safety timer (video duration is ~3.5 seconds; timer triggers at 4.5s)
+    const timeout = setTimeout(() => {
+      safeFinish();
+    }, 4500);
+
     return () => {
       subscription.remove();
+      clearTimeout(timeout);
     };
   }, [player]);
 
@@ -25,15 +42,16 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
     <TouchableOpacity
       activeOpacity={0.95}
       style={styles.container}
-      onPress={onFinish}
+      onPress={safeFinish}
     >
       <VideoView
         player={player}
         style={StyleSheet.absoluteFillObject}
         nativeControls={false}
-        contentFit="cover"
+        contentFit="contain"
       />
 
+      {/* Brand Overlay */}
       <View style={styles.footerOverlay}>
         <Text style={styles.brandSubtitle}>
           Bookings · Clients · Payments · Reports

@@ -106,6 +106,20 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
                 <Text style={styles.sendBtnText}>SEND CODE</Text>
               )}
             </TouchableOpacity>
+
+            {/* One-Tap Demo Number Button */}
+            <TouchableOpacity
+              style={styles.demoBtn}
+              onPress={() => {
+                setPhoneNumber('9876543210');
+                onOtpSent('+919876543210');
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.demoBtnKicker}>OFFICIAL DEMO ACCOUNT</Text>
+              <Text style={styles.demoBtnNumber}>+91 98765 43210</Text>
+              <Text style={styles.demoBtnHint}>Tap for instant 1-click preview →</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -246,6 +260,35 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 1.2,
     fontWeight: '700',
+  },
+  demoBtn: {
+    marginTop: 14,
+    backgroundColor: '#fafafb',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#c59b6d',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  demoBtnKicker: {
+    fontSize: 9.5,
+    letterSpacing: 1.2,
+    fontWeight: '800',
+    color: '#c59b6d',
+    textTransform: 'uppercase',
+  },
+  demoBtnNumber: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#121212',
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+  demoBtnHint: {
+    fontSize: 11,
+    color: 'rgba(18, 18, 18, 0.55)',
+    marginTop: 2,
   },
   trustContainer: {
     paddingHorizontal: 16,

@@ -19,7 +19,8 @@ interface LoginOtpScreenProps {
 }
 
 export const LoginOtpScreen: React.FC<LoginOtpScreenProps> = ({ phone, onGoBack, onVerified }) => {
-  const [otp, setOtp] = useState('');
+  const isDemo = phone.includes('9876543210');
+  const [otp, setOtp] = useState(isDemo ? '528143' : '');
   const [timer, setTimer] = useState(30);
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState('');
@@ -96,6 +97,12 @@ export const LoginOtpScreen: React.FC<LoginOtpScreenProps> = ({ phone, onGoBack,
           Enter the code sent to{'\n'}
           <Text style={styles.phoneHighlight}>{phone}</Text>
         </Text>
+
+        {isDemo ? (
+          <View style={styles.demoNoticeBadge}>
+            <Text style={styles.demoNoticeText}>Demo Code: 528143 (Prefilled)</Text>
+          </View>
+        ) : null}
 
         {/* 6 Individual Digit Display Boxes */}
         <TouchableOpacity
@@ -210,6 +217,21 @@ const styles = StyleSheet.create({
   phoneHighlight: {
     fontWeight: '700',
     color: '#121212',
+  },
+  demoNoticeBadge: {
+    marginTop: 10,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#c59b6d',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    alignSelf: 'flex-start',
+  },
+  demoNoticeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#8c6b3e',
   },
   otpBoxesRow: {
     flexDirection: 'row',
