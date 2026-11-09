@@ -1,25 +1,25 @@
-import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
-import { Colors } from '../theme/colors';
-
-const { width, height } = Dimensions.get('window');
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useVideoPlayer, VideoView } from 'expo-video';
 
 interface SplashScreenProps {
   onFinish: () => void;
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
-  const videoRef = useRef<Video>(null);
-  const [videoLoaded, setVideoLoaded] = useState(false);
+  const player = useVideoPlayer(require('../../assets/Shilpi_Splash_Intro.mp4'), (p) => {
+    p.loop = false;
+    p.play();
+  });
 
-  const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
-    if (status.isLoaded) {
-      if (status.didJustFinish) {
-        onFinish();
-      }
-    }
-  };
+  useEffect(() => {
+    const subscription = player.addListener('playToEnd', () => {
+      onFinish();
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, [player]);
 
   return (
     <TouchableOpacity
@@ -27,24 +27,13 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
       style={styles.container}
       onPress={onFinish}
     >
-      {/* Splash Intro Video as demanded */}
-      <Video
-        ref={videoRef}
-        source={require('../../assets/Shilpi_Splash_Intro.mp4')}
+      <VideoView
+        player={player}
         style={StyleSheet.absoluteFillObject}
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping={false}
-        isMuted={false}
-        onLoad={() => setVideoLoaded(true)}
-        onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-        onError={(err) => {
-          console.warn('Video playback warning, falling back to instant proceed', err);
-          setTimeout(onFinish, 2000);
-        }}
+        nativeControls={false}
+        contentFit="cover"
       />
 
-      {/* Elegant Bottom Brand Tagline Overlay */}
       <View style={styles.footerOverlay}>
         <Text style={styles.brandSubtitle}>
           Bookings · Clients · Payments · Reports
@@ -68,7 +57,7 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
     alignItems: 'center',
     gap: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
     width: '100%',
     paddingTop: 24,
   },
