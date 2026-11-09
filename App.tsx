@@ -13,27 +13,28 @@ type ScreenState = 'splash' | 'login_phone' | 'login_otp' | 'onboarding' | 'dash
 
 export default function App() {
   const [screen, setScreen] = useState<ScreenState>('splash');
-  const [authPhone, setAuthPhone] = useState('');
+  const [authPhone, setAuthPhone] = useState('+919876543210');
 
-  // Check if token already exists
   useEffect(() => {
     const checkAuthToken = async () => {
       const token = await AsyncStorage.getItem('@shilpi_token');
-      // If token exists, we can transition to dashboard after splash
     };
     checkAuthToken();
   }, []);
 
+  // Full-bleed edge-to-edge view for Splash video
+  if (screen === 'splash') {
+    return (
+      <View style={styles.splashContainer}>
+        <StatusBar hidden />
+        <SplashScreen onFinish={() => setScreen('login_phone')} />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-
-      {/* 1. Splash Intro Video */}
-      {screen === 'splash' && (
-        <SplashScreen
-          onFinish={() => setScreen('login_phone')}
-        />
-      )}
 
       {/* 2. Login Phone Number Screen */}
       {screen === 'login_phone' && (
@@ -88,6 +89,10 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  splashContainer: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
   container: {
     flex: 1,
     backgroundColor: '#000000',
