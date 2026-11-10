@@ -85,10 +85,10 @@ const IntroVideoPlayer: React.FC<{ onEnd: () => void }> = ({ onEnd }) => {
 
   return (
     <VideoView
-      style={StyleSheet.absoluteFill}
+      style={styles.videoPlayer}
       player={player}
       nativeControls={false}
-      contentFit="cover"
+      contentFit="contain"
     />
   );
 };
@@ -133,9 +133,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
         onPress={() => setVideoFinished(true)}
       >
         <View style={styles.footerOverlay}>
-          <Text style={styles.brandSubtitle}>
-            Bookings · Clients · Payments · Reports
-          </Text>
           <Text style={styles.tapToContinue}>
             Tap anywhere to skip
           </Text>
@@ -150,6 +147,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
     position: 'relative',
+  },
+  videoPlayer: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#000000',
   },
   touchOverlay: {
     ...StyleSheet.absoluteFill,

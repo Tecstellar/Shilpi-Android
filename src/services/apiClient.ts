@@ -1,7 +1,7 @@
 // API CLIENT FOR REACT NATIVE EXPO
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.213.81.80:4000/api/v1';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://172.22.14.80:4000/api/v1';
 
 export const apiClient = {
   async get(endpoint: string) {

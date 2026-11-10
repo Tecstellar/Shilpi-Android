@@ -10,7 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
+import { Colors } from '../theme/colors';
 import { apiClient } from '../services/apiClient';
 
 interface LoginPhoneScreenProps {
@@ -18,12 +20,19 @@ interface LoginPhoneScreenProps {
 }
 
 export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent }) => {
-  // Natural pre-fill matching prototype demo number
   const [phoneNumber, setPhoneNumber] = useState('98765 43210');
+  const [agreed, setAgreed] = useState(false); // Default unkept/unchecked as requested
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState('');
 
+  const isButtonEnabled = agreed && phoneNumber.replace(/\s+/g, '').length >= 10;
+
   const handleSendCode = async () => {
+    if (!agreed) {
+      setErrorText('Please agree to the Terms and Privacy Policy to continue.');
+      return;
+    }
+
     const cleaned = (phoneNumber || '9876543210').replace(/\s+/g, '');
     if (cleaned.length < 10) {
       setErrorText('Please enter a valid 10-digit mobile number.');
@@ -52,13 +61,27 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
     }
   };
 
+  const openTerms = () => {
+    Alert.alert(
+      'Terms of Service',
+      'By using Shilpi, you agree to standard service terms, client data protection guidelines, and cloud backup policies.'
+    );
+  };
+
+  const openPrivacy = () => {
+    Alert.alert(
+      'Privacy Policy',
+      'Shilpi strictly secures your client book, appointments, payment logs, and phone numbers. Your data is never shared or sold.'
+    );
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.screen}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
-        {/* Curved Deep Black Header with Prominently Visible White & Gold Shilpi Lockup */}
+        {/* Curved Deep Black Header with Shilpi White & Gold Lockup */}
         <View style={styles.headerBlack}>
           <Image
             source={require('../../assets/shilpi-lockup-black.png')}
@@ -73,6 +96,7 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
             <Text style={styles.kicker}>SIGN IN</Text>
             <Text style={styles.headline}>What's your phone number?</Text>
 
+            {/* Pink-shaped Phone Number Field with only black and pink used in prototype */}
             <View style={styles.phoneInputRow}>
               <View style={styles.countryPrefix}>
                 <Text style={styles.flagEmoji}>🇮🇳</Text>
@@ -84,7 +108,8 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
                 style={styles.textInput}
                 keyboardType="phone-pad"
                 placeholder="98765 43210"
-                placeholderTextColor="rgba(18, 18, 18, 0.35)"
+                placeholderTextColor="rgba(18, 18, 18, 0.4)"
+                selectionColor={Colors.accent}
                 value={phoneNumber}
                 onChangeText={(val) => {
                   setPhoneNumber(val);
@@ -96,16 +121,51 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
 
             {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
 
+            {/* Clickable Agreement Row: Terms and Privacy Policy */}
             <TouchableOpacity
-              style={styles.sendBtn}
+              style={styles.consentRow}
+              onPress={() => setAgreed(!agreed)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.checkbox, agreed && styles.checkboxAgreed]}>
+                {agreed && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <View style={styles.consentTextWrap}>
+                <Text style={styles.consentText}>
+                  By continuing, you agree to the{' '}
+                  <Text style={styles.linkText} onPress={openTerms}>
+                    Terms
+                  </Text>
+                  {' '}and{' '}
+                  <Text style={styles.linkText} onPress={openPrivacy}>
+                    Privacy Policy
+                  </Text>
+                  .
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* 'Send Code' button - Defaultly unkept/disabled until clicked, pink color when enabled */}
+            <TouchableOpacity
+              style={[
+                styles.sendBtn,
+                isButtonEnabled ? styles.sendBtnActive : styles.sendBtnDisabled,
+              ]}
               onPress={handleSendCode}
-              disabled={loading}
+              disabled={!isButtonEnabled || loading}
               activeOpacity={0.85}
             >
               {loading ? (
                 <ActivityIndicator color="#ffffff" size="small" />
               ) : (
-                <Text style={styles.sendBtnText}>SEND CODE</Text>
+                <Text
+                  style={[
+                    styles.sendBtnText,
+                    !isButtonEnabled && styles.sendBtnTextDisabled,
+                  ]}
+                >
+                  SEND CODE
+                </Text>
               )}
             </TouchableOpacity>
           </View>
@@ -118,7 +178,7 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
               <Text style={styles.iconText}>💬</Text>
             </View>
             <Text style={styles.trustLabel}>
-              A 6-digit code arrives on WhatsApp and SMS.
+              The six-digit code arrives on SMS.
             </Text>
           </View>
 
@@ -127,17 +187,12 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
               <Text style={styles.iconText}>🔒</Text>
             </View>
             <Text style={styles.trustLabel}>
-              This number sends your client confirmations. Never shared.
+              This number sends your client confirmations.
             </Text>
           </View>
         </View>
 
-        {/* Legal Footer */}
-        <View style={styles.footerContainer}>
-          <Text style={styles.footerLegal}>
-            By continuing you agree to the Terms and Privacy Policy.
-          </Text>
-        </View>
+        <View style={{ height: 40 }} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -162,7 +217,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: 260,
-    height: 104, // 2.5:1 ratio matching the 1983x793 image
+    height: 104,
     marginLeft: -8,
   },
   cardContainer: {
@@ -183,7 +238,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: '#8c6b3e',
+    color: Colors.deep,
     fontWeight: '700',
   },
   headline: {
@@ -191,16 +246,16 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     marginTop: 6,
     color: '#121212',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   phoneInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 18,
     borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(18, 18, 18, 0.12)',
-    backgroundColor: '#fafafb',
+    borderWidth: 2,
+    borderColor: Colors.accent, // Pink colored shape from prototype
+    backgroundColor: Colors.tint2, // Soft pink surface tint from prototype
     overflow: 'hidden',
   },
   countryPrefix: {
@@ -218,32 +273,85 @@ const styles = StyleSheet.create({
     color: '#121212',
   },
   verticalDivider: {
-    width: 1,
+    width: 1.5,
     height: 24,
-    backgroundColor: 'rgba(18, 18, 18, 0.14)',
+    backgroundColor: 'rgba(232, 39, 107, 0.35)',
     marginLeft: 6,
   },
   textInput: {
     flex: 1,
     paddingVertical: 14,
     paddingHorizontal: 8,
-    fontSize: 17,
+    fontSize: 18,
     letterSpacing: 1,
-    color: '#121212',
-    fontWeight: '600',
+    color: '#121212', // Black text
+    fontWeight: '700',
   },
   errorText: {
-    color: '#dc2626',
+    color: Colors.deep,
     fontSize: 12,
     marginTop: 8,
     marginLeft: 2,
+    fontWeight: '600',
+  },
+  consentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 16,
+    gap: 10,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'rgba(18, 18, 18, 0.35)',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  checkboxAgreed: {
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
+  },
+  checkmark: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  consentTextWrap: {
+    flex: 1,
+  },
+  consentText: {
+    fontSize: 12,
+    color: 'rgba(18, 18, 18, 0.75)',
+    lineHeight: 18,
+  },
+  linkText: {
+    color: Colors.accent,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
   sendBtn: {
     marginTop: 18,
-    backgroundColor: '#121212',
-    borderRadius: 12,
+    borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendBtnActive: {
+    backgroundColor: Colors.accent, // Pink color from design system
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  sendBtnDisabled: {
+    backgroundColor: '#f1f1f4',
+    borderWidth: 1.5,
+    borderColor: 'rgba(18, 18, 18, 0.1)',
   },
   sendBtnText: {
     color: '#ffffff',
@@ -251,9 +359,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     fontWeight: '700',
   },
+  sendBtnTextDisabled: {
+    color: 'rgba(18, 18, 18, 0.35)',
+  },
   trustContainer: {
     paddingHorizontal: 16,
-    marginTop: 16,
+    marginTop: 18,
     gap: 8,
   },
   trustItem: {
@@ -264,12 +375,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 14,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   iconCircle: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f4f4f6',
+    backgroundColor: Colors.tint,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -279,19 +395,8 @@ const styles = StyleSheet.create({
   trustLabel: {
     flex: 1,
     fontSize: 12,
-    color: 'rgba(18, 18, 18, 0.72)',
+    color: '#121212',
+    fontWeight: '600',
     lineHeight: 18,
-  },
-  footerContainer: {
-    marginTop: 'auto',
-    paddingVertical: 24,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  footerLegal: {
-    fontSize: 11,
-    color: 'rgba(18, 18, 18, 0.45)',
-    textAlign: 'center',
-    lineHeight: 16,
   },
 });
