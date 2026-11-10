@@ -13,7 +13,7 @@ import {
 } from '../data/prototypeData';
 
 import { TopHeader } from '../components/TopHeader';
-import { BottomTabBar } from '../components/BottomTabBar';
+import { BottomTabBar, TabType } from '../components/BottomTabBar';
 import { DrawerMenu } from '../components/DrawerMenu';
 import { ActionBottomSheet, ActionSheetData } from '../components/ActionBottomSheet';
 
@@ -44,7 +44,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   onLogout,
 }) => {
   // Navigation State
-  const [activeTab, setActiveTab] = useState<'clients' | 'home' | 'orders'>('home');
+  const [activeTab, setActiveTab] = useState<TabType>('home');
   const [currentScreen, setCurrentScreen] = useState<string>('home');
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -127,14 +127,23 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     settings: 'Settings',
   };
 
-  const handleTabChange = (tab: 'clients' | 'home' | 'orders') => {
+  const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
-    setCurrentScreen(tab);
+    if (tab === 'earnings') {
+      setCurrentScreen('payments');
+    } else {
+      setCurrentScreen(tab);
+    }
   };
 
   const handleGoBack = () => {
-    // Return to the current active tab
-    setCurrentScreen(activeTab);
+    // Return to the current active tab or home
+    if (currentScreen === 'payments' && activeTab === 'earnings') {
+      setActiveTab('home');
+      setCurrentScreen('home');
+    } else {
+      setCurrentScreen(activeTab === 'earnings' ? 'home' : activeTab);
+    }
   };
 
   const handleOpenClient = (clientId: number) => {
@@ -286,20 +295,10 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     });
   };
 
-  // FAB Action
-  const handleFabPress = () => {
-    if (currentScreen === 'clients') {
-      setCurrentScreen('newclient');
-    } else {
-      setCurrentScreen('newbooking');
-    }
+  // Center FAB (+) Action -> Opens New Booking directly as requested
+  const handleNewBooking = () => {
+    setCurrentScreen('newbooking');
   };
-
-  const showFab =
-    currentScreen === 'home' ||
-    currentScreen === 'clients' ||
-    currentScreen === 'orders' ||
-    currentScreen === 'client';
 
   const showTabs =
     currentScreen !== 'newbooking' &&
@@ -420,29 +419,28 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         )}
       </View>
 
-      {/* 3. Floating Action Button (FAB) */}
-      {showFab && (
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={handleFabPress}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.fabPlus}>＋</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* 4. Bottom 3-Tab Bar */}
+      {/* 3. Bottom Navigation Bar with Center FAB */}
       {showTabs && (
-        <BottomTabBar activeTab={activeTab} onSelectTab={handleTabChange} />
+        <BottomTabBar
+          activeTab={activeTab}
+          onSelectTab={handleTabChange}
+          onPressNewBooking={handleNewBooking}
+        />
       )}
 
-      {/* 5. Slide-in Drawer Menu */}
+      {/* 4. Slide-in Drawer Menu */}
       <DrawerMenu
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         onNavigate={(screen) => {
           if (screen === 'qr_scanner') {
             onOpenQrScanner();
+          } else if (screen === 'payments') {
+            setActiveTab('earnings');
+            setCurrentScreen('payments');
+          } else if (screen === 'home' || screen === 'clients' || screen === 'orders') {
+            setActiveTab(screen);
+            setCurrentScreen(screen);
           } else {
             setCurrentScreen(screen);
           }
