@@ -489,25 +489,34 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               </View>
             </View>
 
-            {/* Compact Dotted Box Logo Upload */}
-            <View style={styles.logoUploadSection}>
-              <TouchableOpacity
-                style={[styles.logoDottedBox, logoUri ? styles.logoDottedBoxFilled : null]}
-                onPress={handlePickLogo}
-                activeOpacity={0.7}
-              >
-                {logoUri ? (
-                  <Image source={{ uri: logoUri }} style={styles.uploadedLogoImage} resizeMode="cover" />
-                ) : (
-                  <Text style={styles.plusIconText}>＋</Text>
-                )}
-              </TouchableOpacity>
-              <Text style={styles.logoOptionalText}>Logo (Optional)</Text>
-              {logoUri && (
-                <TouchableOpacity onPress={() => setLogoUri(null)} style={styles.removeLogoBtn}>
-                  <Text style={styles.removeLogoText}>Remove</Text>
+            {/* Right corner compact logo upload box */}
+            <View style={styles.logoRowRight}>
+              <View style={styles.logoHintCol}>
+                <Text style={styles.logoHintTitle}>STUDIO LOGO</Text>
+                <Text style={styles.logoHintSub}>
+                  Appears on your client bills, invoices & booking receipts
+                </Text>
+              </View>
+
+              <View style={styles.logoRightWrap}>
+                <TouchableOpacity
+                  style={[styles.logoDottedBox, logoUri ? styles.logoDottedBoxFilled : null]}
+                  onPress={handlePickLogo}
+                  activeOpacity={0.7}
+                >
+                  {logoUri ? (
+                    <Image source={{ uri: logoUri }} style={styles.uploadedLogoImage} resizeMode="cover" />
+                  ) : (
+                    <Text style={styles.plusIconText}>＋</Text>
+                  )}
                 </TouchableOpacity>
-              )}
+                <Text style={styles.logoOptionalText}>Logo (Optional)</Text>
+                {logoUri && (
+                  <TouchableOpacity onPress={() => setLogoUri(null)} style={styles.removeLogoBtn}>
+                    <Text style={styles.removeLogoText}>Remove</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
 
             <Text style={styles.helperNote}>
@@ -915,11 +924,33 @@ const styles = StyleSheet.create({
   flex1: {
     flex: 1,
   },
-  logoUploadSection: {
+  logoRowRight: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     marginTop: 14,
-    marginBottom: 4,
+    marginBottom: 6,
+    paddingHorizontal: 4,
+  },
+  logoHintCol: {
+    flex: 1,
+    paddingRight: 14,
+  },
+  logoHintTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    color: '#e8276b',
+    textTransform: 'uppercase',
+  },
+  logoHintSub: {
+    fontSize: 12,
+    color: 'rgba(18, 18, 18, 0.55)',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  logoRightWrap: {
+    alignItems: 'center',
   },
   logoDottedBox: {
     width: 56,

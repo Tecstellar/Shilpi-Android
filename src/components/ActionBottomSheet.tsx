@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   ScrollView,
+  Image,
 } from 'react-native';
 import { Colors } from '../theme/colors';
 
@@ -14,6 +15,7 @@ export interface ActionSheetData {
   title: string;
   message: string;
   cta: string;
+  logoUri?: string;
   onConfirm?: () => void;
 }
 
@@ -35,8 +37,17 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({ sheet, onC
         {/* Drag handle line */}
         <View style={styles.handleBar} />
 
-        <Text style={styles.kicker}>{sheet.kicker}</Text>
-        <Text style={styles.title}>{sheet.title}</Text>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text style={styles.kicker}>{sheet.kicker}</Text>
+            <Text style={styles.title}>{sheet.title}</Text>
+          </View>
+          {sheet.logoUri ? (
+            <View style={styles.brandLogoBox}>
+              <Image source={{ uri: sheet.logoUri }} style={styles.brandLogoImage} resizeMode="cover" />
+            </View>
+          ) : null}
+        </View>
 
         <ScrollView style={styles.messageScroll} bounces={false}>
           <View style={styles.messageBox}>
@@ -103,6 +114,24 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(18, 18, 18, 0.15)',
     alignSelf: 'center',
     marginBottom: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  brandLogoBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: 'rgba(232, 39, 107, 0.35)',
+    backgroundColor: '#ffeef4',
+  },
+  brandLogoImage: {
+    width: '100%',
+    height: '100%',
   },
   kicker: {
     fontSize: 10,

@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../theme/colors';
 import { Booking, fmt } from '../data/prototypeData';
 
@@ -24,6 +26,20 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
   onOpenConfirmSheet,
   onCloseBooking,
 }) => {
+  const [profile, setProfile] = useState<{ businessName?: string; logoUri?: string; ownerName?: string }>({});
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('@shilpi_profile');
+        if (stored) {
+          setProfile(JSON.parse(stored));
+        }
+      } catch (e) {}
+    };
+    loadProfile();
+  }, []);
+
   if (!order) {
     return (
       <View style={{ flex: 1, backgroundColor: '#f4f4f6', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
@@ -43,10 +59,19 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent}>
-      {/* 1. Black Ink Booking Card */}
+      {/* 1. Black Ink Booking Pass Card with Studio Logo */}
       <View style={styles.inkHeaderCard}>
-        <Text style={styles.refCode}>{order.ref}</Text>
-        <Text style={styles.clientTitle}>{order.client}</Text>
+        <View style={styles.headerTopRow}>
+          <View style={styles.headerTitles}>
+            <Text style={styles.refCode}>{order.ref}</Text>
+            <Text style={styles.clientTitle}>{order.client}</Text>
+          </View>
+          {profile.logoUri ? (
+            <View style={styles.headerLogoContainer}>
+              <Image source={{ uri: profile.logoUri }} style={styles.headerLogoImage} resizeMode="cover" />
+            </View>
+          ) : null}
+        </View>
 
         <View style={styles.metaRow}>
           <Text style={styles.metaDate}>
@@ -77,12 +102,30 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
         })}
       </View>
 
-      {/* 3. Packages Table */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>PACKAGES</Text>
+      {/* 3. Studio Bill & Breakdown */}
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>STUDIO BILL & BREAKDOWN</Text>
+        <Text style={styles.invoiceTag}>OFFICIAL RECEIPT</Text>
       </View>
 
       <View style={styles.tableCard}>
+        {/* Studio Logo Header stamped on the bill */}
+        {profile.logoUri ? (
+          <View style={styles.billBrandRow}>
+            <View style={styles.billLogoBox}>
+              <Image source={{ uri: profile.logoUri }} style={styles.billLogoImage} resizeMode="cover" />
+            </View>
+            <View style={styles.billBrandDetails}>
+              <Text style={styles.billBusinessName} numberOfLines={1}>
+                {profile.businessName || 'Beauty & Bridal Studio'}
+              </Text>
+              <Text style={styles.billRefLine}>
+                Client Invoice · {order.ref}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
         {order.items.map((item, idx) => (
           <View key={idx} style={styles.tableRow}>
             <Text style={styles.itemName}>{item.name}</Text>
@@ -181,6 +224,28 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingBottom: 20,
   },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerTitles: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  headerLogoContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: Colors.accent,
+    backgroundColor: '#ffeef4',
+  },
+  headerLogoImage: {
+    width: '100%',
+    height: '100%',
+  },
   refCode: {
     fontSize: 10,
     letterSpacing: 1.2,
@@ -247,6 +312,24 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 6,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 6,
+  },
+  invoiceTag: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: Colors.deep,
+    backgroundColor: '#ffeef4',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
   sectionTitle: {
     fontSize: 10,
     letterSpacing: 1.2,
@@ -260,6 +343,42 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: 'rgba(18, 18, 18, 0.07)',
     paddingHorizontal: 16,
+    paddingTop: 14,
+  },
+  billBrandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: 12,
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(18, 18, 18, 0.08)',
+  },
+  billLogoBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(232, 39, 107, 0.3)',
+    backgroundColor: '#ffeef4',
+    marginRight: 10,
+  },
+  billLogoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  billBrandDetails: {
+    flex: 1,
+  },
+  billBusinessName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#121212',
+  },
+  billRefLine: {
+    fontSize: 11,
+    color: 'rgba(18, 18, 18, 0.5)',
+    marginTop: 2,
   },
   tableRow: {
     flexDirection: 'row',

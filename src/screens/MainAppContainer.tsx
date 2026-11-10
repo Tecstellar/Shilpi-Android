@@ -59,6 +59,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   const [packageGroups, setPackageGroups] = useState<PackageGroup[]>(INITIAL_PKG_GROUPS);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [artistName, setArtistName] = useState('Artist');
+  const [studioLogo, setStudioLogo] = useState<string | undefined>();
 
   // Load storage data on mount
   useEffect(() => {
@@ -71,6 +72,9 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             setArtistName(parsed.ownerName.trim());
           } else if (parsed.businessName?.trim()) {
             setArtistName(parsed.businessName.trim());
+          }
+          if (parsed.logoUri) {
+            setStudioLogo(parsed.logoUri);
           }
         }
 
@@ -191,6 +195,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
       title: `Send confirmation to ${first(newBooking.client)}?`,
       message: `Hi ${first(newBooking.client)}, your booking is confirmed.\n\n${newBooking.dateLong} · ${newBooking.time} ${newBooking.meridiem}\n${newBooking.items.map((i) => i.name).join(' + ')}\n${newBooking.venue}\n\nTotal ${fmt(total)} · Advance ${fmt(newBooking.advance)} · Balance ${fmt(balance)}\n\n— ${artistName}, Shilpi`,
       cta: 'Send on WhatsApp',
+      logoUri: studioLogo,
     });
   };
 
@@ -229,6 +234,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
       title: `Send to ${order.client}?`,
       message: `Hi ${first(order.client)}, your booking is confirmed.\n\n${order.dateLong} · ${order.time} ${order.meridiem}\n${order.items.map((i) => i.name).join(' + ')}\n${order.venue}\n\nTotal ${fmt(total)} · Advance ${fmt(order.advance)} · Balance ${fmt(balance)}\n\n— ${artistName}, Shilpi`,
       cta: 'Send Message',
+      logoUri: studioLogo,
     });
   };
 
@@ -240,6 +246,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
       title: `Thank ${order.client} and ask for review?`,
       message: `Thank you ${first(order.client)}! It was lovely working with you.\n\nIf you liked the look, a photo or a review would mean a lot — I would love to add it to my portfolio.\n\n— ${artistName}, Shilpi`,
       cta: 'Send Review Request',
+      logoUri: studioLogo,
       onConfirm: () => {
         setCurrentScreen('gallery');
       },
