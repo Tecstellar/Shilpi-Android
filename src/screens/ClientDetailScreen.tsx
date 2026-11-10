@@ -11,7 +11,7 @@ import { Colors } from '../theme/colors';
 import { Client, fmt, first } from '../data/prototypeData';
 
 interface ClientDetailScreenProps {
-  client: Client;
+  client: Client | null;
   onGoBack: () => void;
   onOpenWhatsAppSheet: (clientName: string, phone: string) => void;
 }
@@ -21,6 +21,20 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
   onGoBack,
   onOpenWhatsAppSheet,
 }) => {
+  if (!client) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#f4f4f6', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#121212', marginBottom: 12 }}>Client not found</Text>
+        <TouchableOpacity
+          onPress={onGoBack}
+          style={{ backgroundColor: Colors.accent, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 14 }}
+        >
+          <Text style={{ color: '#ffffff', fontWeight: '700' }}>Back to Clients</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   const initial = client.name.charAt(0);
 
   const handleCall = () => {

@@ -12,11 +12,13 @@ import { Booking, fmt } from '../data/prototypeData';
 interface OrdersScreenProps {
   bookings: Booking[];
   onOpenBooking: (bookingId: string) => void;
+  onStartNewBooking?: () => void;
 }
 
 export const OrdersScreen: React.FC<OrdersScreenProps> = ({
   bookings,
   onOpenBooking,
+  onStartNewBooking,
 }) => {
   const [filter, setFilter] = useState<'Upcoming' | 'Completed' | 'Closed'>('Upcoming');
 
@@ -49,54 +51,75 @@ export const OrdersScreen: React.FC<OrdersScreenProps> = ({
         })}
       </View>
 
-      {/* 2. Orders List */}
+      {/* 2. Orders List or Empty State */}
       <ScrollView
         style={styles.listScroll}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       >
-        {filtered.map((b) => {
-          const total = b.items.reduce((sum, item) => sum + item.price, 0) + b.travel;
-          const balance = total - b.advance;
+        {filtered.length > 0 ? (
+          filtered.map((b) => {
+            const total = b.items.reduce((sum, item) => sum + item.price, 0) + b.travel;
+            const balance = total - b.advance;
 
-          return (
-            <TouchableOpacity
-              key={b.id}
-              style={styles.orderRow}
-              onPress={() => onOpenBooking(b.id)}
-              activeOpacity={0.7}
-            >
-              {/* Date Box */}
-              <View style={styles.dateBox}>
-                <Text style={styles.dayNum}>{b.day}</Text>
-                <Text style={styles.monthLabel}>{b.month.toUpperCase()}</Text>
-                <Text style={styles.timeLabel}>{b.time}</Text>
-              </View>
+            return (
+              <TouchableOpacity
+                key={b.id}
+                style={styles.orderRow}
+                onPress={() => onOpenBooking(b.id)}
+                activeOpacity={0.7}
+              >
+                {/* Date Box */}
+                <View style={styles.dateBox}>
+                  <Text style={styles.dayNum}>{b.day}</Text>
+                  <Text style={styles.monthLabel}>{b.month.toUpperCase()}</Text>
+                  <Text style={styles.timeLabel}>{b.time}</Text>
+                </View>
 
-              {/* Order Info */}
-              <View style={styles.orderInfo}>
-                <Text style={styles.clientName}>{b.client}</Text>
-                <Text style={styles.pkgText}>
-                  {b.items.map((i) => i.name).join(' + ')}
-                </Text>
-                <Text style={styles.venueText}>{b.venue}</Text>
-              </View>
+                {/* Order Info */}
+                <View style={styles.orderInfo}>
+                  <Text style={styles.clientName}>{b.client}</Text>
+                  <Text style={styles.pkgText}>
+                    {b.items.map((i) => i.name).join(' + ')}
+                  </Text>
+                  <Text style={styles.venueText}>{b.venue}</Text>
+                </View>
 
-              {/* Amount & Status */}
-              <View style={styles.amountBox}>
-                <Text style={styles.amountText}>{fmt(total)}</Text>
-                <Text
-                  style={[
-                    styles.balancePill,
-                    balance > 0 ? styles.balanceDueText : styles.paidText,
-                  ]}
-                >
-                  {balance > 0 ? `${fmt(balance)} due` : 'Paid'}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+                {/* Amount & Status */}
+                <View style={styles.amountBox}>
+                  <Text style={styles.amountText}>{fmt(total)}</Text>
+                  <Text
+                    style={[
+                      styles.balancePill,
+                      balance > 0 ? styles.balanceDueText : styles.paidText,
+                    ]}
+                  >
+                    {balance > 0 ? `${fmt(balance)} due` : 'Paid'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })
+        ) : (
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyIconCircle}>
+              <Text style={styles.emptyIconText}>📅</Text>
+            </View>
+            <Text style={styles.emptyTitle}>No {filter.toLowerCase()} bookings</Text>
+            <Text style={styles.emptySubtitle}>
+              When you record a client bridal, reception, or party appointment, it will be organized here.
+            </Text>
+            {onStartNewBooking && (
+              <TouchableOpacity
+                style={styles.emptyBtn}
+                onPress={onStartNewBooking}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.emptyBtnText}>＋ New Booking</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -221,5 +244,54 @@ const styles = StyleSheet.create({
   },
   paidText: {
     color: 'rgba(18, 18, 18, 0.45)',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#ffeef4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyIconText: {
+    fontSize: 26,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#121212',
+    letterSpacing: -0.3,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: 'rgba(18, 18, 18, 0.55)',
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 18,
+    maxWidth: 280,
+  },
+  emptyBtn: {
+    backgroundColor: Colors.accent,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    borderRadius: 14,
+    marginTop: 20,
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  emptyBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

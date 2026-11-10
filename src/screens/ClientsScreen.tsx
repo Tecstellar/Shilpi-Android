@@ -13,9 +13,14 @@ import { Client, fmt } from '../data/prototypeData';
 interface ClientsScreenProps {
   clients: Client[];
   onOpenClient: (clientId: number) => void;
+  onStartNewClient?: () => void;
 }
 
-export const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onOpenClient }) => {
+export const ClientsScreen: React.FC<ClientsScreenProps> = ({
+  clients,
+  onOpenClient,
+  onStartNewClient,
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filtered = clients.filter(
@@ -37,46 +42,67 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({ clients, onOpenCli
         />
       </View>
 
-      {/* Clients List */}
+      {/* Clients List or Empty State */}
       <ScrollView
         style={styles.listScroll}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       >
-        {filtered.map((c, index) => {
-          const initial = c.name.charAt(0);
-          const isAccentChip = index === 0 || index === 2; // highlight Priya and Anu like prototype
+        {filtered.length > 0 ? (
+          filtered.map((c, index) => {
+            const initial = c.name.charAt(0);
+            const isAccentChip = index % 2 === 0;
 
-          return (
-            <TouchableOpacity
-              key={c.id}
-              style={styles.clientRow}
-              onPress={() => onOpenClient(c.id)}
-              activeOpacity={0.7}
-            >
-              <View
-                style={[
-                  styles.avatarChip,
-                  isAccentChip ? styles.avatarAccent : styles.avatarInk,
-                ]}
+            return (
+              <TouchableOpacity
+                key={c.id}
+                style={styles.clientRow}
+                onPress={() => onOpenClient(c.id)}
+                activeOpacity={0.7}
               >
-                <Text style={styles.avatarText}>{initial}</Text>
-              </View>
+                <View
+                  style={[
+                    styles.avatarChip,
+                    isAccentChip ? styles.avatarAccent : styles.avatarInk,
+                  ]}
+                >
+                  <Text style={styles.avatarText}>{initial}</Text>
+                </View>
 
-              <View style={styles.clientInfo}>
-                <Text style={styles.clientName}>{c.name}</Text>
-                <Text style={styles.clientMeta}>
-                  {c.phone} · {c.bookings} bookings
-                </Text>
-              </View>
+                <View style={styles.clientInfo}>
+                  <Text style={styles.clientName}>{c.name}</Text>
+                  <Text style={styles.clientMeta}>
+                    {c.phone} · {c.bookings} bookings
+                  </Text>
+                </View>
 
-              <View style={styles.salesInfo}>
-                <Text style={styles.salesAmount}>{fmt(c.sales)}</Text>
-                <Text style={styles.lifetimeLabel}>LIFETIME</Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+                <View style={styles.salesInfo}>
+                  <Text style={styles.salesAmount}>{fmt(c.sales)}</Text>
+                  <Text style={styles.lifetimeLabel}>LIFETIME</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })
+        ) : (
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyIconCircle}>
+              <Text style={styles.emptyIconText}>👥</Text>
+            </View>
+            <Text style={styles.emptyTitle}>No clients yet</Text>
+            <Text style={styles.emptySubtitle}>
+              Save client details to easily manage appointments, send quotes, and track lifetime billing.
+            </Text>
+            {onStartNewClient && (
+              <TouchableOpacity
+                style={styles.emptyBtn}
+                onPress={onStartNewClient}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.emptyBtnText}>＋ Add Client</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -167,5 +193,54 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: 'rgba(18, 18, 18, 0.45)',
     marginTop: 2,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#ffeef4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyIconText: {
+    fontSize: 26,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#121212',
+    letterSpacing: -0.3,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: 'rgba(18, 18, 18, 0.55)',
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 18,
+    maxWidth: 280,
+  },
+  emptyBtn: {
+    backgroundColor: Colors.accent,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    borderRadius: 14,
+    marginTop: 20,
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  emptyBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
+  Easing,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../theme/colors';
 import {
   Booking,
@@ -25,59 +27,150 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenBooking,
   onOpenOrders,
 }) => {
-  // Quote rolling index
+  // 1. Animated Quote vertical transition
   const [quoteIndex, setQuoteIndex] = useState(0);
-  const [calOpen, setCalOpen] = useState(false);
-  const [selectedDay, setSelectedDay] = useState(14);
-  const [calMonth, setCalMonth] = useState('September 2026');
+  const translateY = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setQuoteIndex((prev) => (prev + 1) % QUOTES.length);
-    }, 8000);
+      // Step A: Slide up and fade out current quote
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: -26,
+          duration: 340,
+          easing: Easing.in(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 280,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        // Step B: Advance quote
+        setQuoteIndex((prev) => (prev + 1) % QUOTES.length);
+        // Step C: Position below
+        translateY.setValue(26);
+        // Step D: Slide in from below and fade in
+        Animated.parallel([
+          Animated.timing(translateY, {
+            toValue: 0,
+            duration: 400,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration: 340,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+    }, 7500);
+
     return () => clearInterval(timer);
   }, []);
 
-  const currentQuote = QUOTES[quoteIndex];
+  const currentQuote = QUOTES[quoteIndex] || QUOTES[0];
 
-  // 14-day strip numbers (13 Sep to 26 Sep)
-  const twoWeeksDays = [
-    { num: 13, dow: 'S', dots: 0 },
-    { num: 14, dow: 'M', dots: 2 },
-    { num: 15, dow: 'T', dots: 0 },
-    { num: 16, dow: 'W', dots: 0 },
-    { num: 17, dow: 'T', dots: 0 },
-    { num: 18, dow: 'F', dots: 1 },
-    { num: 19, dow: 'S', dots: 0 },
-    { num: 20, dow: 'S', dots: 0 },
-    { num: 21, dow: 'M', dots: 0 },
-    { num: 22, dow: 'T', dots: 1 },
-    { num: 23, dow: 'W', dots: 0 },
-    { num: 24, dow: 'T', dots: 0 },
-    { num: 25, dow: 'F', dots: 0 },
-    { num: 26, dow: 'S', dots: 0 },
+  // 2. Dynamic Artist Name from AsyncStorage
+  const [artistName, setArtistName] = useState('Artist');
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('@shilpi_profile');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.ownerName && parsed.ownerName.trim()) {
+            setArtistName(parsed.ownerName.trim());
+          } else if (parsed.businessName && parsed.businessName.trim()) {
+            setArtistName(parsed.businessName.trim());
+          }
+        }
+      } catch (e) {}
+    };
+    loadProfile();
+  }, []);
+
+  // 3. Live Dynamic Date
+  const now = new Date();
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const monthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  const fullMonthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
   ];
 
-  // Month grid for Sept 2026 (Starts on Tuesday, 30 days)
-  // lead 2 blanks for Sun, Mon
-  const monthLead = [null, null];
-  const monthDays = Array.from({ length: 30 }, (_, i) => i + 1);
+  const currentDow = dayNames[now.getDay()];
+  const currentDay = now.getDate();
+  const currentMonthShort = monthNames[now.getMonth()];
+  const currentMonthLong = fullMonthNames[now.getMonth()];
+  const currentYear = now.getFullYear();
+
+  const [calOpen, setCalOpen] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(currentDay);
+  const [calMonth, setCalMonth] = useState(`${currentMonthLong} ${currentYear}`);
+
+  // Dynamic 14-day calendar strip
+  const twoWeeksDays = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(now);
+    d.setDate(now.getDate() + i);
+    const dayNum = d.getDate();
+    const dow = dayNames[d.getDay()].charAt(0);
+    const mShort = monthNames[d.getMonth()];
+    const dots = bookings.filter(
+      (b) => b.day === dayNum && b.month === mShort && b.status !== 'Closed'
+    ).length;
+    return { num: dayNum, dow, month: mShort, dots };
+  });
+
+  // Dynamic Full Month days calculation
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+  const daysInCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const monthLead = Array.from({ length: firstDayOfMonth }, () => null);
+  const monthDays = Array.from({ length: daysInCurrentMonth }, (_, i) => i + 1);
 
   const getDotsForDay = (d: number) => {
-    return bookings.filter((b) => b.month === 'Sep' && b.day === d && b.status !== 'Closed').length;
+    return bookings.filter(
+      (b) => b.month === currentMonthShort && b.day === d && b.status !== 'Closed'
+    ).length;
   };
 
   const selectedDayBookings = bookings.filter(
-    (b) => b.month === 'Sep' && b.day === selectedDay && b.status !== 'Closed'
+    (b) => b.day === selectedDay && b.status !== 'Closed'
   );
 
-  const thisWeekBookings = bookings.filter(
-    (b) => b.month === 'Sep' && b.day <= 18 && b.status === 'Upcoming'
-  );
+  const thisWeekBookings = bookings.filter((b) => b.status === 'Upcoming');
 
   const laterThisMonthBookings = bookings.filter(
-    (b) => b.month === 'Sep' && b.day > 18 && b.status === 'Upcoming'
+    (b) => b.month === currentMonthShort && b.day > currentDay + 7 && b.status === 'Upcoming'
   );
+
+  // 4. Dynamic KPI Calculations
+  const thisMonthBookings = bookings.filter(
+    (b) => b.status !== 'Closed'
+  );
+
+  const toCollect = bookings
+    .filter((b) => b.status === 'Upcoming')
+    .reduce((sum, b) => {
+      const bTotal = b.items.reduce((s, item) => s + item.price, 0) + (b.travel || 0);
+      const bBal = Math.max(0, bTotal - (b.advance || 0));
+      return sum + bBal;
+    }, 0);
+
+  const monthSales = thisMonthBookings.reduce((sum, b) => {
+    const bTotal = b.items.reduce((s, item) => s + item.price, 0) + (b.travel || 0);
+    return sum + bTotal;
+  }, 0);
+
+  const monthExpenses = 0;
+  const monthProfit = Math.max(0, monthSales - monthExpenses);
 
   return (
     <ScrollView
@@ -89,103 +182,134 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <View style={styles.inkCard}>
         <View>
           <Text style={styles.kicker}>GOOD MORNING</Text>
-          <Text style={styles.artistName}>Shilpa R.</Text>
+          <Text style={styles.artistName}>{artistName}</Text>
         </View>
         <View style={styles.dateBlock}>
-          <Text style={styles.dateDay}>Mon</Text>
-          <Text style={styles.dateNumber}>14 Sep</Text>
-          <Text style={styles.dateYear}>2026</Text>
+          <Text style={styles.dateDay}>{currentDow}</Text>
+          <Text style={styles.dateNumber}>{currentDay} {currentMonthShort}</Text>
+          <Text style={styles.dateYear}>{currentYear}</Text>
         </View>
       </View>
 
-      {/* 2. Rolling Inspirational Quote Card */}
+      {/* 2. Animated Inspirational Quote Card with vertical transition */}
       <View style={styles.quoteCard}>
         <View style={styles.quoteAccentBar} />
-        <View style={styles.quoteContent}>
-          <Text style={styles.quoteTitle}>{currentQuote.title}</Text>
-          <Text style={styles.quoteSubtitle}>{currentQuote.subtitle}</Text>
+        <View style={styles.quoteContainer}>
+          <Animated.View
+            style={[
+              styles.quoteAnimatedBox,
+              {
+                opacity,
+                transform: [{ translateY }],
+              },
+            ]}
+          >
+            <Text style={styles.quoteTitle} numberOfLines={2}>
+              {currentQuote.title}
+            </Text>
+            <Text style={styles.quoteSubtitle} numberOfLines={2}>
+              {currentQuote.subtitle}
+            </Text>
+          </Animated.View>
         </View>
       </View>
 
-      {/* 3. 6-KPI Metrics Grid */}
+      {/* 3. 6-KPI Metrics Grid (100% dynamic from real data) */}
       <View style={styles.statsGrid}>
         {/* Row 1 */}
         <View style={styles.statCardWhite}>
           <Text style={styles.statLabel}>THIS WEEK</Text>
-          <Text style={styles.statValue}>3 bookings</Text>
+          <Text style={styles.statValue}>
+            {thisWeekBookings.length} {thisWeekBookings.length === 1 ? 'booking' : 'bookings'}
+          </Text>
         </View>
         <View style={styles.statCardWhite}>
           <Text style={styles.statLabel}>THIS MONTH</Text>
-          <Text style={styles.statValue}>11 bookings</Text>
+          <Text style={styles.statValue}>
+            {thisMonthBookings.length} {thisMonthBookings.length === 1 ? 'booking' : 'bookings'}
+          </Text>
         </View>
         <View style={styles.statCardPink}>
           <Text style={styles.statLabelPink}>TO COLLECT</Text>
-          <Text style={styles.statValuePink}>{fmt(18000)}</Text>
+          <Text style={styles.statValuePink}>{fmt(toCollect)}</Text>
         </View>
 
         {/* Row 2 */}
         <View style={styles.statCardWhite}>
-          <Text style={styles.statLabel}>SEPT SALES</Text>
-          <Text style={styles.statValue}>{fmt(125000)}</Text>
+          <Text style={styles.statLabel}>{currentMonthShort.toUpperCase()} SALES</Text>
+          <Text style={styles.statValue}>{fmt(monthSales)}</Text>
         </View>
         <View style={styles.statCardWhite}>
-          <Text style={styles.statLabel}>SEPT EXPENSES</Text>
-          <Text style={styles.statValue}>{fmt(35000)}</Text>
+          <Text style={styles.statLabel}>{currentMonthShort.toUpperCase()} EXPENSES</Text>
+          <Text style={styles.statValue}>{fmt(monthExpenses)}</Text>
         </View>
         <View style={styles.statCardPeach}>
-          <Text style={styles.statLabel}>SEPT PROFIT</Text>
-          <Text style={styles.statValue}>{fmt(90000)}</Text>
+          <Text style={styles.statLabel}>{currentMonthShort.toUpperCase()} PROFIT</Text>
+          <Text style={styles.statValue}>{fmt(monthProfit)}</Text>
         </View>
       </View>
 
       {/* 4. This Week Section */}
       <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionTitle}>THIS WEEK · 3 BOOKINGS</Text>
-        <TouchableOpacity onPress={onOpenOrders} activeOpacity={0.7}>
-          <Text style={styles.allLink}>ALL</Text>
-        </TouchableOpacity>
+        <Text style={styles.sectionTitle}>
+          THIS WEEK · {thisWeekBookings.length} {thisWeekBookings.length === 1 ? 'BOOKING' : 'BOOKINGS'}
+        </Text>
+        {thisWeekBookings.length > 0 && (
+          <TouchableOpacity onPress={onOpenOrders} activeOpacity={0.7}>
+            <Text style={styles.allLink}>ALL</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      <View style={styles.bookingListCard}>
-        {thisWeekBookings.map((b) => {
-          const total = b.items.reduce((sum, item) => sum + item.price, 0) + b.travel;
-          const balance = total - b.advance;
+      {thisWeekBookings.length > 0 ? (
+        <View style={styles.bookingListCard}>
+          {thisWeekBookings.map((b) => {
+            const total = b.items.reduce((sum, item) => sum + item.price, 0) + b.travel;
+            const balance = total - b.advance;
 
-          return (
-            <TouchableOpacity
-              key={b.id}
-              style={styles.bookingRow}
-              onPress={() => onOpenBooking(b.id)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.timeColumn}>
-                <Text style={styles.timeText}>{b.time}</Text>
-                <Text style={styles.meridiemText}>{b.meridiem}</Text>
-              </View>
+            return (
+              <TouchableOpacity
+                key={b.id}
+                style={styles.bookingRow}
+                onPress={() => onOpenBooking(b.id)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.timeColumn}>
+                  <Text style={styles.timeText}>{b.time}</Text>
+                  <Text style={styles.meridiemText}>{b.meridiem}</Text>
+                </View>
 
-              <View style={styles.bookingDetails}>
-                <Text style={styles.clientName}>{b.client}</Text>
-                <Text style={styles.packagesText}>
-                  {b.items.map((i) => i.name).join(' + ')}
-                </Text>
-                <Text style={styles.venueText}>{b.venue}</Text>
-              </View>
+                <View style={styles.bookingDetails}>
+                  <Text style={styles.clientName}>{b.client}</Text>
+                  <Text style={styles.packagesText}>
+                    {b.items.map((i) => i.name).join(' + ')}
+                  </Text>
+                  <Text style={styles.venueText}>{b.venue}</Text>
+                </View>
 
-              <View style={styles.amountColumn}>
-                <Text style={styles.totalAmount}>{fmt(total)}</Text>
-                <Text
-                  style={[
-                    styles.balancePill,
-                    balance > 0 ? styles.balanceDueText : styles.paidText,
-                  ]}
-                >
-                  {balance > 0 ? `${fmt(balance)} due` : 'Paid'}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+                <View style={styles.amountColumn}>
+                  <Text style={styles.totalAmount}>{fmt(total)}</Text>
+                  <Text
+                    style={[
+                      styles.balancePill,
+                      balance > 0 ? styles.balanceDueText : styles.paidText,
+                    ]}
+                  >
+                    {balance > 0 ? `${fmt(balance)} due` : 'Paid'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : (
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyCardTitle}>No bookings this week</Text>
+          <Text style={styles.emptyCardSub}>
+            Tap the ＋ button below to create your first client booking.
+          </Text>
+        </View>
+      )}
 
       {/* 5. Collapsible Calendar */}
       <TouchableOpacity
@@ -212,7 +336,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           contentContainerStyle={styles.twoWeeksStrip}
         >
           {twoWeeksDays.map((d) => {
-            const isToday = d.num === 14;
+            const isToday = d.num === currentDay;
             const isSel = selectedDay === d.num;
 
             return (
@@ -288,7 +412,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             ))}
             {monthDays.map((d) => {
               const dots = getDotsForDay(d);
-              const isToday = d === 14;
+              const isToday = d === currentDay;
               const isSel = selectedDay === d;
 
               return (
@@ -331,68 +455,78 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <View style={styles.selectedDayBox}>
             <Text style={styles.selectedDayTitle}>
               {selectedDayBookings.length} BOOKING
-              {selectedDayBookings.length === 1 ? '' : 'S'} ON {selectedDay} SEP
+              {selectedDayBookings.length === 1 ? '' : 'S'} ON {selectedDay} {currentMonthShort.toUpperCase()}
             </Text>
-            {selectedDayBookings.map((b) => (
-              <TouchableOpacity
-                key={b.id}
-                style={styles.selectedDayItem}
-                onPress={() => onOpenBooking(b.id)}
-              >
-                <Text style={styles.selectedDayTime}>{b.time} {b.meridiem}</Text>
-                <Text style={styles.selectedDayClient}>{b.client}</Text>
-                <Text style={styles.selectedDayVenue}>{b.venue}</Text>
-              </TouchableOpacity>
-            ))}
+            {selectedDayBookings.length > 0 ? (
+              selectedDayBookings.map((b) => (
+                <TouchableOpacity
+                  key={b.id}
+                  style={styles.selectedDayItem}
+                  onPress={() => onOpenBooking(b.id)}
+                >
+                  <Text style={styles.selectedDayTime}>{b.time} {b.meridiem}</Text>
+                  <Text style={styles.selectedDayClient}>{b.client}</Text>
+                  <Text style={styles.selectedDayVenue}>{b.venue}</Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <Text style={styles.selectedDayEmptyText}>
+                No bookings scheduled for this date.
+              </Text>
+            )}
           </View>
         </View>
       )}
 
-      {/* 6. Later this month */}
-      <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionTitle}>LATER THIS MONTH</Text>
-      </View>
+      {/* 6. Later this month (only if bookings exist) */}
+      {laterThisMonthBookings.length > 0 && (
+        <>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>LATER THIS MONTH</Text>
+          </View>
 
-      <View style={styles.bookingListCard}>
-        {laterThisMonthBookings.map((b) => {
-          const total = b.items.reduce((sum, item) => sum + item.price, 0) + b.travel;
-          const balance = total - b.advance;
+          <View style={styles.bookingListCard}>
+            {laterThisMonthBookings.map((b) => {
+              const total = b.items.reduce((sum, item) => sum + item.price, 0) + b.travel;
+              const balance = total - b.advance;
 
-          return (
-            <TouchableOpacity
-              key={b.id}
-              style={styles.bookingRow}
-              onPress={() => onOpenBooking(b.id)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.timeColumn}>
-                <Text style={styles.timeText}>{b.day} Sep</Text>
-                <Text style={styles.meridiemText}>{b.time} {b.meridiem}</Text>
-              </View>
-
-              <View style={styles.bookingDetails}>
-                <Text style={styles.clientName}>{b.client}</Text>
-                <Text style={styles.packagesText}>
-                  {b.items.map((i) => i.name).join(' + ')}
-                </Text>
-                <Text style={styles.venueText}>{b.venue}</Text>
-              </View>
-
-              <View style={styles.amountColumn}>
-                <Text style={styles.totalAmount}>{fmt(total)}</Text>
-                <Text
-                  style={[
-                    styles.balancePill,
-                    balance > 0 ? styles.balanceDueText : styles.paidText,
-                  ]}
+              return (
+                <TouchableOpacity
+                  key={b.id}
+                  style={styles.bookingRow}
+                  onPress={() => onOpenBooking(b.id)}
+                  activeOpacity={0.7}
                 >
-                  {balance > 0 ? `${fmt(balance)} due` : 'Paid'}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+                  <View style={styles.timeColumn}>
+                    <Text style={styles.timeText}>{b.day} {b.month}</Text>
+                    <Text style={styles.meridiemText}>{b.time} {b.meridiem}</Text>
+                  </View>
+
+                  <View style={styles.bookingDetails}>
+                    <Text style={styles.clientName}>{b.client}</Text>
+                    <Text style={styles.packagesText}>
+                      {b.items.map((i) => i.name).join(' + ')}
+                    </Text>
+                    <Text style={styles.venueText}>{b.venue}</Text>
+                  </View>
+
+                  <View style={styles.amountColumn}>
+                    <Text style={styles.totalAmount}>{fmt(total)}</Text>
+                    <Text
+                      style={[
+                        styles.balancePill,
+                        balance > 0 ? styles.balanceDueText : styles.paidText,
+                      ]}
+                    >
+                      {balance > 0 ? `${fmt(balance)} due` : 'Paid'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </>
+      )}
 
       <View style={{ height: 100 }} />
     </ScrollView>
@@ -469,8 +603,15 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: Colors.accent,
   },
-  quoteContent: {
+  quoteContainer: {
     flex: 1,
+    height: 52,
+    overflow: 'hidden',
+    justifyContent: 'center',
+  },
+  quoteAnimatedBox: {
+    height: 52,
+    justifyContent: 'center',
   },
   quoteTitle: {
     fontSize: 14,
@@ -483,6 +624,35 @@ const styles = StyleSheet.create({
     color: 'rgba(18, 18, 18, 0.6)',
     marginTop: 2,
     lineHeight: 16,
+  },
+  emptyCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    marginHorizontal: 16,
+    paddingVertical: 26,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(18, 18, 18, 0.06)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  emptyCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#121212',
+    letterSpacing: -0.2,
+  },
+  emptyCardSub: {
+    fontSize: 12,
+    color: 'rgba(18, 18, 18, 0.55)',
+    textAlign: 'center',
+    marginTop: 5,
+    lineHeight: 17,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -851,5 +1021,11 @@ const styles = StyleSheet.create({
   selectedDayVenue: {
     fontSize: 11,
     color: 'rgba(18, 18, 18, 0.55)',
+  },
+  selectedDayEmptyText: {
+    fontSize: 12,
+    color: 'rgba(18, 18, 18, 0.55)',
+    fontStyle: 'italic',
+    paddingVertical: 4,
   },
 });

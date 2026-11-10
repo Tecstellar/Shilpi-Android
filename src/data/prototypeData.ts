@@ -344,6 +344,10 @@ export const INITIAL_NOTIFS: NotificationItem[] = [
 
 export const QUOTES = [
   {
+    title: 'Artist who makes every moment beautiful.',
+    subtitle: 'Behind every radiant smile is your craft, patience, and magic.',
+  },
+  {
     title: 'You are a hard worker.',
     subtitle: 'We see the effort you put in every single day.',
   },

@@ -15,7 +15,7 @@ interface TopHeaderProps {
 export const TopHeader: React.FC<TopHeaderProps> = ({
   screen,
   title,
-  hasUnread = true,
+  hasUnread = false,
   onOpenMenu,
   onGoBack,
   onOpenNotifications,
@@ -25,7 +25,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
   return (
     <View style={styles.headerBlack}>
-      {/* Left section: Hamburger / Back button + Left-aligned prominent Shilpi Lockup */}
+      {/* Left section: Hamburger / Back button + Close-by prominent Shilpi Lockup with a little gap */}
       <View style={styles.leftGroup}>
         {isRoot ? (
           <TouchableOpacity
@@ -34,7 +34,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             activeOpacity={0.7}
           >
-            {/* Hamburger 3-line icon */}
+            {/* Hamburger 3-line vector icon */}
             <View style={styles.hamburger}>
               <View style={styles.hamburgerLine} />
               <View style={styles.hamburgerLine} />
@@ -95,8 +95,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 const styles = StyleSheet.create({
   headerBlack: {
     backgroundColor: '#000000',
-    paddingTop: Platform.OS === 'ios' ? 52 : 36,
-    paddingBottom: 14,
+    paddingTop: Platform.OS === 'ios' ? 8 : 10,
+    paddingBottom: 10,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -106,10 +106,9 @@ const styles = StyleSheet.create({
   leftGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
   },
   iconBtn: {
-    padding: 4,
+    padding: 6,
     position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
@@ -135,12 +134,14 @@ const styles = StyleSheet.create({
   logoLarge: {
     height: 38,
     width: 175,
+    marginLeft: 10, // Close to menu bar with a tasteful 10px gap
   },
   screenTitle: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 1.5,
+    marginLeft: 10,
   },
   rightAction: {
     alignItems: 'flex-end',
@@ -148,8 +149,8 @@ const styles = StyleSheet.create({
   },
   unreadDot: {
     position: 'absolute',
-    top: 2,
-    right: 2,
+    top: 4,
+    right: 4,
     width: 8,
     height: 8,
     borderRadius: 4,

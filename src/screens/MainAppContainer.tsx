@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../theme/colors';
 import {
-  INITIAL_CLIENTS,
-  INITIAL_BOOKINGS,
   INITIAL_PKG_GROUPS,
-  INITIAL_NOTIFS,
   Client,
   Booking,
   PackageGroup,
@@ -48,21 +46,62 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   // Navigation State
   const [activeTab, setActiveTab] = useState<'clients' | 'home' | 'orders'>('home');
   const [currentScreen, setCurrentScreen] = useState<string>('home');
-  const [selectedClientId, setSelectedClientId] = useState<number>(1);
-  const [selectedOrderId, setSelectedOrderId] = useState<string>('b1');
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   // Drawer & Sheet States
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeSheet, setActiveSheet] = useState<ActionSheetData | null>(null);
 
-  // App Data State
-  const [clients, setClients] = useState<Client[]>(INITIAL_CLIENTS);
-  const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
+  // App Data State — Clean initial state (starts empty, persisted in AsyncStorage)
+  const [clients, setClients] = useState<Client[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [packageGroups, setPackageGroups] = useState<PackageGroup[]>(INITIAL_PKG_GROUPS);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFS);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [artistName, setArtistName] = useState('Artist');
 
-  const selectedClient = clients.find((c) => c.id === selectedClientId) || clients[0];
-  const selectedBooking = bookings.find((b) => b.id === selectedOrderId) || bookings[0];
+  // Load storage data on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const storedProfile = await AsyncStorage.getItem('@shilpi_profile');
+        if (storedProfile) {
+          const parsed = JSON.parse(storedProfile);
+          if (parsed.ownerName?.trim()) {
+            setArtistName(parsed.ownerName.trim());
+          } else if (parsed.businessName?.trim()) {
+            setArtistName(parsed.businessName.trim());
+          }
+        }
+
+        const storedClients = await AsyncStorage.getItem('@shilpi_clients');
+        if (storedClients) {
+          setClients(JSON.parse(storedClients));
+        }
+
+        const storedBookings = await AsyncStorage.getItem('@shilpi_bookings');
+        if (storedBookings) {
+          setBookings(JSON.parse(storedBookings));
+        }
+
+        const storedNotifs = await AsyncStorage.getItem('@shilpi_notifs');
+        if (storedNotifs) {
+          setNotifications(JSON.parse(storedNotifs));
+        }
+
+        const storedPackages = await AsyncStorage.getItem('@shilpi_packages');
+        if (storedPackages) {
+          setPackageGroups(JSON.parse(storedPackages));
+        }
+      } catch (e) {
+        console.warn('Failed to load storage data:', e);
+      }
+    };
+    loadData();
+  }, []);
+
+  const selectedClient = clients.find((c) => c.id === selectedClientId) || clients[0] || null;
+  const selectedBooking = bookings.find((b) => b.id === selectedOrderId) || bookings[0] || null;
 
   // Screen titles dictionary matching prototype
   const TITLES: Record<string, string> = {
@@ -108,40 +147,49 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     orderId: string,
     status: 'Upcoming' | 'Completed' | 'Closed'
   ) => {
-    setBookings((prev) =>
-      prev.map((b) => (b.id === orderId ? { ...b, status } : b))
-    );
+    const updated = bookings.map((b) => (b.id === orderId ? { ...b, status } : b));
+    setBookings(updated);
+    AsyncStorage.setItem('@shilpi_bookings', JSON.stringify(updated)).catch(() => {});
   };
 
   const handleSaveBooking = (newBookingData: Partial<Booking>) => {
     const newId = `b_${Date.now()}`;
+    const now = new Date();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentMonth = months[now.getMonth()];
+
     const newBooking: Booking = {
       id: newId,
       ref: newBookingData.ref || `Booking #${Math.floor(1000 + Math.random() * 9000)}`,
       client: newBookingData.client || 'Client',
-      day: newBookingData.day || 26,
-      month: newBookingData.month || 'Sep',
-      dateLong: newBookingData.dateLong || 'Sat 26 Sep 2026',
-      time: newBookingData.time || '6:30',
+      day: newBookingData.day || now.getDate(),
+      month: newBookingData.month || currentMonth,
+      dateLong: newBookingData.dateLong || `${now.getDate()} ${currentMonth} ${now.getFullYear()}`,
+      time: newBookingData.time || '10:00',
       meridiem: newBookingData.meridiem || 'AM',
       items: newBookingData.items || [{ name: 'Bridal Makeup', price: 15000 }],
       travel: newBookingData.travel || 0,
       advance: newBookingData.advance || 0,
       status: 'Upcoming',
       venue: newBookingData.venue || 'Residence',
-      address: newBookingData.address || 'Coimbatore',
+      address: newBookingData.address || '',
       notes: newBookingData.notes || '',
     };
 
-    setBookings((prev) => [newBooking, ...prev]);
+    const updated = [newBooking, ...bookings];
+    setBookings(updated);
+    AsyncStorage.setItem('@shilpi_bookings', JSON.stringify(updated)).catch(() => {});
+
     setCurrentScreen('orders');
     setActiveTab('orders');
 
     // Trigger WhatsApp confirmation sheet
+    const total = newBooking.items.reduce((s, i) => s + i.price, 0) + newBooking.travel;
+    const balance = total - newBooking.advance;
     setActiveSheet({
       kicker: 'BOOKING SAVED',
       title: `Send confirmation to ${first(newBooking.client)}?`,
-      message: `Hi ${first(newBooking.client)}, your booking is confirmed.\n\n${newBooking.dateLong} · ${newBooking.time} ${newBooking.meridiem}\n${newBooking.items.map((i) => i.name).join(' + ')}\n${newBooking.venue}\n\nTotal ${fmt(newBooking.items.reduce((s, i) => s + i.price, 0) + newBooking.travel)} · Advance ${fmt(newBooking.advance)}\n\n— Shilpa R., Shilpi`,
+      message: `Hi ${first(newBooking.client)}, your booking is confirmed.\n\n${newBooking.dateLong} · ${newBooking.time} ${newBooking.meridiem}\n${newBooking.items.map((i) => i.name).join(' + ')}\n${newBooking.venue}\n\nTotal ${fmt(total)} · Advance ${fmt(newBooking.advance)} · Balance ${fmt(balance)}\n\n— ${artistName}, Shilpi`,
       cta: 'Send on WhatsApp',
     });
   };
@@ -150,25 +198,26 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     const newClient: Client = {
       id: Date.now(),
       name: clientData.name || 'New Client',
-      phone: clientData.phone || '+91 98000 00000',
-      bookings: 1,
+      phone: clientData.phone || '+91 ',
+      bookings: 0,
       sales: 0,
       profit: 0,
       history: [],
     };
-    setClients((prev) => [newClient, ...prev]);
+    const updated = [newClient, ...clients];
+    setClients(updated);
+    AsyncStorage.setItem('@shilpi_clients', JSON.stringify(updated)).catch(() => {});
+
     setCurrentScreen('clients');
     setActiveTab('clients');
   };
 
   const handleAddPackage = (groupName: string, name: string, price: number) => {
-    setPackageGroups((prev) =>
-      prev.map((g) =>
-        g.name === groupName
-          ? { ...g, items: [...g.items, { name, price }] }
-          : g
-      )
+    const updated = packageGroups.map((g) =>
+      g.name === groupName ? { ...g, items: [...g.items, { name, price }] } : g
     );
+    setPackageGroups(updated);
+    AsyncStorage.setItem('@shilpi_packages', JSON.stringify(updated)).catch(() => {});
   };
 
   // WhatsApp Confirm Sheet Trigger
@@ -178,7 +227,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     setActiveSheet({
       kicker: 'WHATSAPP · ORDER CONFIRMATION',
       title: `Send to ${order.client}?`,
-      message: `Hi ${first(order.client)}, your booking is confirmed.\n\n${order.dateLong} · ${order.time} ${order.meridiem}\n${order.items.map((i) => i.name).join(' + ')}\n${order.venue}\n\nTotal ${fmt(total)} · Advance ${fmt(order.advance)} · Balance ${fmt(balance)}\n\n— Shilpa R., Shilpi`,
+      message: `Hi ${first(order.client)}, your booking is confirmed.\n\n${order.dateLong} · ${order.time} ${order.meridiem}\n${order.items.map((i) => i.name).join(' + ')}\n${order.venue}\n\nTotal ${fmt(total)} · Advance ${fmt(order.advance)} · Balance ${fmt(balance)}\n\n— ${artistName}, Shilpi`,
       cta: 'Send Message',
     });
   };
@@ -189,7 +238,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     setActiveSheet({
       kicker: 'WHATSAPP · ORDER CLOSED',
       title: `Thank ${order.client} and ask for review?`,
-      message: `Thank you ${first(order.client)}! It was lovely working with you.\n\nIf you liked the look, a photo or a review would mean a lot — I would love to add it to my portfolio.\n\n— Shilpa R., Shilpi`,
+      message: `Thank you ${first(order.client)}! It was lovely working with you.\n\nIf you liked the look, a photo or a review would mean a lot — I would love to add it to my portfolio.\n\n— ${artistName}, Shilpi`,
       cta: 'Send Review Request',
       onConfirm: () => {
         setCurrentScreen('gallery');
@@ -202,7 +251,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     setActiveSheet({
       kicker: 'WHATSAPP DIRECT',
       title: `Message ${clientName}?`,
-      message: `Hi ${first(clientName)}, hope you are doing well! Let me know if you have any upcoming dates — happy to block them for you.\n\n— Shilpa R., Shilpi`,
+      message: `Hi ${first(clientName)}, hope you are doing well! Let me know if you have any upcoming dates — happy to block them for you.\n\n— ${artistName}, Shilpi`,
       cta: 'Open WhatsApp',
     });
   };
@@ -211,9 +260,9 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   const handleOpenRemindSheet = () => {
     setActiveSheet({
       kicker: 'WHATSAPP · PAYMENT REMINDER',
-      title: 'Remind 2 clients about pending balance?',
-      message: `Hi Divya, a gentle reminder — a balance of ₹10,000 is pending for your reception booking on 14 Sep. You can pay by UPI to shilpa@upi.\n\nThank you!`,
-      cta: 'Send 2 Reminders',
+      title: 'Send reminder for pending balance?',
+      message: `Hi, a gentle reminder — your pending booking balance is due. You can pay by UPI.\n\nThank you!\n— ${artistName}, Shilpi`,
+      cta: 'Send Reminder',
     });
   };
 
@@ -273,7 +322,11 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         )}
 
         {currentScreen === 'clients' && (
-          <ClientsScreen clients={clients} onOpenClient={handleOpenClient} />
+          <ClientsScreen
+            clients={clients}
+            onOpenClient={handleOpenClient}
+            onStartNewClient={() => setCurrentScreen('newclient')}
+          />
         )}
 
         {currentScreen === 'client' && (
@@ -285,7 +338,11 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         )}
 
         {currentScreen === 'orders' && (
-          <OrdersScreen bookings={bookings} onOpenBooking={handleOpenBooking} />
+          <OrdersScreen
+            bookings={bookings}
+            onOpenBooking={handleOpenBooking}
+            onStartNewBooking={() => setCurrentScreen('newbooking')}
+          />
         )}
 
         {currentScreen === 'order' && (
@@ -398,7 +455,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f6',
+    backgroundColor: '#000000',
   },
   content: {
     flex: 1,
