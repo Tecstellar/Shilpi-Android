@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Platform } from 'react-native';
 import { Colors } from '../theme/colors';
 import {
   INITIAL_CLIENTS,
@@ -407,17 +407,17 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 18,
-    bottom: 84,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    bottom: Platform.OS === 'ios' ? 94 : 84,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     backgroundColor: Colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 99,
-    shadowColor: '#000000',
+    shadowColor: Colors.accent,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.28,
+    shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 10,
   },

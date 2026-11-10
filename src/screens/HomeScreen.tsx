@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f4f6',
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: 110,
   },
   inkCard: {
     backgroundColor: '#121212',
