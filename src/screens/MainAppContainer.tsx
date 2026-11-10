@@ -49,6 +49,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [bookingInitialDate, setBookingInitialDate] = useState<number | undefined>();
+  const [bookingClientName, setBookingClientName] = useState<string | undefined>();
 
   // Drawer & Sheet States
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -209,7 +210,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     });
   };
 
-  const handleSaveClient = (clientData: Partial<Client>) => {
+  const handleSaveClient = (clientData: Partial<Client>, thenCreateBooking?: boolean) => {
     const newClient: Client = {
       id: Date.now(),
       name: clientData.name || 'New Client',
@@ -218,13 +219,20 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
       sales: 0,
       profit: 0,
       history: [],
+      notes: clientData.notes,
+      photoUri: clientData.photoUri,
     };
     const updated = [newClient, ...clients];
     setClients(updated);
     AsyncStorage.setItem('@shilpi_clients', JSON.stringify(updated)).catch(() => {});
 
-    setCurrentScreen('clients');
-    setActiveTab('clients');
+    if (thenCreateBooking) {
+      setBookingClientName(newClient.name);
+      setCurrentScreen('newbooking');
+    } else {
+      setCurrentScreen('clients');
+      setActiveTab('clients');
+    }
   };
 
   const handleAddPackage = (groupName: string, name: string, price: number) => {
@@ -371,6 +379,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             clients={clients}
             packageGroups={packageGroups}
             initialDay={bookingInitialDate}
+            initialClientName={bookingClientName}
             onSaveBooking={handleSaveBooking}
             onGoBack={handleGoBack}
             onStartNewClient={() => setCurrentScreen('newclient')}

@@ -8,6 +8,8 @@ export interface Client {
   sales: number;
   profit: number;
   history: { date: string; pkg: string; amount: number }[];
+  photoUri?: string;
+  notes?: string;
 }
 
 export interface BookingItem {
