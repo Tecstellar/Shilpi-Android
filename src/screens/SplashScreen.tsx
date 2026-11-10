@@ -125,19 +125,6 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
           <IntroVideoPlayer onEnd={() => setVideoFinished(true)} />
         </VideoErrorBoundary>
       )}
-
-      {/* Tap anywhere to skip */}
-      <TouchableOpacity
-        style={styles.touchOverlay}
-        activeOpacity={1}
-        onPress={() => setVideoFinished(true)}
-      >
-        <View style={styles.footerOverlay}>
-          <Text style={styles.tapToContinue}>
-            Tap anywhere to skip
-          </Text>
-        </View>
-      </TouchableOpacity>
     </View>
   );
 };

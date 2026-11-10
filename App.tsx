@@ -6,11 +6,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SplashScreen } from './src/screens/SplashScreen';
 import { LoginPhoneScreen } from './src/screens/LoginPhoneScreen';
 import { LoginOtpScreen } from './src/screens/LoginOtpScreen';
-import { OnboardingWizardScreen } from './src/screens/OnboardingWizardScreen';
+import { SetupScreen } from './src/screens/SetupScreen';
 import { MainAppContainer } from './src/screens/MainAppContainer';
 import { QrScannerScreen } from './src/screens/QrScannerScreen';
 
-type ScreenState = 'splash' | 'login_phone' | 'login_otp' | 'onboarding' | 'dashboard' | 'qr_scanner';
+type ScreenState = 'splash' | 'login_phone' | 'login_otp' | 'setup' | 'dashboard' | 'qr_scanner';
 
 export default function App() {
   const [screen, setScreen] = useState<ScreenState>('splash');
@@ -54,19 +54,15 @@ export default function App() {
         <LoginOtpScreen
           phone={authPhone}
           onGoBack={() => setScreen('login_phone')}
-          onVerified={(isNewUser) => {
-            if (isNewUser) {
-              setScreen('onboarding');
-            } else {
-              setScreen('dashboard');
-            }
+          onVerified={() => {
+            setScreen('setup');
           }}
         />
       )}
 
-      {/* 4. Onboarding 4-Step Wizard */}
-      {screen === 'onboarding' && (
-        <OnboardingWizardScreen
+      {/* 4. Complete Prototype Setup Screen */}
+      {screen === 'setup' && (
+        <SetupScreen
           phone={authPhone}
           onCompleted={() => setScreen('dashboard')}
         />
