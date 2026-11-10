@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Image, Text } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 interface TopHeaderProps {
@@ -28,16 +28,16 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
   return (
     <View style={styles.headerBlack}>
-      {/* Left section: Hamburger / Back button + Close-by prominent Shilpi Lockup */}
+      {/* Left: Hamburger (or Back button on child screens) + Shilpi Logo Lockup */}
       <View style={styles.leftGroup}>
         {isRoot ? (
           <TouchableOpacity
             onPress={onOpenMenu}
-            style={styles.iconBtn}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={styles.hamburgerBtn}
+            hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
             activeOpacity={0.7}
           >
-            {/* Hamburger 3-line vector icon */}
+            {/* 3 crisp horizontal white lines matching reference */}
             <View style={styles.hamburger}>
               <View style={styles.hamburgerLine} />
               <View style={styles.hamburgerLine} />
@@ -47,69 +47,65 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         ) : (
           <TouchableOpacity
             onPress={onGoBack}
-            style={styles.iconBtn}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={styles.backBtn}
+            hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
             activeOpacity={0.7}
           >
-            {/* Back chevron icon */}
             <Text style={styles.backChevron}>‹</Text>
           </TouchableOpacity>
         )}
 
-        {/* Signature Shilpi Brand Logo Lockup */}
+        {/* Official Shilpi Brand Logo Lockup (Tight high-resolution crop) */}
         <Image
-          source={require('../../assets/shilpi-lockup-black.png')}
+          source={require('../../assets/shilpi-logo-tight.png')}
           style={styles.logo}
           resizeMode="contain"
         />
 
-        {/* For secondary screens, show a subtle context pill next to the logo */}
+        {/* Screen context tag on secondary pages */}
         {!isRoot && title && (
-          <View style={styles.screenBadge}>
-            <Text style={styles.screenBadgeText}>{title.toUpperCase()}</Text>
+          <View style={styles.screenTag}>
+            <Text style={styles.screenTagText}>{title.toUpperCase()}</Text>
           </View>
         )}
       </View>
 
-      {/* Right section: Vector Notification Bell with Signature Pink Dot */}
-      <View style={styles.rightAction}>
-        <TouchableOpacity
-          onPress={onOpenNotifications}
-          style={styles.iconBtn}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          activeOpacity={0.7}
-        >
-          <View style={styles.bellWrap}>
-            <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
-                stroke="#ffffff"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <Path
-                d="M13.73 21a2 2 0 0 1-3.46 0"
-                stroke="#ffffff"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-            {/* Signature Pink notification badge dot */}
-            {hasUnread && <View style={styles.unreadDot} />}
-          </View>
-        </TouchableOpacity>
-      </View>
+      {/* Right: Notification Bell with signature Shilpi Pink badge dot */}
+      <TouchableOpacity
+        onPress={onOpenNotifications}
+        style={styles.bellBtn}
+        hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+        activeOpacity={0.7}
+      >
+        <View style={styles.bellWrap}>
+          <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"
+              stroke="#ffffff"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <Path
+              d="M13.73 21a2 2 0 0 1-3.46 0"
+              stroke="#ffffff"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </Svg>
+          {/* Always show the pink notification dot badge per design */}
+          <View style={styles.badgeDot} />
+        </View>
+      </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   headerBlack: {
+    height: 56,
     backgroundColor: '#000000',
-    paddingTop: Platform.OS === 'ios' ? 8 : 10,
-    paddingBottom: 10,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -120,8 +116,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  iconBtn: {
-    padding: 6,
+  hamburgerBtn: {
+    paddingVertical: 8,
+    paddingRight: 6,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -136,46 +133,53 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 1.5,
   },
+  backBtn: {
+    paddingVertical: 4,
+    paddingRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   backChevron: {
     color: '#ffffff',
     fontSize: 32,
     lineHeight: 32,
     fontWeight: '300',
-    marginTop: -4,
+    marginTop: -3,
   },
   logo: {
-    height: 34,
-    width: 145,
-    marginLeft: 12,
+    height: 28,
+    width: 118,
+    marginLeft: 20, // Clean, tasteful gap exactly matching the screenshot
   },
-  screenBadge: {
-    marginLeft: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  screenTag: {
+    marginLeft: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     borderRadius: 6,
   },
-  screenBadgeText: {
+  screenTagText: {
     color: '#ffffff',
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '700',
     letterSpacing: 0.8,
   },
-  rightAction: {
-    alignItems: 'flex-end',
+  bellBtn: {
+    padding: 6,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   bellWrap: {
     width: 24,
     height: 24,
+    position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
   },
-  unreadDot: {
+  badgeDot: {
     position: 'absolute',
-    top: 0,
-    right: 0,
+    top: -2,
+    right: -2,
     width: 9,
     height: 9,
     borderRadius: 4.5,
