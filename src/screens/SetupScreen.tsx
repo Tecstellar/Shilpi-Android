@@ -315,14 +315,31 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
       await AsyncStorage.setItem('@shilpi_packages', JSON.stringify(packageGroups));
       await AsyncStorage.setItem('@shilpi_setup_done', 'true');
 
-      // Attempt backend persistence
+      // Attempt backend persistence to AWS RDS PostgreSQL
       try {
+        const flattenedPackages = packageGroups.flatMap((group) =>
+          group.items.map((item) => ({
+            name: item.name,
+            price: item.price,
+            serviceType: group.name.toLowerCase().includes('hair')
+              ? 'hair'
+              : group.name.toLowerCase().includes('mehendi')
+              ? 'mehendi'
+              : group.name.toLowerCase().includes('bridal')
+              ? 'bridal'
+              : 'makeup',
+          }))
+        );
+
         await apiClient.post('/auth/register', {
           phone,
           ownerName: ownerName || 'Shilpa R.',
           businessName: businessName || 'Shilpi Makeovers',
           city: city || 'Coimbatore',
           address: address || '',
+          pincode: pincode || '',
+          logoUri: logoUri || undefined,
+          packages: flattenedPackages,
         });
       } catch (err) {
         console.warn('Backend register sync skipped, using local persistence');
