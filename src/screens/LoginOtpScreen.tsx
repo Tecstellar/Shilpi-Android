@@ -55,7 +55,23 @@ export const LoginOtpScreen: React.FC<LoginOtpScreenProps> = ({ phone, onGoBack,
         if (response.data.isNewUser) {
           onVerified(true);
         } else {
-          await AsyncStorage.setItem('@shilpi_token', response.data.token);
+          if (response.data.token) {
+            await AsyncStorage.setItem('@shilpi_token', response.data.token);
+          }
+          if (response.data.beautician) {
+            await AsyncStorage.setItem(
+              '@shilpi_profile',
+              JSON.stringify({
+                ownerName: response.data.beautician.ownerName,
+                businessName: response.data.beautician.businessName,
+                city: response.data.beautician.city || '',
+                address: response.data.beautician.address || '',
+                pincode: response.data.beautician.pincode || '',
+                phone: response.data.beautician.phone || phone,
+                logoUri: response.data.beautician.profilePhotoUrl,
+              })
+            );
+          }
           onVerified(false, response.data.token);
         }
       } else {

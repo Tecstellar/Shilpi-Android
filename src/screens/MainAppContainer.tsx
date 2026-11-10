@@ -384,6 +384,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         {currentScreen === 'home' && (
           <HomeScreen
             bookings={bookings}
+            artistName={artistName}
             onOpenBooking={handleOpenBooking}
             onOpenOrders={() => handleTabChange('orders')}
             onStartNewBooking={(day) => {

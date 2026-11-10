@@ -21,6 +21,7 @@ interface HomeScreenProps {
   onOpenBooking: (bookingId: string) => void;
   onOpenOrders: () => void;
   onStartNewBooking?: (day?: number, month?: string) => void;
+  artistName?: string;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
@@ -28,6 +29,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onOpenBooking,
   onOpenOrders,
   onStartNewBooking,
+  artistName: propArtistName,
 }) => {
   // 1. Animated Quote vertical transition
   const [quoteIndex, setQuoteIndex] = useState(0);
@@ -76,8 +78,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   const currentQuote = QUOTES[quoteIndex] || QUOTES[0];
 
-  // 2. Dynamic Artist Name from AsyncStorage
-  const [artistName, setArtistName] = useState('Artist');
+  // 2. Dynamic Artist Name from Props and AsyncStorage
+  const [artistName, setArtistName] = useState(propArtistName || 'Artist');
+
+  useEffect(() => {
+    if (propArtistName && propArtistName !== 'Artist') {
+      setArtistName(propArtistName);
+    }
+  }, [propArtistName]);
 
   useEffect(() => {
     const loadProfile = async () => {

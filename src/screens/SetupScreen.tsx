@@ -373,7 +373,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
           }))
         );
 
-        await apiClient.post('/auth/register', {
+        const regRes = await apiClient.post('/auth/register', {
           phone,
           ownerName: ownerName || 'Shilpa R.',
           businessName: businessName || 'Shilpi Makeovers',
@@ -383,6 +383,24 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
           logoUri: logoUri || undefined,
           packages: flattenedPackages,
         });
+
+        if (regRes.data?.token) {
+          await AsyncStorage.setItem('@shilpi_token', regRes.data.token);
+        }
+        if (regRes.data?.beautician) {
+          await AsyncStorage.setItem(
+            '@shilpi_profile',
+            JSON.stringify({
+              ownerName: regRes.data.beautician.ownerName || ownerName,
+              businessName: regRes.data.beautician.businessName || businessName,
+              city: regRes.data.beautician.city || city,
+              address: regRes.data.beautician.address || address,
+              pincode: regRes.data.beautician.pincode || pincode,
+              phone: regRes.data.beautician.phone || phone,
+              logoUri: regRes.data.beautician.profilePhotoUrl || logoUri,
+            })
+          );
+        }
       } catch (err) {
         console.warn('Backend register sync skipped, using local persistence');
       }

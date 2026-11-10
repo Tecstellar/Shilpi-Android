@@ -77,7 +77,14 @@ export default function App() {
         <MainAppContainer
           onOpenQrScanner={() => setScreen('qr_scanner')}
           onLogout={async () => {
-            await AsyncStorage.removeItem('@shilpi_token');
+            await AsyncStorage.multiRemove([
+              '@shilpi_token',
+              '@shilpi_profile',
+              '@shilpi_clients',
+              '@shilpi_bookings',
+              '@shilpi_notifs',
+              '@shilpi_setup_done',
+            ]);
             setScreen('login_phone');
           }}
         />
