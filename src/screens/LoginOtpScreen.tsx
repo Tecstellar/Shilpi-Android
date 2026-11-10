@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../theme/colors';
@@ -94,7 +95,13 @@ export const LoginOtpScreen: React.FC<LoginOtpScreenProps> = ({ phone, onGoBack,
         </TouchableOpacity>
       </View>
 
-      <View style={styles.content}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: 60 }]}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets={true}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.kicker}>VERIFICATION</Text>
         <Text style={styles.headline}>
           Enter the code sent to{'\n'}
@@ -184,7 +191,7 @@ export const LoginOtpScreen: React.FC<LoginOtpScreenProps> = ({ phone, onGoBack,
             </Text>
           )}
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 };

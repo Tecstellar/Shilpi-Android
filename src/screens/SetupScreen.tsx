@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Platform,
   Alert,
   Image,
+  Keyboard,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
@@ -88,6 +89,34 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   phone = '+919876543210',
   onCompleted,
 }) => {
+  const scrollViewRef = useRef<any>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+      }
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const scrollToOffset = (offset: number) => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: offset, animated: true });
+    }, 120);
+  };
+
   const [currentStep, setCurrentStep] = useState<SetupStep>('profile');
 
   // Step 1: Profile State - All starting EMPTY by default as requested
@@ -234,7 +263,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.85,
@@ -404,9 +433,15 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
       </View>
 
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 120 : 160 },
+        ]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets={true}
         showsVerticalScrollIndicator={false}
       >
         {/* 2. Signature Ink Curved Header */}
@@ -437,6 +472,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                 onChangeText={setOwnerName}
                 placeholder="e.g. Shilpa R."
                 placeholderTextColor="rgba(18, 18, 18, 0.35)"
+                onFocus={() => scrollToOffset(40)}
               />
             </View>
 
@@ -449,6 +485,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                 onChangeText={setBusinessName}
                 placeholder="e.g. Shilpi Makeovers"
                 placeholderTextColor="rgba(18, 18, 18, 0.35)"
+                onFocus={() => scrollToOffset(100)}
               />
             </View>
 
@@ -476,6 +513,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                 placeholderTextColor="rgba(18, 18, 18, 0.35)"
                 multiline
                 numberOfLines={3}
+                onFocus={() => scrollToOffset(200)}
               />
             </View>
 
@@ -489,6 +527,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                   onChangeText={setCity}
                   placeholder="e.g. Coimbatore"
                   placeholderTextColor="rgba(18, 18, 18, 0.35)"
+                  onFocus={() => scrollToOffset(320)}
                 />
               </View>
 
@@ -502,6 +541,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                   placeholderTextColor="rgba(18, 18, 18, 0.35)"
                   keyboardType="numeric"
                   maxLength={6}
+                  onFocus={() => scrollToOffset(360)}
                 />
               </View>
             </View>
@@ -563,6 +603,11 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                         placeholderTextColor="rgba(18, 18, 18, 0.3)"
                         onChangeText={(txt) => handleUpdatePrice(group.name, item.id, txt)}
                         keyboardType="numeric"
+                        onFocus={() => {
+                          if (group.name.toLowerCase().includes('hair')) scrollToOffset(260);
+                          else if (group.name.toLowerCase().includes('saree')) scrollToOffset(420);
+                          else scrollToOffset(100);
+                        }}
                       />
                     </View>
                     <TouchableOpacity
@@ -589,6 +634,11 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                     placeholderTextColor="rgba(18, 18, 18, 0.35)"
                     value={newServiceName}
                     onChangeText={setNewServiceName}
+                    onFocus={() => {
+                      setTimeout(() => {
+                        scrollViewRef.current?.scrollToEnd({ animated: true });
+                      }, 120);
+                    }}
                   />
                 </View>
 
@@ -602,6 +652,11 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                       value={newServicePrice}
                       onChangeText={setNewServicePrice}
                       keyboardType="numeric"
+                      onFocus={() => {
+                        setTimeout(() => {
+                          scrollViewRef.current?.scrollToEnd({ animated: true });
+                        }, 120);
+                      }}
                     />
                   </View>
 
@@ -652,7 +707,12 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
             ) : (
               <View style={styles.addServiceActionWrap}>
                 <TouchableOpacity
-                  onPress={() => setShowAddForm(true)}
+                  onPress={() => {
+                    setShowAddForm(true);
+                    setTimeout(() => {
+                      scrollViewRef.current?.scrollToEnd({ animated: true });
+                    }, 150);
+                  }}
                   style={styles.addServiceBtn}
                   activeOpacity={0.8}
                 >
@@ -826,7 +886,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 160,
   },
   inkHeader: {
     backgroundColor: '#121212',

@@ -123,7 +123,13 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
       style={styles.screen}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
+        bounces={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets={true}
+      >
         {/* Curved Deep Black Header with Shilpi White & Gold Lockup */}
         <View style={styles.headerBlack}>
           <Image

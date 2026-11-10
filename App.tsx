@@ -54,8 +54,12 @@ export default function App() {
         <LoginOtpScreen
           phone={authPhone}
           onGoBack={() => setScreen('login_phone')}
-          onVerified={() => {
-            setScreen('setup');
+          onVerified={(isNewUser) => {
+            if (isNewUser) {
+              setScreen('setup');
+            } else {
+              setScreen('dashboard');
+            }
           }}
         />
       )}
