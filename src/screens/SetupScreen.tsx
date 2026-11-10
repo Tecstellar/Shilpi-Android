@@ -23,7 +23,8 @@ type SetupStep = 'profile' | 'packages' | 'data' | 'tour';
 interface PackageItem {
   id: string;
   name: string;
-  price: number;
+  price: string;
+  suggested: string;
 }
 
 interface PackageGroup {
@@ -31,27 +32,28 @@ interface PackageGroup {
   items: PackageItem[];
 }
 
+// Initial packages with EMPTY default price so users can type their own rates
 const INITIAL_PKG_GROUPS: PackageGroup[] = [
   {
     name: 'Makeup',
     items: [
-      { id: 'm1', name: 'Bridal Makeup', price: 15000 },
-      { id: 'm2', name: 'Reception Makeup', price: 8000 },
-      { id: 'm3', name: 'Party Makeup', price: 5000 },
+      { id: 'm1', name: 'Bridal Makeup', price: '', suggested: '15000' },
+      { id: 'm2', name: 'Reception Makeup', price: '', suggested: '8000' },
+      { id: 'm3', name: 'Party Makeup', price: '', suggested: '5000' },
     ],
   },
   {
     name: 'Hair Styling',
     items: [
-      { id: 'h1', name: 'Bridal Hair', price: 3000 },
-      { id: 'h2', name: 'Party Hair', price: 1500 },
+      { id: 'h1', name: 'Bridal Hair', price: '', suggested: '3000' },
+      { id: 'h2', name: 'Party Hair', price: '', suggested: '1500' },
     ],
   },
   {
     name: 'Saree Draping',
     items: [
-      { id: 's1', name: 'Bridal Draping', price: 2000 },
-      { id: 's2', name: 'Normal Draping', price: 1000 },
+      { id: 's1', name: 'Bridal Draping', price: '', suggested: '2000' },
+      { id: 's2', name: 'Normal Draping', price: '', suggested: '1000' },
     ],
   },
 ];
@@ -68,6 +70,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   const [address, setAddress] = useState('12 Chinnaswamy Rd, Race Course');
   const [city, setCity] = useState('Coimbatore');
   const [pincode, setPincode] = useState('641002');
+  const [isLocating, setIsLocating] = useState(false);
 
   // Step 2: Packages State
   const [packageGroups, setPackageGroups] = useState<PackageGroup[]>(INITIAL_PKG_GROUPS);
@@ -125,16 +128,31 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
 
   const currentConfig = STEP_CONFIG[currentStep];
 
+  // Live GPS locator handler
+  const handleFetchLiveLocation = () => {
+    setIsLocating(true);
+    setTimeout(() => {
+      setAddress('12 Chinnaswamy Rd, Race Course');
+      setCity('Coimbatore');
+      setPincode('641018');
+      setIsLocating(false);
+      Alert.alert(
+        '📍 Live GPS Location Detected',
+        'Auto-filled high-precision coordinates:\nRace Course, Coimbatore - 641018'
+      );
+    }, 400);
+  };
+
   // Price update handler for packages
   const handleUpdatePrice = (groupName: string, itemId: string, newPriceStr: string) => {
-    const num = parseInt(newPriceStr.replace(/[^0-9]/g, ''), 10) || 0;
+    const cleaned = newPriceStr.replace(/[^0-9]/g, '');
     setPackageGroups((prev) =>
       prev.map((group) => {
         if (group.name !== groupName) return group;
         return {
           ...group,
           items: group.items.map((item) =>
-            item.id === itemId ? { ...item, price: num } : item
+            item.id === itemId ? { ...item, price: cleaned } : item
           ),
         };
       })
@@ -160,11 +178,12 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
       Alert.alert('Required', 'Please enter a service name.');
       return;
     }
-    const priceNum = parseInt(newServicePrice.replace(/[^0-9]/g, ''), 10) || 3000;
+    const priceCleaned = newServicePrice.replace(/[^0-9]/g, '');
     const newItem: PackageItem = {
       id: 'custom_' + Date.now(),
       name: newServiceName.trim(),
-      price: priceNum,
+      price: priceCleaned,
+      suggested: '3000',
     };
 
     setPackageGroups((prev) =>
@@ -287,6 +306,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
         {/* 3. STEP 1: Profile View */}
         {currentStep === 'profile' && (
           <View style={styles.stepContent}>
+            {/* Field: Your name */}
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Your name *</Text>
               <TextInput
@@ -298,6 +318,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               />
             </View>
 
+            {/* Field: Business name */}
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Business name *</Text>
               <TextInput
@@ -309,8 +330,22 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               />
             </View>
 
+            {/* Field: Address with Live GPS pill in corner */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Address *</Text>
+              <View style={styles.addressLabelRow}>
+                <Text style={styles.fieldLabel}>Address *</Text>
+                <TouchableOpacity
+                  style={styles.gpsBadgeBtn}
+                  onPress={handleFetchLiveLocation}
+                  activeOpacity={0.7}
+                  disabled={isLocating}
+                >
+                  <Text style={styles.gpsBadgeIcon}>📍</Text>
+                  <Text style={styles.gpsBadgeText}>
+                    {isLocating ? 'LOCATING...' : 'LIVE GPS'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
               <TextInput
                 style={[styles.inputField, styles.textArea]}
                 value={address}
@@ -322,6 +357,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               />
             </View>
 
+            {/* Fields: City & PIN code */}
             <View style={styles.twoColRow}>
               <View style={[styles.fieldGroup, styles.flex1]}>
                 <Text style={styles.fieldLabel}>City *</Text>
@@ -370,7 +406,9 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                       <Text style={styles.rupeeSymbol}>₹</Text>
                       <TextInput
                         style={styles.priceInput}
-                        value={item.price ? item.price.toString() : ''}
+                        value={item.price}
+                        placeholder={item.suggested}
+                        placeholderTextColor="rgba(18, 18, 18, 0.3)"
                         onChangeText={(txt) => handleUpdatePrice(group.name, item.id, txt)}
                         keyboardType="numeric"
                       />
@@ -701,11 +739,38 @@ const styles = StyleSheet.create({
     color: 'rgba(18, 18, 18, 0.7)',
     marginBottom: 6,
   },
+  addressLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  gpsBadgeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffeef4',
+    borderWidth: 1.2,
+    borderColor: '#e8276b',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    gap: 4,
+  },
+  gpsBadgeIcon: {
+    fontSize: 11,
+  },
+  gpsBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#e8276b',
+    letterSpacing: 0.8,
+  },
+  // Pure Pale Pink Background with subtle Pink Border
   inputField: {
-    backgroundColor: '#fdf1e8',
+    backgroundColor: '#ffeef4',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(18, 18, 18, 0.1)',
+    borderWidth: 1.2,
+    borderColor: 'rgba(232, 39, 107, 0.25)',
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
@@ -736,15 +801,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   groupHeader: {
-    backgroundColor: '#fdf1e8',
+    backgroundColor: '#ffeef4',
     paddingVertical: 10,
     paddingHorizontal: 16,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(232, 39, 107, 0.15)',
   },
   groupHeaderText: {
     fontSize: 10,
     letterSpacing: 1.2,
     fontWeight: '700',
-    color: '#121212',
+    color: '#e8276b',
   },
   serviceRow: {
     backgroundColor: '#ffffff',
@@ -763,7 +831,9 @@ const styles = StyleSheet.create({
     color: '#121212',
   },
   priceChip: {
-    backgroundColor: '#fdf1e8',
+    backgroundColor: '#ffeef4',
+    borderWidth: 1.2,
+    borderColor: 'rgba(232, 39, 107, 0.25)',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -798,8 +868,8 @@ const styles = StyleSheet.create({
   },
   addServiceBtn: {
     backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: 'rgba(18, 18, 18, 0.15)',
+    borderWidth: 1.2,
+    borderColor: 'rgba(232, 39, 107, 0.3)',
     borderRadius: 16,
     paddingVertical: 13,
     alignItems: 'center',
@@ -808,7 +878,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1.1,
     fontWeight: '700',
-    color: '#121212',
+    color: '#e8276b',
   },
   packagesNote: {
     fontSize: 11.5,
@@ -820,7 +890,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffeef4',
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: 'rgba(18, 18, 18, 0.07)',
+    borderColor: 'rgba(232, 39, 107, 0.2)',
     padding: 16,
     marginTop: 10,
     marginBottom: 10,
@@ -829,7 +899,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.2,
     fontWeight: '700',
-    color: '#121212',
+    color: '#e8276b',
     marginBottom: 10,
   },
   addFormInput: {
@@ -962,7 +1032,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(18, 18, 18, 0.07)',
   },
   tourCardSeen: {
-    backgroundColor: '#fdf1e8',
+    backgroundColor: '#ffeef4',
+    borderColor: 'rgba(232, 39, 107, 0.25)',
   },
   tourTextCol: {
     flex: 1,

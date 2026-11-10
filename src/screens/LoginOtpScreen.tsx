@@ -101,18 +101,6 @@ export const LoginOtpScreen: React.FC<LoginOtpScreenProps> = ({ phone, onGoBack,
           <Text style={styles.phoneHighlight}>{phone}</Text>
         </Text>
 
-        {/* Demo verification hint with tap-to-autofill option */}
-        <TouchableOpacity
-          style={styles.demoNoticeBadge}
-          onPress={() => {
-            setOtp('528143');
-            if (errorText) setErrorText('');
-          }}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.demoNoticeText}>Demo Verification: 528143 (Tap to fill)</Text>
-        </TouchableOpacity>
-
         {/* 6 Individual Digit Display Boxes */}
         {/* Before typing: White box with subtle border */}
         {/* When typed: Box changes into Pink background with White digit */}

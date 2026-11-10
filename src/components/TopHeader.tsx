@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { Colors } from '../theme/colors';
 
 interface TopHeaderProps {
@@ -24,7 +25,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
   return (
     <View style={styles.headerBlack}>
-      <View style={styles.leftAction}>
+      {/* Left section: Hamburger / Back button + Left-aligned prominent Shilpi Lockup */}
+      <View style={styles.leftGroup}>
         {isRoot ? (
           <TouchableOpacity
             onPress={onOpenMenu}
@@ -50,13 +52,11 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             <Text style={styles.backChevron}>‹</Text>
           </TouchableOpacity>
         )}
-      </View>
 
-      <View style={styles.centerContainer}>
         {isHome ? (
           <Image
             source={require('../../assets/shilpi-lockup-black.png')}
-            style={styles.logo}
+            style={styles.logoLarge}
             resizeMode="contain"
           />
         ) : (
@@ -64,6 +64,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
         )}
       </View>
 
+      {/* Right section: Vector Notification Bell */}
       <View style={styles.rightAction}>
         <TouchableOpacity
           onPress={onOpenNotifications}
@@ -71,8 +72,19 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           activeOpacity={0.7}
         >
-          {/* Bell Icon */}
-          <Text style={styles.bellIcon}>🔔</Text>
+          {/* Crisp vector notification bell matching prototype */}
+          <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth={2}>
+            <Path
+              d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <Path
+              d="M13.73 21a2 2 0 01-3.46 0"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </Svg>
           {hasUnread && <View style={styles.unreadDot} />}
         </TouchableOpacity>
       </View>
@@ -84,28 +96,23 @@ const styles = StyleSheet.create({
   headerBlack: {
     backgroundColor: '#000000',
     paddingTop: Platform.OS === 'ios' ? 52 : 36,
-    paddingBottom: 16,
+    paddingBottom: 14,
     paddingHorizontal: 16,
-    borderBottomLeftRadius: 26,
-    borderBottomRightRadius: 26,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     zIndex: 10,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
   },
-  leftAction: {
-    width: 44,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
+  leftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   iconBtn: {
-    padding: 6,
+    padding: 4,
     position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   hamburger: {
     width: 22,
@@ -125,36 +132,27 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     marginTop: -4,
   },
-  centerContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logo: {
-    height: 36,
-    width: 170,
+  logoLarge: {
+    height: 38,
+    width: 175,
   },
   screenTitle: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     letterSpacing: 1.5,
   },
   rightAction: {
-    width: 44,
     alignItems: 'flex-end',
     justifyContent: 'center',
   },
-  bellIcon: {
-    fontSize: 18,
-  },
   unreadDot: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: 2,
+    right: 2,
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.accent,
+    backgroundColor: '#e8276b',
   },
 });

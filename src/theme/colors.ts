@@ -7,8 +7,10 @@ export const Colors = {
   deep: '#a50f45',           // Deep Berry Wine
   accent2: '#ff9d5c',        // Warm Saffron / Terracotta
   accentLt: '#ff4d89',       // Rose Accent
-  tint: '#fdf1e8',           // Warm Peach Surface Tint
+  tint: '#ffeef4',           // Delicate Pale Pink Surface Tint
   tint2: '#ffeef4',          // Soft Blush Surface Tint
+  palePink: '#ffeef4',       // Pure Pale Pink for all input fields
+  palePinkBorder: 'rgba(232, 39, 107, 0.25)', // Subtle pink field border
 
   // Aliases for backwards compatibility
   primary: '#e8276b',
