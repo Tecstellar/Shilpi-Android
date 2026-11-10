@@ -20,12 +20,14 @@ interface HomeScreenProps {
   bookings: Booking[];
   onOpenBooking: (bookingId: string) => void;
   onOpenOrders: () => void;
+  onStartNewBooking?: (day?: number, month?: string) => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   bookings,
   onOpenBooking,
   onOpenOrders,
+  onStartNewBooking,
 }) => {
   // 1. Animated Quote vertical transition
   const [quoteIndex, setQuoteIndex] = useState(0);
@@ -34,35 +36,35 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   useEffect(() => {
     const timer = setInterval(() => {
-      // Step A: Slide up and fade out current quote
+      // Step A: Slide slightly up (-8) and fade out current quote
       Animated.parallel([
         Animated.timing(translateY, {
-          toValue: -26,
-          duration: 340,
+          toValue: -8,
+          duration: 300,
           easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(opacity, {
           toValue: 0,
-          duration: 280,
+          duration: 250,
           useNativeDriver: true,
         }),
       ]).start(() => {
         // Step B: Advance quote
         setQuoteIndex((prev) => (prev + 1) % QUOTES.length);
-        // Step C: Position below
-        translateY.setValue(26);
-        // Step D: Slide in from below and fade in
+        // Step C: Position slightly below (+8)
+        translateY.setValue(8);
+        // Step D: Slide into place (0) and fade in
         Animated.parallel([
           Animated.timing(translateY, {
             toValue: 0,
-            duration: 400,
+            duration: 350,
             easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }),
           Animated.timing(opacity, {
             toValue: 1,
-            duration: 340,
+            duration: 300,
             useNativeDriver: true,
           }),
         ]).start();
@@ -114,7 +116,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   const [calOpen, setCalOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState(currentDay);
-  const [calMonth, setCalMonth] = useState(`${currentMonthLong} ${currentYear}`);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthShort);
+  const [monthOffset, setMonthOffset] = useState(0);
 
   // Dynamic 14-day calendar strip
   const twoWeeksDays = Array.from({ length: 14 }, (_, i) => {
@@ -129,20 +132,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     return { num: dayNum, dow, month: mShort, dots };
   });
 
-  // Dynamic Full Month days calculation
-  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
-  const daysInCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  // Dynamic Full Month days calculation supporting month navigation
+  const displayedDate = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+  const displayedMonthShort = monthNames[displayedDate.getMonth()];
+  const displayedMonthLong = fullMonthNames[displayedDate.getMonth()];
+  const displayedYear = displayedDate.getFullYear();
+  const calMonth = `${displayedMonthLong} ${displayedYear}`;
+
+  const firstDayOfMonth = new Date(displayedYear, displayedDate.getMonth(), 1).getDay();
+  const daysInCurrentMonth = new Date(displayedYear, displayedDate.getMonth() + 1, 0).getDate();
   const monthLead = Array.from({ length: firstDayOfMonth }, () => null);
   const monthDays = Array.from({ length: daysInCurrentMonth }, (_, i) => i + 1);
 
   const getDotsForDay = (d: number) => {
     return bookings.filter(
-      (b) => b.month === currentMonthShort && b.day === d && b.status !== 'Closed'
+      (b) => b.month === displayedMonthShort && b.day === d && b.status !== 'Closed'
     ).length;
   };
 
   const selectedDayBookings = bookings.filter(
-    (b) => b.day === selectedDay && b.status !== 'Closed'
+    (b) => b.day === selectedDay && (b.month === selectedMonth || !b.month) && b.status !== 'Closed'
   );
 
   const thisWeekBookings = bookings.filter((b) => b.status === 'Upcoming');
@@ -204,10 +213,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               },
             ]}
           >
-            <Text style={styles.quoteTitle} numberOfLines={2}>
+            <Text style={styles.quoteTitle}>
               {currentQuote.title}
             </Text>
-            <Text style={styles.quoteSubtitle} numberOfLines={2}>
+            <Text style={styles.quoteSubtitle}>
               {currentQuote.subtitle}
             </Text>
           </Animated.View>
@@ -330,68 +339,137 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
       {/* Collapsed 14-day strip */}
       {!calOpen && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.twoWeeksStrip}
-        >
-          {twoWeeksDays.map((d) => {
-            const isToday = d.num === currentDay;
-            const isSel = selectedDay === d.num;
+        <>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.twoWeeksStrip}
+          >
+            {twoWeeksDays.map((d) => {
+              const isToday = d.num === currentDay && d.month === currentMonthShort;
+              const isSel = selectedDay === d.num && selectedMonth === d.month;
 
-            return (
-              <TouchableOpacity
-                key={d.num}
-                style={[
-                  styles.stripCell,
-                  isToday && styles.stripCellToday,
-                  isSel && !isToday && styles.stripCellSelected,
-                ]}
-                onPress={() => setSelectedDay(d.num)}
-                activeOpacity={0.8}
-              >
-                <Text
+              return (
+                <TouchableOpacity
+                  key={`${d.month}-${d.num}`}
                   style={[
-                    styles.stripDow,
-                    isToday ? styles.stripDowToday : styles.stripDowDefault,
+                    styles.stripCell,
+                    isToday && styles.stripCellToday,
+                    isSel && !isToday && styles.stripCellSelected,
                   ]}
+                  onPress={() => {
+                    setSelectedDay(d.num);
+                    setSelectedMonth(d.month);
+                  }}
+                  activeOpacity={0.8}
                 >
-                  {d.dow}
-                </Text>
-                <Text
-                  style={[
-                    styles.stripNum,
-                    isToday ? styles.stripNumToday : styles.stripNumDefault,
-                  ]}
+                  <Text
+                    style={[
+                      styles.stripDow,
+                      isToday ? styles.stripDowToday : styles.stripDowDefault,
+                    ]}
+                  >
+                    {d.dow}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.stripNum,
+                      isToday ? styles.stripNumToday : styles.stripNumDefault,
+                    ]}
+                  >
+                    {d.num}
+                  </Text>
+                  <View style={styles.dotsRow}>
+                    {Array.from({ length: d.dots }).map((_, idx) => (
+                      <View
+                        key={idx}
+                        style={[
+                          styles.dot,
+                          isToday ? styles.dotWhite : styles.dotPink,
+                        ]}
+                      />
+                    ))}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {/* Prototype Selected Day Detail Card below strip */}
+          <View style={styles.stripDetailBox}>
+            <View style={styles.selectedDayHeaderRow}>
+              <Text style={styles.selectedDayTitle}>
+                {selectedDayBookings.length} BOOKING
+                {selectedDayBookings.length === 1 ? '' : 'S'} ON {selectedDay} {selectedMonth.toUpperCase()}
+              </Text>
+              {selectedDayBookings.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => onStartNewBooking?.(selectedDay, selectedMonth)}
+                  activeOpacity={0.7}
+                  style={styles.addBookingSmallBtn}
                 >
-                  {d.num}
-                </Text>
-                <View style={styles.dotsRow}>
-                  {Array.from({ length: d.dots }).map((_, idx) => (
-                    <View
-                      key={idx}
-                      style={[
-                        styles.dot,
-                        isToday ? styles.dotWhite : styles.dotPink,
-                      ]}
-                    />
-                  ))}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+                  <Text style={styles.addBookingSmallText}>＋ ADD</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {selectedDayBookings.length > 0 ? (
+              selectedDayBookings.map((b) => {
+                const total = b.items.reduce((sum, item) => sum + item.price, 0) + (b.travel || 0);
+                return (
+                  <TouchableOpacity
+                    key={b.id}
+                    style={styles.selectedDayItemCard}
+                    onPress={() => onOpenBooking(b.id)}
+                    activeOpacity={0.75}
+                  >
+                    <View style={styles.selectedDayTimeCol}>
+                      <Text style={styles.selectedDayTime}>{b.time}</Text>
+                      <Text style={styles.selectedDayMeridiem}>{b.meridiem}</Text>
+                    </View>
+                    <View style={styles.selectedDayInfoCol}>
+                      <Text style={styles.selectedDayClient}>{b.client}</Text>
+                      <Text style={styles.selectedDaySub} numberOfLines={1}>
+                        {b.items.map((i) => i.name).join(' + ')} · {b.venue}
+                      </Text>
+                    </View>
+                    <Text style={styles.selectedDayAmount}>{fmt(total)}</Text>
+                  </TouchableOpacity>
+                );
+              })
+            ) : (
+              <View style={styles.emptyDayActionRow}>
+                <Text style={styles.emptyDayText}>No bookings — the day is free.</Text>
+                <TouchableOpacity
+                  style={styles.bookItBtn}
+                  onPress={() => onStartNewBooking?.(selectedDay, selectedMonth)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.bookItBtnText}>BOOK IT</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </>
       )}
 
       {/* Expanded Full Month Grid */}
       {calOpen && (
         <View style={styles.expandedCalendarCard}>
           <View style={styles.monthHeaderRow}>
-            <TouchableOpacity onPress={() => {}} style={styles.monthNavBtn}>
+            <TouchableOpacity
+              onPress={() => setMonthOffset((prev) => prev - 1)}
+              style={styles.monthNavBtn}
+              activeOpacity={0.7}
+            >
               <Text style={styles.monthNavText}>‹</Text>
             </TouchableOpacity>
             <Text style={styles.monthTitle}>{calMonth.toUpperCase()}</Text>
-            <TouchableOpacity onPress={() => {}} style={styles.monthNavBtn}>
+            <TouchableOpacity
+              onPress={() => setMonthOffset((prev) => prev + 1)}
+              style={styles.monthNavBtn}
+              activeOpacity={0.7}
+            >
               <Text style={styles.monthNavText}>›</Text>
             </TouchableOpacity>
           </View>
@@ -412,8 +490,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             ))}
             {monthDays.map((d) => {
               const dots = getDotsForDay(d);
-              const isToday = d === currentDay;
-              const isSel = selectedDay === d;
+              const isToday = d === currentDay && monthOffset === 0;
+              const isSel = selectedDay === d && selectedMonth === displayedMonthShort;
 
               return (
                 <TouchableOpacity
@@ -423,7 +501,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                     isSel && styles.monthCellSelected,
                     isToday && !isSel && styles.monthCellToday,
                   ]}
-                  onPress={() => setSelectedDay(d)}
+                  onPress={() => {
+                    setSelectedDay(d);
+                    setSelectedMonth(displayedMonthShort);
+                  }}
                   activeOpacity={0.8}
                 >
                   <Text
@@ -453,26 +534,57 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
           {/* Selected day booking preview inside calendar */}
           <View style={styles.selectedDayBox}>
-            <Text style={styles.selectedDayTitle}>
-              {selectedDayBookings.length} BOOKING
-              {selectedDayBookings.length === 1 ? '' : 'S'} ON {selectedDay} {currentMonthShort.toUpperCase()}
-            </Text>
-            {selectedDayBookings.length > 0 ? (
-              selectedDayBookings.map((b) => (
-                <TouchableOpacity
-                  key={b.id}
-                  style={styles.selectedDayItem}
-                  onPress={() => onOpenBooking(b.id)}
-                >
-                  <Text style={styles.selectedDayTime}>{b.time} {b.meridiem}</Text>
-                  <Text style={styles.selectedDayClient}>{b.client}</Text>
-                  <Text style={styles.selectedDayVenue}>{b.venue}</Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <Text style={styles.selectedDayEmptyText}>
-                No bookings scheduled for this date.
+            <View style={styles.selectedDayHeaderRow}>
+              <Text style={styles.selectedDayTitle}>
+                {selectedDayBookings.length} BOOKING
+                {selectedDayBookings.length === 1 ? '' : 'S'} ON {selectedDay} {selectedMonth.toUpperCase()}
               </Text>
+              {selectedDayBookings.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => onStartNewBooking?.(selectedDay, selectedMonth)}
+                  activeOpacity={0.7}
+                  style={styles.addBookingSmallBtn}
+                >
+                  <Text style={styles.addBookingSmallText}>＋ ADD</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {selectedDayBookings.length > 0 ? (
+              selectedDayBookings.map((b) => {
+                const total = b.items.reduce((sum, item) => sum + item.price, 0) + (b.travel || 0);
+                return (
+                  <TouchableOpacity
+                    key={b.id}
+                    style={styles.selectedDayItemCard}
+                    onPress={() => onOpenBooking(b.id)}
+                    activeOpacity={0.75}
+                  >
+                    <View style={styles.selectedDayTimeCol}>
+                      <Text style={styles.selectedDayTime}>{b.time}</Text>
+                      <Text style={styles.selectedDayMeridiem}>{b.meridiem}</Text>
+                    </View>
+                    <View style={styles.selectedDayInfoCol}>
+                      <Text style={styles.selectedDayClient}>{b.client}</Text>
+                      <Text style={styles.selectedDaySub} numberOfLines={1}>
+                        {b.items.map((i) => i.name).join(' + ')} · {b.venue}
+                      </Text>
+                    </View>
+                    <Text style={styles.selectedDayAmount}>{fmt(total)}</Text>
+                  </TouchableOpacity>
+                );
+              })
+            ) : (
+              <View style={styles.emptyDayActionRow}>
+                <Text style={styles.emptyDayText}>No bookings — the day is free.</Text>
+                <TouchableOpacity
+                  style={styles.bookItBtn}
+                  onPress={() => onStartNewBooking?.(selectedDay, selectedMonth)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.bookItBtnText}>BOOK IT</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         </View>
@@ -587,7 +699,8 @@ const styles = StyleSheet.create({
     marginTop: 14,
     backgroundColor: '#ffffff',
     borderRadius: 20,
-    padding: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -599,31 +712,32 @@ const styles = StyleSheet.create({
   },
   quoteAccentBar: {
     width: 3.5,
-    height: 48,
+    alignSelf: 'stretch',
+    minHeight: 44,
     borderRadius: 2,
     backgroundColor: Colors.accent,
   },
   quoteContainer: {
     flex: 1,
-    height: 52,
-    overflow: 'hidden',
+    minHeight: 52,
     justifyContent: 'center',
   },
   quoteAnimatedBox: {
-    height: 52,
     justifyContent: 'center',
+    paddingVertical: 2,
   },
   quoteTitle: {
     fontSize: 14,
     fontWeight: '700',
     color: '#121212',
-    lineHeight: 18,
+    lineHeight: 19,
+    letterSpacing: -0.2,
   },
   quoteSubtitle: {
     fontSize: 12,
-    color: 'rgba(18, 18, 18, 0.6)',
-    marginTop: 2,
-    lineHeight: 16,
+    color: 'rgba(18, 18, 18, 0.62)',
+    marginTop: 3,
+    lineHeight: 17,
   },
   emptyCard: {
     backgroundColor: '#ffffff',
@@ -991,41 +1105,123 @@ const styles = StyleSheet.create({
   textPink: {
     color: Colors.accent,
   },
-  selectedDayBox: {
-    backgroundColor: Colors.tint,
+  stripDetailBox: {
     marginHorizontal: 16,
     marginTop: 10,
-    borderRadius: 14,
-    padding: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(18, 18, 18, 0.07)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  selectedDayTitle: {
-    fontSize: 9.5,
-    fontWeight: '700',
-    letterSpacing: 1,
-    color: Colors.deep,
+  selectedDayBox: {
+    padding: 14,
+    backgroundColor: '#ffffff',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(18, 18, 18, 0.07)',
+  },
+  selectedDayHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 6,
   },
-  selectedDayItem: {
-    paddingVertical: 4,
+  selectedDayTitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.1,
+    color: Colors.deep,
+    textTransform: 'uppercase',
+  },
+  addBookingSmallBtn: {
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: 'rgba(232, 39, 107, 0.1)',
+  },
+  addBookingSmallText: {
+    color: Colors.accent,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  selectedDayItemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fbf9f8',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(18, 18, 18, 0.05)',
+  },
+  selectedDayTimeCol: {
+    width: 60,
   },
   selectedDayTime: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: '#121212',
+  },
+  selectedDayMeridiem: {
+    fontSize: 10,
+    color: 'rgba(18, 18, 18, 0.5)',
+    fontWeight: '600',
+  },
+  selectedDayInfoCol: {
+    flex: 1,
+    paddingHorizontal: 8,
   },
   selectedDayClient: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#121212',
   },
-  selectedDayVenue: {
+  selectedDaySub: {
     fontSize: 11,
     color: 'rgba(18, 18, 18, 0.55)',
+    marginTop: 1,
   },
-  selectedDayEmptyText: {
+  selectedDayAmount: {
     fontSize: 12,
-    color: 'rgba(18, 18, 18, 0.55)',
-    fontStyle: 'italic',
+    fontWeight: '700',
+    color: Colors.accent,
+  },
+  emptyDayActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
     paddingVertical: 4,
+  },
+  emptyDayText: {
+    flex: 1,
+    fontSize: 12.5,
+    color: 'rgba(18, 18, 18, 0.65)',
+  },
+  bookItBtn: {
+    backgroundColor: Colors.accent,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  bookItBtnText: {
+    color: '#ffffff',
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 0.8,
   },
 });

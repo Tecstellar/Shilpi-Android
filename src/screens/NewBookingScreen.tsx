@@ -19,6 +19,7 @@ import {
 interface NewBookingScreenProps {
   clients: Client[];
   packageGroups: PackageGroup[];
+  initialDay?: number;
   onSaveBooking: (newBooking: Partial<Booking>) => void;
   onGoBack: () => void;
   onStartNewClient: () => void;
@@ -27,12 +28,13 @@ interface NewBookingScreenProps {
 export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
   clients,
   packageGroups,
+  initialDay,
   onSaveBooking,
   onGoBack,
   onStartNewClient,
 }) => {
   const [selectedClient, setSelectedClient] = useState(clients[0]?.name || 'Priya Raghavan');
-  const [selectedDate, setSelectedDate] = useState(26);
+  const [selectedDate, setSelectedDate] = useState(initialDay || 26);
   const [selectedPackages, setSelectedPackages] = useState<string[]>(['Bridal Makeup', 'Bridal Hair']);
   const [advanceText, setAdvanceText] = useState('8000');
   const [venue, setVenue] = useState('Sri Kamatchi Mahal, RS Puram');

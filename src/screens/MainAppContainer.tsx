@@ -48,6 +48,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   const [currentScreen, setCurrentScreen] = useState<string>('home');
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [bookingInitialDate, setBookingInitialDate] = useState<number | undefined>();
 
   // Drawer & Sheet States
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -324,6 +325,10 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             bookings={bookings}
             onOpenBooking={handleOpenBooking}
             onOpenOrders={() => handleTabChange('orders')}
+            onStartNewBooking={(day) => {
+              if (day) setBookingInitialDate(day);
+              setCurrentScreen('newbooking');
+            }}
           />
         )}
 
@@ -365,6 +370,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           <NewBookingScreen
             clients={clients}
             packageGroups={packageGroups}
+            initialDay={bookingInitialDate}
             onSaveBooking={handleSaveBooking}
             onGoBack={handleGoBack}
             onStartNewClient={() => setCurrentScreen('newclient')}
