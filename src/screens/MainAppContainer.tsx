@@ -441,6 +441,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           }
         }}
         onLogout={onLogout}
+        ownerName={artistName}
       />
 
       {/* 6. Action Bottom Sheet */}
