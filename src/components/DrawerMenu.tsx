@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   TouchableWithoutFeedback,
   Dimensions,
   Platform,
@@ -14,10 +13,9 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
-import { Colors } from '../theme/colors';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.84, 340);
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.84, 335);
 
 interface DrawerMenuProps {
   isOpen: boolean;
@@ -30,14 +28,14 @@ interface DrawerMenuProps {
 // ----------------- Bespoke Luxury Vector SVG Icons ----------------- //
 
 const CloseIcon = () => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2.4}>
+  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2.4}>
     <Line x1={18} y1={6} x2={6} y2={18} strokeLinecap="round" />
     <Line x1={6} y1={6} x2={18} y2={18} strokeLinecap="round" />
   </Svg>
 );
 
 const UserPlusIcon = () => (
-  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth={2}>
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth={2}>
     <Path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
     <Circle cx={8.5} cy={7} r={4} strokeLinecap="round" strokeLinejoin="round" />
     <Line x1={20} y1={8} x2={20} y2={14} strokeLinecap="round" />
@@ -46,20 +44,20 @@ const UserPlusIcon = () => (
 );
 
 const PackagesIcon = () => (
-  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2}>
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2}>
     <Path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
 const PaymentsIcon = () => (
-  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2}>
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2}>
     <Rect x={2} y={5} width={20} height={14} rx={2} strokeLinecap="round" strokeLinejoin="round" />
     <Line x1={2} y1={10} x2={22} y2={10} strokeLinecap="round" />
   </Svg>
 );
 
 const GalleryIcon = () => (
-  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2}>
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2}>
     <Rect x={3} y={3} width={18} height={18} rx={2} strokeLinecap="round" strokeLinejoin="round" />
     <Circle cx={8.5} cy={8.5} r={1.5} fill="rgba(255,255,255,0.7)" />
     <Path d="M21 15l-5-5L5 21" strokeLinecap="round" strokeLinejoin="round" />
@@ -67,21 +65,21 @@ const GalleryIcon = () => (
 );
 
 const NotificationsIcon = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth={2}>
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth={2}>
     <Path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" strokeLinecap="round" strokeLinejoin="round" />
     <Path d="M13.73 21a2 2 0 0 1-3.46 0" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
 const RemindersIcon = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth={2}>
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth={2}>
     <Circle cx={12} cy={12} r={9} strokeLinecap="round" strokeLinejoin="round" />
     <Path d="M12 7v5l3 3" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
 const ExpensesIcon = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth={2}>
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth={2}>
     <Path
       d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z"
       strokeLinecap="round"
@@ -93,7 +91,7 @@ const ExpensesIcon = () => (
 );
 
 const ReportsIcon = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth={2}>
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth={2}>
     <Line x1={18} y1={20} x2={18} y2={10} strokeLinecap="round" strokeWidth={2.2} />
     <Line x1={12} y1={20} x2={12} y2={4} strokeLinecap="round" strokeWidth={2.2} />
     <Line x1={6} y1={20} x2={6} y2={14} strokeLinecap="round" strokeWidth={2.2} />
@@ -101,7 +99,7 @@ const ReportsIcon = () => (
 );
 
 const SubscriptionIcon = () => (
-  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2}>
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2}>
     <Path
       d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
       strokeLinecap="round"
@@ -111,14 +109,14 @@ const SubscriptionIcon = () => (
 );
 
 const ProfileIcon = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2}>
+  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2}>
     <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
     <Circle cx={12} cy={7} r={4} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
 const SettingsIcon = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2}>
+  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={2}>
     <Circle cx={12} cy={12} r={3} strokeLinecap="round" strokeLinejoin="round" />
     <Path
       d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
@@ -129,14 +127,14 @@ const SettingsIcon = () => (
 );
 
 const LogoutIcon = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#ff4d6d" strokeWidth={2}>
+  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#ff4d6d" strokeWidth={2}>
     <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" strokeLinecap="round" strokeLinejoin="round" />
     <Path d="M16 17l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
     <Line x1={21} y1={12} x2={9} y2={12} strokeLinecap="round" />
   </Svg>
 );
 
-// ----------------- GSAP-Inspired Micro-Interactive Pressable Card ----------------- //
+// ----------------- Micro-Interactive Pressable Card ----------------- //
 
 interface AnimatedTouchableCardProps {
   onPress: () => void;
@@ -182,7 +180,7 @@ const AnimatedTouchableCard: React.FC<AnimatedTouchableCardProps> = ({
   );
 };
 
-// ----------------- Main Luxury Drawer Component ----------------- //
+// ----------------- Main Non-Scrollable Full-View Drawer ----------------- //
 
 export const DrawerMenu: React.FC<DrawerMenuProps> = ({
   isOpen,
@@ -197,7 +195,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
   const animX = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
   const animFade = useRef(new Animated.Value(0)).current;
 
-  // Staggered child entrance animations (GSAP-like fluid cascade)
+  // Staggered child entrance animations
   const animHeader = useRef(new Animated.Value(0)).current;
   const animProfile = useRef(new Animated.Value(0)).current;
   const animGrid = useRef(new Animated.Value(0)).current;
@@ -243,7 +241,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
       Animated.parallel([
         Animated.spring(animX, {
           toValue: 0,
-          tension: 65,
+          tension: 70,
           friction: 11,
           useNativeDriver: true,
         }),
@@ -255,12 +253,12 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
       ]).start();
 
       // Staggered fluid cascade for interior items
-      Animated.stagger(45, [
-        Animated.spring(animHeader, { toValue: 1, tension: 70, friction: 10, useNativeDriver: true }),
-        Animated.spring(animProfile, { toValue: 1, tension: 70, friction: 10, useNativeDriver: true }),
-        Animated.spring(animGrid, { toValue: 1, tension: 70, friction: 10, useNativeDriver: true }),
-        Animated.spring(animList, { toValue: 1, tension: 70, friction: 10, useNativeDriver: true }),
-        Animated.spring(animFooter, { toValue: 1, tension: 70, friction: 10, useNativeDriver: true }),
+      Animated.stagger(40, [
+        Animated.spring(animHeader, { toValue: 1, tension: 75, friction: 10, useNativeDriver: true }),
+        Animated.spring(animProfile, { toValue: 1, tension: 75, friction: 10, useNativeDriver: true }),
+        Animated.spring(animGrid, { toValue: 1, tension: 75, friction: 10, useNativeDriver: true }),
+        Animated.spring(animList, { toValue: 1, tension: 75, friction: 10, useNativeDriver: true }),
+        Animated.spring(animFooter, { toValue: 1, tension: 75, friction: 10, useNativeDriver: true }),
       ]).start();
     } else if (isVisible) {
       Animated.parallel([
@@ -305,7 +303,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
 
   if (!isVisible && !isOpen) return null;
 
-  // Extract up to 2 uppercase initials from name
+  // Extract initials
   const nameParts = (profile.ownerName || 'Shilpa R.').trim().split(' ');
   const initials = nameParts.length >= 2
     ? `${nameParts[0].charAt(0)}${nameParts[1].charAt(0)}`.toUpperCase()
@@ -313,7 +311,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
 
   return (
     <View style={styles.overlay}>
-      {/* 1. Main Sliding Luxury Obsidian Drawer */}
+      {/* 1. Main Sliding Luxury Obsidian Drawer (Full Visible Viewport - Non-Scrollable) */}
       <Animated.View
         style={[
           styles.drawerContainer,
@@ -322,13 +320,8 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
           },
         ]}
       >
-        <ScrollView
-          style={styles.scrollContainer}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          bounces={false}
-        >
-          {/* Header: Shilpi Logo + Close Button */}
+        <View style={styles.nonScrollableBody}>
+          {/* Header: Shilpi Logo + Close Button (Positioned right at the top) */}
           <Animated.View
             style={[
               styles.headerSection,
@@ -338,7 +331,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                   {
                     translateY: animHeader.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [-10, 0],
+                      outputRange: [-8, 0],
                     }),
                   },
                 ],
@@ -346,7 +339,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
             ]}
           >
             <View style={styles.headerRow}>
-              {/* Shilpi Logo */}
+              {/* Shilpi Transparent Logo Lockup (100% blends into background) */}
               <Image
                 source={require('../../assets/shilpi-logo-tight.png')}
                 style={styles.shilpiLogo}
@@ -378,13 +371,13 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                   {
                     translateY: animProfile.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [14, 0],
+                      outputRange: [10, 0],
                     }),
                   },
                   {
                     scale: animProfile.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [0.96, 1],
+                      outputRange: [0.97, 1],
                     }),
                   },
                 ],
@@ -438,7 +431,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                   {
                     translateY: animGrid.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [16, 0],
+                      outputRange: [12, 0],
                     }),
                   },
                 ],
@@ -503,7 +496,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                   {
                     translateY: animList.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [18, 0],
+                      outputRange: [14, 0],
                     }),
                   },
                 ],
@@ -598,7 +591,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                   {
                     translateY: animFooter.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [20, 0],
+                      outputRange: [16, 0],
                     }),
                   },
                 ],
@@ -637,7 +630,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
           <Animated.View style={{ opacity: animFooter }}>
             <Text style={styles.versionFooter}>Shilpi v1.0</Text>
           </Animated.View>
-        </ScrollView>
+        </View>
       </Animated.View>
 
       {/* Dimmed Backdrop Dismissal with Smooth Fade */}
@@ -660,13 +653,13 @@ const styles = StyleSheet.create({
   },
   drawerContainer: {
     width: DRAWER_WIDTH,
-    backgroundColor: '#0f0f13',
+    backgroundColor: '#0d0d11',
     borderTopRightRadius: 28,
     borderBottomRightRadius: 28,
     zIndex: 10000,
     shadowColor: '#000000',
     shadowOffset: { width: 8, height: 0 },
-    shadowOpacity: 0.65,
+    shadowOpacity: 0.7,
     shadowRadius: 24,
     elevation: 25,
     borderRightWidth: 1,
@@ -674,36 +667,36 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(5, 5, 8, 0.65)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
-  scrollContainer: {
+  nonScrollableBody: {
     flex: 1,
-  },
-  scrollContent: {
-    paddingTop: Platform.OS === 'ios' ? 52 : 36,
-    paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    paddingTop: Platform.OS === 'ios' ? 44 : 26,
+    paddingHorizontal: 15,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 12,
+    justifyContent: 'space-between',
   },
 
   // Header Section
   headerSection: {
-    marginBottom: 14,
+    marginBottom: 8,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 2,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   shilpiLogo: {
     height: 22,
-    width: 96,
+    width: 95,
+    backgroundColor: 'transparent',
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -720,21 +713,22 @@ const styles = StyleSheet.create({
   // Profile Card
   profileCard: {
     backgroundColor: '#16161a',
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#232328',
-    padding: 14,
-    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
   },
   profileTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1.8,
     borderColor: '#e8276b',
     backgroundColor: '#1a1016',
     alignItems: 'center',
@@ -742,17 +736,17 @@ const styles = StyleSheet.create({
   },
   avatarInitials: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
   profileDetails: {
-    marginLeft: 12,
+    marginLeft: 10,
     flex: 1,
   },
   ownerName: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     letterSpacing: -0.2,
   },
@@ -762,26 +756,26 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(232, 39, 107, 0.12)',
     borderWidth: 1,
     borderColor: 'rgba(232, 39, 107, 0.28)',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
     borderRadius: 999,
     alignSelf: 'flex-start',
-    marginTop: 4,
+    marginTop: 2,
   },
   premiumCrown: {
-    fontSize: 9,
-    marginRight: 3,
+    fontSize: 8.5,
+    marginRight: 2.5,
   },
   premiumText: {
     color: '#e8276b',
-    fontSize: 9.5,
+    fontSize: 8.5,
     fontWeight: '700',
     letterSpacing: 0.8,
   },
   profileCardDivider: {
     height: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    marginVertical: 12,
+    marginVertical: 8,
   },
   metricsRow: {
     flexDirection: 'row',
@@ -793,25 +787,25 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     color: 'rgba(255, 255, 255, 0.45)',
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '500',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   metricValueWhite: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: '700',
     letterSpacing: -0.2,
   },
   metricSeparator: {
     width: 1,
-    height: 28,
+    height: 22,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    marginHorizontal: 12,
+    marginHorizontal: 8,
   },
   metricValuePink: {
     color: '#e8276b',
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: '700',
     letterSpacing: -0.2,
   },
@@ -821,17 +815,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    rowGap: 10,
-    marginBottom: 12,
+    rowGap: 7,
+    marginBottom: 8,
   },
   gridCard: {
     width: '48.5%',
-    height: 98,
+    height: 74,
     backgroundColor: '#16161a',
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#232328',
-    padding: 12,
+    padding: 10,
     justifyContent: 'space-between',
   },
   gridCardPink: {
@@ -839,49 +833,49 @@ const styles = StyleSheet.create({
     borderColor: '#e8276b',
   },
   iconCircleTranslucent: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 27,
+    height: 27,
+    borderRadius: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconCircleDark: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 27,
+    height: 27,
+    borderRadius: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardTitleWhite: {
     color: '#ffffff',
-    fontSize: 13.5,
+    fontSize: 12.5,
     fontWeight: '700',
     letterSpacing: -0.1,
   },
   cardSubPink: {
     color: '#e8276b',
-    fontSize: 10.5,
+    fontSize: 9.5,
     fontWeight: '600',
-    marginTop: 2,
+    marginTop: 1,
   },
 
   // Menu List Group Card
   menuListCard: {
     backgroundColor: '#16161a',
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#232328',
-    marginBottom: 12,
+    marginBottom: 8,
     overflow: 'hidden',
   },
   menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12.5,
-    paddingHorizontal: 14,
+    paddingVertical: 9.5,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.04)',
   },
@@ -894,41 +888,41 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuIconBox: {
-    width: 26,
+    width: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 9,
   },
   menuRowText: {
     color: '#ffffff',
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.1,
   },
   badgePinkPill: {
     backgroundColor: '#e8276b',
-    paddingHorizontal: 8,
-    paddingVertical: 2.5,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: 999,
   },
   badgePinkText: {
     color: '#ffffff',
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: '700',
   },
   subtextGray: {
     color: 'rgba(255, 255, 255, 0.45)',
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '500',
   },
   chevronGray: {
     color: 'rgba(255, 255, 255, 0.3)',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '300',
   },
   premiumTextRight: {
     color: '#e8276b',
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
   },
 
@@ -936,39 +930,39 @@ const styles = StyleSheet.create({
   utilityRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 10,
+    gap: 7,
+    marginBottom: 4,
   },
   utilityCard: {
     flex: 1,
     backgroundColor: '#16161a',
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#232328',
-    paddingVertical: 11,
+    paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   utilityTextWhite: {
     color: '#ffffff',
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '600',
-    marginTop: 5,
+    marginTop: 4,
   },
   utilityTextRed: {
     color: '#ff4d6d',
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '600',
-    marginTop: 5,
+    marginTop: 4,
   },
 
   // Footer
   versionFooter: {
-    color: 'rgba(255, 255, 255, 0.28)',
-    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.25)',
+    fontSize: 10,
     textAlign: 'center',
-    marginTop: 4,
-    marginBottom: 4,
+    marginTop: 2,
+    marginBottom: 2,
     fontWeight: '500',
   },
 });
