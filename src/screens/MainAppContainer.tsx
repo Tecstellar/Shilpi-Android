@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiClient } from '../services/apiClient';
 import { Colors } from '../theme/colors';
 import {
   INITIAL_PKG_GROUPS,
@@ -46,7 +47,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   // Navigation State
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [currentScreen, setCurrentScreen] = useState<string>('home');
-  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<number | string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [bookingInitialDate, setBookingInitialDate] = useState<number | undefined>();
   const [bookingClientName, setBookingClientName] = useState<string | undefined>();
@@ -63,7 +64,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   const [artistName, setArtistName] = useState('Artist');
   const [studioLogo, setStudioLogo] = useState<string | undefined>();
 
-  // Load storage data on mount
+  // Load storage data on mount & sync with RDS PostgreSQL
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -80,9 +81,11 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           }
         }
 
+        let localClients: Client[] = [];
         const storedClients = await AsyncStorage.getItem('@shilpi_clients');
         if (storedClients) {
-          setClients(JSON.parse(storedClients));
+          localClients = JSON.parse(storedClients);
+          setClients(localClients);
         }
 
         const storedBookings = await AsyncStorage.getItem('@shilpi_bookings');
@@ -98,6 +101,35 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         const storedPackages = await AsyncStorage.getItem('@shilpi_packages');
         if (storedPackages) {
           setPackageGroups(JSON.parse(storedPackages));
+        }
+
+        // Fetch from PostgreSQL backend database
+        try {
+          const res = await apiClient.get('/clients');
+          if (res.data?.success && Array.isArray(res.data.data)) {
+            const dbClients: Client[] = res.data.data.map((c: any) => ({
+              id: c.id,
+              name: c.name,
+              phone: c.phone,
+              bookings: c._count?.bookings || 0,
+              sales: 0,
+              profit: 0,
+              history: [],
+              notes: c.notes || '',
+            }));
+
+            // Merge unique clients (matching on phone or id)
+            const merged = [...dbClients];
+            localClients.forEach((lc) => {
+              if (!merged.some((m) => m.phone === lc.phone || m.id === lc.id)) {
+                merged.push(lc);
+              }
+            });
+            setClients(merged);
+            await AsyncStorage.setItem('@shilpi_clients', JSON.stringify(merged));
+          }
+        } catch (apiErr) {
+          console.log('Backend sync offline/fallback:', apiErr);
         }
       } catch (e) {
         console.warn('Failed to load storage data:', e);
@@ -148,7 +180,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     }
   };
 
-  const handleOpenClient = (clientId: number) => {
+  const handleOpenClient = (clientId: number | string) => {
     setSelectedClientId(clientId);
     setCurrentScreen('client');
   };
@@ -210,11 +242,12 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     });
   };
 
-  const handleSaveClient = (clientData: Partial<Client>, thenCreateBooking?: boolean) => {
+  const handleSaveClient = async (clientData: Partial<Client>, thenCreateBooking?: boolean) => {
+    let clientRecordId: string | number = Date.now();
     const newClient: Client = {
-      id: Date.now(),
-      name: clientData.name || 'New Client',
-      phone: clientData.phone || '+91 ',
+      id: clientRecordId,
+      name: clientData.name?.trim() || 'New Client',
+      phone: clientData.phone?.trim() || '+91 98000 00000',
       bookings: 0,
       sales: 0,
       profit: 0,
@@ -222,9 +255,29 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
       notes: clientData.notes,
       photoUri: clientData.photoUri,
     };
-    const updated = [newClient, ...clients];
-    setClients(updated);
-    AsyncStorage.setItem('@shilpi_clients', JSON.stringify(updated)).catch(() => {});
+
+    // 1. Persist directly into PostgreSQL Amazon RDS 'clients' table
+    try {
+      const res = await apiClient.post('/clients', {
+        name: newClient.name,
+        phone: newClient.phone,
+        notes: newClient.notes || undefined,
+      });
+      console.log('Successfully saved to RDS PostgreSQL clients table:', res.data);
+      if (res.data?.data?.id) {
+        newClient.id = res.data.data.id;
+      }
+    } catch (err) {
+      console.warn('Backend database client save error:', err);
+    }
+
+    // 2. Update local state and offline AsyncStorage
+    setClients((prev) => {
+      const filtered = prev.filter((c) => c.phone !== newClient.phone && c.id !== newClient.id);
+      const updated = [newClient, ...filtered];
+      AsyncStorage.setItem('@shilpi_clients', JSON.stringify(updated)).catch(() => {});
+      return updated;
+    });
 
     if (thenCreateBooking) {
       setBookingClientName(newClient.name);

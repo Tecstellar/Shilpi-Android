@@ -1,7 +1,7 @@
 // Shilpi Prototype Data & Types matching prototype-logic.js exactly
 
 export interface Client {
-  id: number;
+  id: number | string;
   name: string;
   phone: string;
   bookings: number;

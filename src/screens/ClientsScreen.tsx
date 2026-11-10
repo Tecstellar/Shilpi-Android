@@ -22,7 +22,7 @@ const UsersEmptyVectorIcon = () => (
 
 interface ClientsScreenProps {
   clients: Client[];
-  onOpenClient: (clientId: number) => void;
+  onOpenClient: (clientId: number | string) => void;
   onStartNewClient?: () => void;
 }
 
