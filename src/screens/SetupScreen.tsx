@@ -9,9 +9,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 import Svg, { Circle, Line } from 'react-native-svg';
 import { apiClient } from '../services/apiClient';
 
@@ -94,6 +96,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [pincode, setPincode] = useState('');
+  const [logoUri, setLogoUri] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
 
   // Step 2: Packages State
@@ -218,6 +221,33 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
     }
   };
 
+  // Logo upload picker handler
+  const handlePickLogo = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Permission Needed',
+          'Please allow photo gallery access to choose your studio logo.'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setLogoUri(result.assets[0].uri);
+      }
+    } catch (err) {
+      console.warn('Logo pick error:', err);
+    }
+  };
+
   // Price update handler for packages
   const handleUpdatePrice = (groupName: string, itemId: string, newPriceStr: string) => {
     const cleaned = newPriceStr.replace(/[^0-9]/g, '');
@@ -280,7 +310,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
     try {
       await AsyncStorage.setItem(
         '@shilpi_profile',
-        JSON.stringify({ ownerName, businessName, address, city, pincode, phone })
+        JSON.stringify({ ownerName, businessName, address, city, pincode, phone, logoUri })
       );
       await AsyncStorage.setItem('@shilpi_packages', JSON.stringify(packageGroups));
       await AsyncStorage.setItem('@shilpi_setup_done', 'true');
@@ -457,6 +487,27 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                   maxLength={6}
                 />
               </View>
+            </View>
+
+            {/* Compact Dotted Box Logo Upload */}
+            <View style={styles.logoUploadSection}>
+              <TouchableOpacity
+                style={[styles.logoDottedBox, logoUri ? styles.logoDottedBoxFilled : null]}
+                onPress={handlePickLogo}
+                activeOpacity={0.7}
+              >
+                {logoUri ? (
+                  <Image source={{ uri: logoUri }} style={styles.uploadedLogoImage} resizeMode="cover" />
+                ) : (
+                  <Text style={styles.plusIconText}>＋</Text>
+                )}
+              </TouchableOpacity>
+              <Text style={styles.logoOptionalText}>Logo (Optional)</Text>
+              {logoUri && (
+                <TouchableOpacity onPress={() => setLogoUri(null)} style={styles.removeLogoBtn}>
+                  <Text style={styles.removeLogoText}>Remove</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             <Text style={styles.helperNote}>
@@ -863,6 +914,57 @@ const styles = StyleSheet.create({
   },
   flex1: {
     flex: 1,
+  },
+  logoUploadSection: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 14,
+    marginBottom: 4,
+  },
+  logoDottedBox: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#e8276b',
+    backgroundColor: '#ffeef4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  logoDottedBoxFilled: {
+    borderStyle: 'solid',
+    borderColor: '#e8276b',
+  },
+  uploadedLogoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
+  plusIconText: {
+    fontSize: 22,
+    color: '#e8276b',
+    fontWeight: '600',
+    lineHeight: 24,
+  },
+  logoOptionalText: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+    color: 'rgba(18, 18, 18, 0.55)',
+    marginTop: 5,
+  },
+  removeLogoBtn: {
+    marginTop: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  removeLogoText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#e8276b',
+    textDecorationLine: 'underline',
   },
   helperNote: {
     fontSize: 11.5,

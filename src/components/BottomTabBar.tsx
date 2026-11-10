@@ -8,10 +8,10 @@ interface BottomTabBarProps {
   onSelectTab: (tab: 'clients' | 'home' | 'orders') => void;
 }
 
-// 1. Bespoke Luxury Duo-Tone Clients Icon
+// 1. Bespoke Luxury Duo-Tone Clients Icon infused with Signature Pink
 const ClientsIcon: React.FC<{ isActive: boolean }> = ({ isActive }) => {
-  const strokeColor = isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.5)';
-  const fillColor = isActive ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.06)';
+  const strokeColor = isActive ? '#ffffff' : '#e8276b';
+  const fillColor = isActive ? 'rgba(255, 255, 255, 0.28)' : 'rgba(232, 39, 107, 0.18)';
 
   return (
     <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
@@ -50,10 +50,10 @@ const ClientsIcon: React.FC<{ isActive: boolean }> = ({ isActive }) => {
   );
 };
 
-// 2. Bespoke Luxury Architectural Home Icon
+// 2. Bespoke Luxury Architectural Home Icon infused with Signature Pink
 const HomeIcon: React.FC<{ isActive: boolean }> = ({ isActive }) => {
-  const strokeColor = isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.5)';
-  const fillColor = isActive ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.06)';
+  const strokeColor = isActive ? '#ffffff' : '#e8276b';
+  const fillColor = isActive ? 'rgba(255, 255, 255, 0.28)' : 'rgba(232, 39, 107, 0.18)';
 
   return (
     <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
@@ -78,10 +78,10 @@ const HomeIcon: React.FC<{ isActive: boolean }> = ({ isActive }) => {
   );
 };
 
-// 3. Bespoke Luxury Orders / Agenda Booking Pass Icon
+// 3. Bespoke Luxury Orders / Agenda Booking Pass Icon infused with Signature Pink
 const OrdersIcon: React.FC<{ isActive: boolean }> = ({ isActive }) => {
-  const strokeColor = isActive ? '#ffffff' : 'rgba(255, 255, 255, 0.5)';
-  const fillColor = isActive ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.06)';
+  const strokeColor = isActive ? '#ffffff' : '#e8276b';
+  const fillColor = isActive ? 'rgba(255, 255, 255, 0.28)' : 'rgba(232, 39, 107, 0.18)';
 
   return (
     <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
@@ -142,28 +142,34 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab, onSelectT
     <View style={styles.floatingDock}>
       {/* 1. Clients Tab */}
       <TouchableOpacity
-        style={[styles.tabItem, activeTab === 'clients' && styles.activeTabPill]}
+        style={[
+          styles.tabItem,
+          activeTab === 'clients' ? styles.activeTabPill : styles.inactiveTabPill,
+        ]}
         onPress={() => onSelectTab('clients')}
-        activeOpacity={0.8}
+        activeOpacity={0.75}
       >
         <ClientsIcon isActive={activeTab === 'clients'} />
         <Text
-          style={[styles.tabLabel, activeTab === 'clients' && styles.activeTabLabel]}
+          style={[styles.tabLabel, activeTab === 'clients' ? styles.activeTabLabel : styles.inactiveTabLabel]}
           numberOfLines={1}
         >
           CLIENTS
         </Text>
       </TouchableOpacity>
 
-      {/* 2. Home Tab (Anchor) */}
+      {/* 2. Home Tab (Center Anchor) */}
       <TouchableOpacity
-        style={[styles.tabItem, activeTab === 'home' && styles.activeTabPill]}
+        style={[
+          styles.tabItem,
+          activeTab === 'home' ? styles.activeTabPill : styles.inactiveTabPill,
+        ]}
         onPress={() => onSelectTab('home')}
-        activeOpacity={0.8}
+        activeOpacity={0.75}
       >
         <HomeIcon isActive={activeTab === 'home'} />
         <Text
-          style={[styles.tabLabel, activeTab === 'home' && styles.activeTabLabel]}
+          style={[styles.tabLabel, activeTab === 'home' ? styles.activeTabLabel : styles.inactiveTabLabel]}
           numberOfLines={1}
         >
           HOME
@@ -172,13 +178,16 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeTab, onSelectT
 
       {/* 3. Orders Tab */}
       <TouchableOpacity
-        style={[styles.tabItem, activeTab === 'orders' && styles.activeTabPill]}
+        style={[
+          styles.tabItem,
+          activeTab === 'orders' ? styles.activeTabPill : styles.inactiveTabPill,
+        ]}
         onPress={() => onSelectTab('orders')}
-        activeOpacity={0.8}
+        activeOpacity={0.75}
       >
         <OrdersIcon isActive={activeTab === 'orders'} />
         <Text
-          style={[styles.tabLabel, activeTab === 'orders' && styles.activeTabLabel]}
+          style={[styles.tabLabel, activeTab === 'orders' ? styles.activeTabLabel : styles.inactiveTabLabel]}
           numberOfLines={1}
         >
           ORDERS
@@ -194,20 +203,21 @@ const styles = StyleSheet.create({
     left: 18,
     right: 18,
     bottom: Platform.OS === 'ios' ? 24 : 14,
-    backgroundColor: '#0f0f12', // Obsidian dark fintech container
+    backgroundColor: '#110b14', // Deep obsidian with rich pink aura
     borderRadius: 999, // Floating pill capsule
     paddingVertical: 5,
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1.2,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    // Multi-layer deep ambient shadow
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.5,
-    shadowRadius: 22,
+    borderWidth: 1.5,
+    borderColor: 'rgba(232, 39, 107, 0.42)', // Luminous signature pink border
+    gap: 4,
+    // Ambient pink glow shadow
+    shadowColor: '#e8276b',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
     elevation: 16,
     zIndex: 100,
   },
@@ -220,19 +230,27 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     gap: 7,
   },
+  inactiveTabPill: {
+    backgroundColor: 'rgba(232, 39, 107, 0.08)', // Subtle pink glass aura for inactive tabs
+  },
   activeTabPill: {
-    backgroundColor: '#e8276b', // Signature Shilpi Pink pill highlight
+    backgroundColor: '#e8276b', // Signature Shilpi Pink active pill
     shadowColor: '#e8276b',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
     elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   tabLabel: {
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.9,
-    color: 'rgba(255, 255, 255, 0.48)',
+  },
+  inactiveTabLabel: {
+    color: '#e8276b', // Signature pink for inactive labels
+    opacity: 0.85,
   },
   activeTabLabel: {
     color: '#ffffff',
