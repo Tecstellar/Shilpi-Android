@@ -12,8 +12,51 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { Colors } from '../theme/colors';
 import { apiClient } from '../services/apiClient';
+
+// Premium Vector Icons replacing emojis
+const SmsBubbleIcon: React.FC = () => (
+  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
+      stroke="#e8276b"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="rgba(232, 39, 107, 0.12)"
+    />
+    <Circle cx={8.5} cy={11.5} r={1.2} fill="#e8276b" />
+    <Circle cx={12} cy={11.5} r={1.2} fill="#e8276b" />
+    <Circle cx={15.5} cy={11.5} r={1.2} fill="#e8276b" />
+  </Svg>
+);
+
+const SecurityLockIcon: React.FC = () => (
+  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
+    <Rect
+      x={3.5}
+      y={11}
+      width={17}
+      height={11}
+      rx={2.5}
+      stroke="#e8276b"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="rgba(232, 39, 107, 0.12)"
+    />
+    <Path
+      d="M7 11V7a5 5 0 0 1 10 0v4"
+      stroke="#e8276b"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Circle cx={12} cy={16} r={1.5} fill="#e8276b" />
+  </Svg>
+);
 
 interface LoginPhoneScreenProps {
   onOtpSent: (phone: string) => void;
@@ -171,11 +214,11 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
           </View>
         </View>
 
-        {/* Trust Badges matching Prototype */}
+        {/* Trust Badges matching Prototype with Premium Vector Icons */}
         <View style={styles.trustContainer}>
           <View style={styles.trustItem}>
             <View style={styles.iconCircle}>
-              <Text style={styles.iconText}>💬</Text>
+              <SmsBubbleIcon />
             </View>
             <Text style={styles.trustLabel}>
               The six-digit code arrives on SMS.
@@ -184,7 +227,7 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
 
           <View style={styles.trustItem}>
             <View style={styles.iconCircle}>
-              <Text style={styles.iconText}>🔒</Text>
+              <SecurityLockIcon />
             </View>
             <Text style={styles.trustLabel}>
               This number sends your client confirmations.
@@ -382,15 +425,14 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.tint,
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: '#ffeef4',
+    borderWidth: 1.2,
+    borderColor: 'rgba(232, 39, 107, 0.25)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  iconText: {
-    fontSize: 14,
   },
   trustLabel: {
     flex: 1,
