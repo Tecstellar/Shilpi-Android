@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SplashScreen } from './src/screens/SplashScreen';
 import { LoginPhoneScreen } from './src/screens/LoginPhoneScreen';
@@ -34,10 +35,11 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="light" />
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
 
-      {/* 2. Login Phone Number Screen */}
+        {/* 2. Login Phone Number Screen */}
       {screen === 'login_phone' && (
         <LoginPhoneScreen
           onOtpSent={(phone) => {
@@ -88,7 +90,8 @@ export default function App() {
           onCancel={() => setScreen('dashboard')}
         />
       )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
