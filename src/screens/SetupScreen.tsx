@@ -15,8 +15,21 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
-import Svg, { Circle, Line } from 'react-native-svg';
+import Svg, { Circle, Line, Path } from 'react-native-svg';
 import { apiClient } from '../services/apiClient';
+
+const CheckVectorIcon = () => (
+  <Svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth={3}>
+    <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const CloseVectorIcon = () => (
+  <Svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="rgba(18, 18, 18, 0.45)" strokeWidth={2.4}>
+    <Line x1={18} y1={6} x2={6} y2={18} strokeLinecap="round" />
+    <Line x1={6} y1={6} x2={18} y2={18} strokeLinecap="round" />
+  </Svg>
+);
 
 interface SetupScreenProps {
   phone?: string;
@@ -615,7 +628,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
                       style={styles.deleteBtn}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.deleteIconText}>✕</Text>
+                      <CloseVectorIcon />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -736,7 +749,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               activeOpacity={0.7}
             >
               <View style={[styles.checkBox, clientTaskDone && styles.checkBoxFilled]}>
-                {clientTaskDone && <Text style={styles.checkMark}>✓</Text>}
+                {clientTaskDone && <CheckVectorIcon />}
               </View>
               <View style={styles.taskTextCol}>
                 <Text style={styles.taskTitle}>Add a client</Text>
@@ -752,7 +765,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               activeOpacity={0.7}
             >
               <View style={[styles.checkBox, bookingTaskDone && styles.checkBoxFilled]}>
-                {bookingTaskDone && <Text style={styles.checkMark}>✓</Text>}
+                {bookingTaskDone && <CheckVectorIcon />}
               </View>
               <View style={styles.taskTextCol}>
                 <Text style={styles.taskTitle}>Add an upcoming booking</Text>
@@ -777,7 +790,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               activeOpacity={0.8}
             >
               <View style={[styles.checkBox, tourSeen.home && styles.checkBoxFilled]}>
-                {tourSeen.home && <Text style={styles.checkMark}>✓</Text>}
+                {tourSeen.home && <CheckVectorIcon />}
               </View>
               <View style={styles.tourTextCol}>
                 <Text style={styles.tourTitle}>Check Home for your upcoming orders</Text>
@@ -794,7 +807,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               activeOpacity={0.8}
             >
               <View style={[styles.checkBox, tourSeen.expenses && styles.checkBoxFilled]}>
-                {tourSeen.expenses && <Text style={styles.checkMark}>✓</Text>}
+                {tourSeen.expenses && <CheckVectorIcon />}
               </View>
               <View style={styles.tourTextCol}>
                 <Text style={styles.tourTitle}>Check Expenses to log what you spend</Text>
@@ -811,7 +824,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
               activeOpacity={0.8}
             >
               <View style={[styles.checkBox, tourSeen.reports && styles.checkBoxFilled]}>
-                {tourSeen.reports && <Text style={styles.checkMark}>✓</Text>}
+                {tourSeen.reports && <CheckVectorIcon />}
               </View>
               <View style={styles.tourTextCol}>
                 <Text style={styles.tourTitle}>Check Reports for your analytics</Text>

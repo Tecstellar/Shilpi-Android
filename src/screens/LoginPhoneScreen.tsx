@@ -17,6 +17,21 @@ import { Colors } from '../theme/colors';
 import { apiClient } from '../services/apiClient';
 
 // Premium Vector Icons replacing emojis
+const IndiaFlagVector: React.FC = () => (
+  <Svg width={18} height={12} viewBox="0 0 60 40">
+    <Rect width={60} height={13.33} fill="#FF9933" />
+    <Rect y={13.33} width={60} height={13.33} fill="#FFFFFF" />
+    <Rect y={26.66} width={60} height={13.33} fill="#138808" />
+    <Circle cx={30} cy={20} r={5} stroke="#000080" strokeWidth={1} fill="none" />
+  </Svg>
+);
+
+const CheckMarkVectorIcon: React.FC = () => (
+  <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth={3}>
+    <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
 const SmsBubbleIcon: React.FC = () => (
   <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
     <Path
@@ -148,7 +163,9 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
             {/* Pink-shaped Phone Number Field with only black and pink used in prototype */}
             <View style={styles.phoneInputRow}>
               <View style={styles.countryPrefix}>
-                <Text style={styles.flagEmoji}>🇮🇳</Text>
+                <View style={{ marginRight: 4 }}>
+                  <IndiaFlagVector />
+                </View>
                 <Text style={styles.prefixText}>+91</Text>
                 <View style={styles.verticalDivider} />
               </View>
@@ -177,7 +194,7 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
               activeOpacity={0.8}
             >
               <View style={[styles.checkbox, agreed && styles.checkboxAgreed]}>
-                {agreed && <Text style={styles.checkmark}>✓</Text>}
+                {agreed && <CheckMarkVectorIcon />}
               </View>
               <View style={styles.consentTextWrap}>
                 <Text style={styles.consentText}>

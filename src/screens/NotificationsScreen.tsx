@@ -6,8 +6,49 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import Svg, { Path, Circle, Line } from 'react-native-svg';
 import { Colors } from '../theme/colors';
 import { NotificationItem } from '../data/prototypeData';
+
+const NotificationVectorIcon: React.FC<{ glyph: string; color?: string }> = ({ glyph, color = '#ffffff' }) => {
+  if (glyph === 'star' || glyph === '★') {
+    return (
+      <Svg width={13} height={13} viewBox="0 0 24 24" fill={color} stroke={color} strokeWidth={1}>
+        <Path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+      </Svg>
+    );
+  }
+  if (glyph === '↑') {
+    return (
+      <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4}>
+        <Line x1={12} y1={19} x2={12} y2={5} strokeLinecap="round" />
+        <Path d="M5 12l7-7 7 7" strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    );
+  }
+  if (glyph === '!') {
+    return (
+      <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4}>
+        <Line x1={12} y1={8} x2={12} y2={12} strokeLinecap="round" />
+        <Circle cx={12} cy={16} r={1} fill={color} />
+      </Svg>
+    );
+  }
+  if (glyph === '＋' || glyph === '+') {
+    return (
+      <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4}>
+        <Line x1={12} y1={5} x2={12} y2={19} strokeLinecap="round" />
+        <Line x1={5} y1={12} x2={19} y2={12} strokeLinecap="round" />
+      </Svg>
+    );
+  }
+  return (
+    <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
+      <Path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" strokeLinecap="round" strokeLinejoin="round" />
+      <Path d="M13.73 21a2 2 0 0 1-3.46 0" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+};
 
 interface NotificationsScreenProps {
   notifications: NotificationItem[];
@@ -67,9 +108,10 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({
               activeOpacity={0.7}
             >
               <View style={[styles.glyphChip, !isRead && styles.glyphChipUnread]}>
-                <Text style={[styles.glyphText, !isRead && styles.glyphTextUnread]}>
-                  {n.glyph}
-                </Text>
+                <NotificationVectorIcon
+                  glyph={n.glyph}
+                  color={!isRead ? '#ffffff' : 'rgba(18, 18, 18, 0.6)'}
+                />
               </View>
 
               <View style={styles.textContainer}>

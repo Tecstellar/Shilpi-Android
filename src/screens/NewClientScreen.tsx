@@ -64,6 +64,13 @@ const CheckIcon = () => (
   </Svg>
 );
 
+const CloseSmallIcon = () => (
+  <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="rgba(18, 18, 18, 0.6)" strokeWidth={2.4}>
+    <Line x1={18} y1={6} x2={6} y2={18} strokeLinecap="round" />
+    <Line x1={6} y1={6} x2={18} y2={18} strokeLinecap="round" />
+  </Svg>
+);
+
 const CalendarPlusIcon = () => (
   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth={2}>
     <Rect x={3} y={4} width={18} height={18} rx={2} strokeLinecap="round" strokeLinejoin="round" />
@@ -381,7 +388,7 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
                 style={styles.removePhotoBtn}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Text style={styles.removePhotoText}>✕</Text>
+                <CloseSmallIcon />
               </TouchableOpacity>
             )}
           </TouchableOpacity>

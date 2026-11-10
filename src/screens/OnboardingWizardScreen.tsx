@@ -11,7 +11,14 @@ import {
   Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Svg, { Path } from 'react-native-svg';
 import { apiClient } from '../services/apiClient';
+
+const CheckVectorIcon = () => (
+  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={3}>
+    <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
 
 interface OnboardingWizardScreenProps {
   phone: string;
@@ -291,7 +298,9 @@ export const OnboardingWizardScreen: React.FC<OnboardingWizardScreenProps> = ({ 
           <View style={styles.stepContainer}>
             <View style={styles.summaryCard}>
               <View style={styles.summaryItem}>
-                <Text style={styles.checkIcon}>✓</Text>
+                <View style={styles.checkIconWrap}>
+                  <CheckVectorIcon />
+                </View>
                 <View style={styles.summaryTextGroup}>
                   <Text style={styles.summaryTitle}>Studio Profile</Text>
                   <Text style={styles.summaryDesc}>{businessName} · {city}</Text>
@@ -301,7 +310,9 @@ export const OnboardingWizardScreen: React.FC<OnboardingWizardScreenProps> = ({ 
               <View style={styles.summaryDivider} />
 
               <View style={styles.summaryItem}>
-                <Text style={styles.checkIcon}>✓</Text>
+                <View style={styles.checkIconWrap}>
+                  <CheckVectorIcon />
+                </View>
                 <View style={styles.summaryTextGroup}>
                   <Text style={styles.summaryTitle}>Service Catalog</Text>
                   <Text style={styles.summaryDesc}>{packages.length} active service packages configured</Text>
@@ -311,7 +322,9 @@ export const OnboardingWizardScreen: React.FC<OnboardingWizardScreenProps> = ({ 
               <View style={styles.summaryDivider} />
 
               <View style={styles.summaryItem}>
-                <Text style={styles.checkIcon}>✓</Text>
+                <View style={styles.checkIconWrap}>
+                  <CheckVectorIcon />
+                </View>
                 <View style={styles.summaryTextGroup}>
                   <Text style={styles.summaryTitle}>Client WhatsApp Dues</Text>
                   <Text style={styles.summaryDesc}>Instant booking confirmations & balance payment links enabled</Text>
@@ -597,11 +610,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 12,
   },
-  checkIcon: {
-    fontSize: 16,
-    color: '#10b981',
-    fontWeight: '800',
-    marginTop: 1,
+  checkIconWrap: {
+    marginRight: 10,
+    marginTop: 2,
   },
   summaryTextGroup: {
     flex: 1,

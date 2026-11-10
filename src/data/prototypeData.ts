@@ -328,7 +328,7 @@ export const INITIAL_NOTIFS: NotificationItem[] = [
   },
   {
     id: 'n5',
-    glyph: '★',
+    glyph: 'star',
     title: 'Anu Menon left you a 5-star review',
     body: '"Flawless work and so calm on the morning of the wedding."',
     time: '12 Sep',

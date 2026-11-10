@@ -7,8 +7,16 @@ import {
   TouchableOpacity,
   TextInput,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { Colors } from '../theme/colors';
 import { PackageGroup, fmt } from '../data/prototypeData';
+
+const EditPencilVectorIcon = () => (
+  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="rgba(18, 18, 18, 0.35)" strokeWidth={2}>
+    <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
 
 interface PackagesScreenProps {
   packageGroups: PackageGroup[];
@@ -49,7 +57,9 @@ export const PackagesScreen: React.FC<PackagesScreenProps> = ({
                 <Text style={styles.itemName}>{item.name}</Text>
                 <View style={styles.priceContainer}>
                   <Text style={styles.itemPrice}>{fmt(item.price)}</Text>
-                  <Text style={styles.editIcon}>✏️</Text>
+                  <View style={styles.editIconWrap}>
+                    <EditPencilVectorIcon />
+                  </View>
                 </View>
               </View>
             ))}
@@ -199,9 +209,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#121212',
   },
-  editIcon: {
-    fontSize: 12,
-    opacity: 0.6,
+  editIconWrap: {
+    marginLeft: 6,
   },
   addBtnContainer: {
     paddingHorizontal: 16,

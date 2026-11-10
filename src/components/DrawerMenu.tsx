@@ -396,7 +396,9 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 </Text>
 
                 <View style={styles.premiumBadge}>
-                  <Text style={styles.premiumCrown}>👑</Text>
+                  <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2.4} style={{ marginRight: 3 }}>
+                    <Path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z" strokeLinecap="round" strokeLinejoin="round" />
+                  </Svg>
                   <Text style={styles.premiumText}>PREMIUM</Text>
                 </View>
               </View>

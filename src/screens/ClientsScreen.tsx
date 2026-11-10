@@ -7,8 +7,18 @@ import {
   TextInput,
   TouchableOpacity,
 } from 'react-native';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { Colors } from '../theme/colors';
 import { Client, fmt } from '../data/prototypeData';
+
+const UsersEmptyVectorIcon = () => (
+  <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={1.8}>
+    <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
+    <Circle cx={9} cy={7} r={4} strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M23 21v-2a4 4 0 0 0-3-3.87" strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
 
 interface ClientsScreenProps {
   clients: Client[];
@@ -86,7 +96,7 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
         ) : (
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconCircle}>
-              <Text style={styles.emptyIconText}>👥</Text>
+              <UsersEmptyVectorIcon />
             </View>
             <Text style={styles.emptyTitle}>No clients yet</Text>
             <Text style={styles.emptySubtitle}>

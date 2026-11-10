@@ -7,7 +7,14 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { Colors } from '../theme/colors';
+
+const CheckVectorIcon = () => (
+  <Svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth={3}>
+    <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
 
 interface ReminderItem {
   id: string;
@@ -95,7 +102,7 @@ export const RemindersScreen: React.FC<RemindersScreenProps> = ({ onGoBack }) =>
                   activeOpacity={0.7}
                 >
                   <View style={[styles.checkBox, isDone && styles.checkBoxDone]}>
-                    {isDone && <Text style={styles.checkMark}>✓</Text>}
+                    {isDone && <CheckVectorIcon />}
                   </View>
 
                   <View style={styles.reminderDetails}>

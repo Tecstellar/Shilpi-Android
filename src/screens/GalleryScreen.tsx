@@ -7,7 +7,15 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { Colors } from '../theme/colors';
+
+const CameraVectorIcon = () => (
+  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="rgba(255, 255, 255, 0.4)" strokeWidth={1.8}>
+    <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round" />
+    <Circle cx={12} cy={13} r={4} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
 
 const GALLERY_POSTS = [
   {
@@ -51,7 +59,9 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({ onGoBack }) => {
           <View style={styles.photosGrid}>
             <View style={styles.largeSlot}>
               <Text style={styles.slotPlaceholder}>Drop finished look</Text>
-              <Text style={styles.slotIcon}>📸</Text>
+              <View style={styles.slotIconWrap}>
+                <CameraVectorIcon />
+              </View>
             </View>
 
             <View style={styles.rightThumbnails}>
@@ -159,8 +169,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.deep,
   },
-  slotIcon: {
-    fontSize: 20,
+  slotIconWrap: {
     marginTop: 6,
   },
   rightThumbnails: {

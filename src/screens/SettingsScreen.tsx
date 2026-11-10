@@ -7,7 +7,14 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { Colors } from '../theme/colors';
+
+const CheckVectorIcon = () => (
+  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={3}>
+    <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
 
 interface SettingsScreenProps {
   onGoToSubscription: () => void;
@@ -108,7 +115,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 <Text style={styles.themeName}>{th.name}</Text>
                 <Text style={styles.themeDesc}>{th.desc}</Text>
               </View>
-              {isSelected && <Text style={styles.themeCheck}>✓</Text>}
+              {isSelected && (
+                <View style={{ marginLeft: 8 }}>
+                  <CheckVectorIcon />
+                </View>
+              )}
             </TouchableOpacity>
           );
         })}

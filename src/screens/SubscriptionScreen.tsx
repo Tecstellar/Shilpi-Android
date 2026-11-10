@@ -6,8 +6,15 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { Colors } from '../theme/colors';
 import { PLANS, fmt } from '../data/prototypeData';
+
+const CheckVectorIcon = () => (
+  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={3}>
+    <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
 
 interface SubscriptionScreenProps {
   onPayByUpi: (planMonths: number, total: number) => void;
@@ -129,7 +136,9 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({
       <View style={styles.featuresCard}>
         {FEATURES.map((feat, idx) => (
           <View key={idx} style={styles.featureRow}>
-            <Text style={styles.checkIcon}>✓</Text>
+            <View style={styles.checkIconWrap}>
+              <CheckVectorIcon />
+            </View>
             <View style={styles.featureTextCol}>
               <Text style={styles.featureTitle}>{feat.title}</Text>
               <Text style={styles.featureDesc}>{feat.desc}</Text>
@@ -331,11 +340,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(18, 18, 18, 0.05)',
   },
-  checkIcon: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.accent,
-    marginTop: 1,
+  checkIconWrap: {
+    marginRight: 10,
+    marginTop: 3,
   },
   featureTextCol: {
     flex: 1,
