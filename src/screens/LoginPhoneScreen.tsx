@@ -83,7 +83,8 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState('');
 
-  const isButtonEnabled = agreed && phoneNumber.replace(/\s+/g, '').length >= 10;
+  const isValidPhone = /^\d{10}$/.test(phoneNumber);
+  const isButtonEnabled = agreed && isValidPhone;
 
   const handleSendCode = async () => {
     if (!agreed) {
@@ -91,13 +92,13 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
       return;
     }
 
-    const cleaned = phoneNumber.replace(/\s+/g, '');
-    if (cleaned.length < 10) {
+    const cleaned = phoneNumber.replace(/\D/g, '');
+    if (!/^\d{10}$/.test(cleaned)) {
       setErrorText('Please enter a valid 10-digit mobile number.');
       return;
     }
 
-    const fullPhone = cleaned.startsWith('+91') ? cleaned : `+91${cleaned}`;
+    const fullPhone = `+91${cleaned}`;
     setLoading(true);
     setErrorText('');
 
@@ -173,16 +174,17 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
 
               <TextInput
                 style={styles.textInput}
-                keyboardType="phone-pad"
-                placeholder="98765 43210"
+                keyboardType="number-pad"
+                placeholder="9876543210"
                 placeholderTextColor="rgba(18, 18, 18, 0.4)"
                 selectionColor={Colors.accent}
                 value={phoneNumber}
                 onChangeText={(val) => {
-                  setPhoneNumber(val);
+                  const digits = val.replace(/\D/g, '').slice(0, 10);
+                  setPhoneNumber(digits);
                   if (errorText) setErrorText('');
                 }}
-                maxLength={12}
+                maxLength={10}
               />
             </View>
 

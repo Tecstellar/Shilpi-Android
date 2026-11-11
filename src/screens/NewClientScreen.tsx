@@ -129,10 +129,10 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
   onGoBack,
 }) => {
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('+91 ');
+  const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [validationError, setValidationError] = useState(false);
+  const [validationError, setValidationError] = useState<'' | 'name' | 'phone'>('');
 
   // Entrance spring animation
   const animMount = useRef(new Animated.Value(0)).current;
@@ -225,14 +225,19 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
 
   const handleSave = (thenCreateBooking: boolean = false) => {
     if (!name.trim()) {
-      setValidationError(true);
+      setValidationError('name');
       return;
     }
-    setValidationError(false);
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (!/^\d{10}$/.test(cleanPhone)) {
+      setValidationError('phone');
+      return;
+    }
+    setValidationError('');
     onSaveClient(
       {
         name: name.trim(),
-        phone: phone.trim() || '+91 98000 00000',
+        phone: `+91 ${cleanPhone.slice(0, 5)} ${cleanPhone.slice(5)}`,
         bookings: 0,
         sales: 0,
         profit: 0,
@@ -279,13 +284,16 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
         >
           <View style={styles.cardHeaderRow}>
             <Text style={styles.sectionKicker}>CLIENT DETAILS</Text>
-            {validationError && (
+            {validationError === 'name' && (
               <Text style={styles.errorText}>* Name is required</Text>
+            )}
+            {validationError === 'phone' && (
+              <Text style={styles.errorText}>* Enter 10-digit phone number</Text>
             )}
           </View>
 
           {/* Name Field */}
-          <View style={[styles.fieldRow, validationError && styles.fieldRowError]}>
+          <View style={[styles.fieldRow, validationError === 'name' && styles.fieldRowError]}>
             <View style={styles.fieldIconBox}>
               <UserIcon />
             </View>
@@ -298,7 +306,7 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
                 value={name}
                 onChangeText={(t) => {
                   setName(t);
-                  if (t.trim()) setValidationError(false);
+                  if (t.trim() && validationError === 'name') setValidationError('');
                 }}
               />
             </View>
@@ -307,20 +315,30 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
           <View style={styles.fieldDivider} />
 
           {/* Phone Field */}
-          <View style={styles.fieldRow}>
+          <View style={[styles.fieldRow, validationError === 'phone' && styles.fieldRowError]}>
             <View style={styles.fieldIconBox}>
               <PhoneIcon />
             </View>
             <View style={styles.fieldContent}>
               <Text style={styles.fieldLabel}>PHONE NUMBER *</Text>
-              <TextInput
-                style={styles.compactInput}
-                keyboardType="phone-pad"
-                placeholder="+91 98765 43210"
-                placeholderTextColor="rgba(18, 18, 18, 0.35)"
-                value={phone}
-                onChangeText={setPhone}
-              />
+              <View style={styles.phonePrefixWrap}>
+                <Text style={styles.phonePrefixCode}>+91</Text>
+                <TextInput
+                  style={[styles.compactInput, { flex: 1 }]}
+                  keyboardType="number-pad"
+                  placeholder="9876543210"
+                  placeholderTextColor="rgba(18, 18, 18, 0.35)"
+                  value={phone}
+                  onChangeText={(t) => {
+                    const digits = t.replace(/\D/g, '').slice(0, 10);
+                    setPhone(digits);
+                    if (digits.length === 10 && validationError === 'phone') {
+                      setValidationError('');
+                    }
+                  }}
+                  maxLength={10}
+                />
+              </View>
             </View>
           </View>
 
@@ -555,6 +573,16 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     paddingHorizontal: 0,
     fontWeight: '500',
+  },
+  phonePrefixWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  phonePrefixCode: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#121212',
   },
   compactTextArea: {
     minHeight: 46,
