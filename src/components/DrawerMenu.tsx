@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
+import { fmt } from '../data/prototypeData';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.84, 335);
@@ -24,6 +25,10 @@ interface DrawerMenuProps {
   onLogout: () => void;
   ownerName?: string;
   logoUri?: string;
+  monthBookingsCount?: number;
+  toCollectAmount?: number;
+  unreadNotificationsCount?: number;
+  todayBookingsCount?: number;
 }
 
 // ----------------- Bespoke Luxury Vector SVG Icons ----------------- //
@@ -190,6 +195,10 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
   onLogout,
   ownerName,
   logoUri,
+  monthBookingsCount = 0,
+  toCollectAmount = 0,
+  unreadNotificationsCount = 0,
+  todayBookingsCount = 0,
 }) => {
   const [isVisible, setIsVisible] = useState(isOpen);
 
@@ -211,7 +220,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
     businessTypes: string[];
     logoUri?: string;
   }>({
-    ownerName: ownerName || 'Shilpa R.',
+    ownerName: ownerName || 'Artist',
     businessName: 'Beauty & Bridal Studio',
     businessTypes: [],
     logoUri,
@@ -224,7 +233,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
         if (stored) {
           const parsed = JSON.parse(stored);
           setProfile({
-            ownerName: parsed.ownerName?.trim() || ownerName || 'Shilpa R.',
+            ownerName: parsed.ownerName?.trim() || ownerName || 'Artist',
             businessName: parsed.businessName?.trim() || 'Beauty & Bridal Studio',
             businessTypes: Array.isArray(parsed.businessTypes) ? parsed.businessTypes : [],
             logoUri: parsed.logoUri || parsed.profilePhotoUrl || logoUri,
@@ -431,6 +440,34 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 </View>
               </View>
             </View>
+
+            {/* Internal Divider */}
+            <View style={styles.profileCardDivider} />
+
+            {/* Bottom Row: Live Month Metrics */}
+            <View style={styles.metricsRow}>
+              <TouchableOpacity
+                style={styles.metricCol}
+                onPress={() => handleCloseWithAction(() => onNavigate('orders'))}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.metricLabel}>This month</Text>
+                <Text style={styles.metricValueWhite}>
+                  {monthBookingsCount} {monthBookingsCount === 1 ? 'booking' : 'bookings'}
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.metricSeparator} />
+
+              <TouchableOpacity
+                style={styles.metricCol}
+                onPress={() => handleCloseWithAction(() => onNavigate('payments'))}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.metricLabel}>To collect</Text>
+                <Text style={styles.metricValuePink}>{fmt(toCollectAmount)}</Text>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
 
           {/* 2x2 Quick Action Cards Grid */}
@@ -480,7 +517,12 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
               <View style={styles.iconCircleDark}>
                 <PaymentsIcon />
               </View>
-              <Text style={styles.cardTitleWhite}>Payments</Text>
+              <View>
+                <Text style={styles.cardTitleWhite}>Payments</Text>
+                <Text style={styles.cardSubPink}>
+                  {toCollectAmount > 0 ? `${fmt(toCollectAmount)} pending` : 'All settled'}
+                </Text>
+              </View>
             </AnimatedTouchableCard>
 
             {/* Card 4: My Gallery */}
@@ -524,7 +566,13 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 </View>
                 <Text style={styles.menuRowText}>Notifications</Text>
               </View>
-              <Text style={styles.chevronGray}>›</Text>
+              {unreadNotificationsCount > 0 ? (
+                <View style={styles.badgePinkPill}>
+                  <Text style={styles.badgePinkText}>{unreadNotificationsCount} new</Text>
+                </View>
+              ) : (
+                <Text style={styles.chevronGray}>›</Text>
+              )}
             </TouchableOpacity>
 
             {/* Reminders */}
@@ -539,7 +587,11 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 </View>
                 <Text style={styles.menuRowText}>Reminders</Text>
               </View>
-              <Text style={styles.chevronGray}>›</Text>
+              {todayBookingsCount > 0 ? (
+                <Text style={styles.subtextGray}>{todayBookingsCount} today</Text>
+              ) : (
+                <Text style={styles.chevronGray}>›</Text>
+              )}
             </TouchableOpacity>
 
             {/* Expenses */}

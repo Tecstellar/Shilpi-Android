@@ -803,6 +803,43 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     setCurrentScreen('newbooking');
   };
 
+  // Real sidebar metrics synced with active studio bookings & month
+  const nowDate = new Date();
+  const shortMonthsList = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const curMonthShortStr = shortMonthsList[nowDate.getMonth()];
+  const curYearNum = nowDate.getFullYear();
+  const curDayNum = nowDate.getDate();
+
+  const sidebarMonthBookingsCount = bookings.filter((b) => {
+    if (b.bookingDate) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(b.bookingDate));
+      if (m) {
+        return Number(m[1]) === curYearNum && Number(m[2]) - 1 === nowDate.getMonth();
+      }
+    }
+    return b.month === curMonthShortStr && (!b.year || b.year === curYearNum);
+  }).length;
+
+  const sidebarToCollectAmount = bookings.reduce((sum, b) => {
+    const bTotal = b.items.reduce((s, item) => s + item.price, 0) + (b.travel || 0);
+    return sum + Math.max(0, bTotal - (b.advance || 0));
+  }, 0);
+
+  const sidebarTodayBookingsCount = bookings.filter((b) => {
+    if (b.status !== 'Upcoming') return false;
+    if (b.bookingDate) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(b.bookingDate));
+      if (m) {
+        return (
+          Number(m[1]) === curYearNum &&
+          Number(m[2]) - 1 === nowDate.getMonth() &&
+          Number(m[3]) === curDayNum
+        );
+      }
+    }
+    return b.day === curDayNum && b.month === curMonthShortStr && (!b.year || b.year === curYearNum);
+  }).length;
+
   const showTabs =
     currentScreen !== 'newbooking' &&
     currentScreen !== 'newclient' &&
@@ -996,6 +1033,10 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         onLogout={onLogout}
         ownerName={artistName}
         logoUri={studioLogo}
+        monthBookingsCount={sidebarMonthBookingsCount}
+        toCollectAmount={sidebarToCollectAmount}
+        unreadNotificationsCount={notifications.length}
+        todayBookingsCount={sidebarTodayBookingsCount}
       />
 
       {/* 6. Action Bottom Sheet */}
