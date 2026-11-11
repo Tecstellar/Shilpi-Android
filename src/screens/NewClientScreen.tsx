@@ -182,10 +182,14 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
             const res = await ImagePicker.launchCameraAsync({
               allowsEditing: true,
               aspect: [1, 1],
-              quality: 0.8,
+              quality: 0.35,
+              base64: true,
             });
             if (!res.canceled && res.assets && res.assets[0]) {
-              setPhotoUri(res.assets[0].uri);
+              const asset = res.assets[0];
+              setPhotoUri(
+                asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri
+              );
             }
           },
         },
@@ -200,10 +204,14 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
             const res = await ImagePicker.launchImageLibraryAsync({
               allowsEditing: true,
               aspect: [1, 1],
-              quality: 0.8,
+              quality: 0.35,
+              base64: true,
             });
             if (!res.canceled && res.assets && res.assets[0]) {
-              setPhotoUri(res.assets[0].uri);
+              const asset = res.assets[0];
+              setPhotoUri(
+                asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri
+              );
             }
           },
         },

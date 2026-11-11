@@ -419,11 +419,16 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.85,
+        quality: 0.35,
+        base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setLogoUri(result.assets[0].uri);
+        const asset = result.assets[0];
+        const dataUri = asset.base64
+          ? `data:image/jpeg;base64,${asset.base64}`
+          : asset.uri;
+        setLogoUri(dataUri);
       }
     } catch (err) {
       console.warn('Logo pick error:', err);
@@ -494,75 +499,64 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
     );
 
     try {
+      const flattenedPackages = packageGroups.flatMap((group) =>
+        group.items.map((item) => ({
+          name: item.name,
+          price: item.price,
+          serviceType: group.name.toLowerCase().includes('hair')
+            ? 'hair'
+            : group.name.toLowerCase().includes('mehendi')
+            ? 'mehendi'
+            : group.name.toLowerCase().includes('bridal')
+            ? 'bridal'
+            : 'makeup',
+        }))
+      );
+
+      // Persist studio, business types, logo & packages to AWS RDS PostgreSQL
+      const regRes = await apiClient.post('/auth/register', {
+        phone,
+        ownerName: ownerName.trim() || 'Shilpa R.',
+        businessName: businessName.trim() || 'Shilpi Makeovers',
+        businessTypes: finalBusinessTypes,
+        city: city.trim() || 'Coimbatore',
+        address: address.trim() || '',
+        pincode: pincode.trim() || '',
+        logoUri: logoUri || undefined,
+        packages: flattenedPackages,
+      });
+
+      if (!regRes.data?.success || !regRes.data?.token || !regRes.data?.beautician) {
+        throw new Error(regRes.data?.error?.message || 'Registration response incomplete.');
+      }
+
+      await AsyncStorage.setItem('@shilpi_token', regRes.data.token);
+      if (regRes.data.beautician.id) {
+        await AsyncStorage.setItem('@shilpi_beautician_id', regRes.data.beautician.id);
+      }
       await AsyncStorage.setItem(
         '@shilpi_profile',
         JSON.stringify({
-          ownerName,
-          businessName,
-          businessTypes: finalBusinessTypes,
-          address,
-          city,
-          pincode,
-          phone,
-          logoUri,
+          beauticianId: regRes.data.beautician.id,
+          ownerName: regRes.data.beautician.ownerName || ownerName,
+          businessName: regRes.data.beautician.businessName || businessName,
+          businessTypes: regRes.data.beautician.businessTypes || finalBusinessTypes,
+          city: regRes.data.beautician.city || city,
+          address: regRes.data.beautician.address || address,
+          pincode: regRes.data.beautician.pincode || pincode,
+          phone: regRes.data.beautician.phone || phone,
+          logoUri: regRes.data.beautician.profilePhotoUrl || logoUri,
         })
       );
       await AsyncStorage.setItem('@shilpi_packages', JSON.stringify(packageGroups));
       await AsyncStorage.setItem('@shilpi_setup_done', 'true');
-
-      // Attempt backend persistence to AWS RDS PostgreSQL
-      try {
-        const flattenedPackages = packageGroups.flatMap((group) =>
-          group.items.map((item) => ({
-            name: item.name,
-            price: item.price,
-            serviceType: group.name.toLowerCase().includes('hair')
-              ? 'hair'
-              : group.name.toLowerCase().includes('mehendi')
-              ? 'mehendi'
-              : group.name.toLowerCase().includes('bridal')
-              ? 'bridal'
-              : 'makeup',
-          }))
-        );
-
-        const regRes = await apiClient.post('/auth/register', {
-          phone,
-          ownerName: ownerName || 'Shilpa R.',
-          businessName: businessName || 'Shilpi Makeovers',
-          businessTypes: finalBusinessTypes,
-          city: city || 'Coimbatore',
-          address: address || '',
-          pincode: pincode || '',
-          logoUri: logoUri || undefined,
-          packages: flattenedPackages,
-        });
-
-        if (regRes.data?.token) {
-          await AsyncStorage.setItem('@shilpi_token', regRes.data.token);
-        }
-        if (regRes.data?.beautician) {
-          await AsyncStorage.setItem(
-            '@shilpi_profile',
-            JSON.stringify({
-              ownerName: regRes.data.beautician.ownerName || ownerName,
-              businessName: regRes.data.beautician.businessName || businessName,
-              businessTypes: regRes.data.beautician.businessTypes || finalBusinessTypes,
-              city: regRes.data.beautician.city || city,
-              address: regRes.data.beautician.address || address,
-              pincode: regRes.data.beautician.pincode || pincode,
-              phone: regRes.data.beautician.phone || phone,
-              logoUri: regRes.data.beautician.profilePhotoUrl || logoUri,
-            })
-          );
-        }
-      } catch (err) {
-        console.warn('Backend register sync skipped, using local persistence');
-      }
-    } catch (e) {
-      console.warn('Setup persistence error', e);
+      onCompleted();
+    } catch (e: any) {
+      Alert.alert(
+        'Could Not Complete Setup',
+        e?.message || 'Failed to save your studio details to the server. Please try again.'
+      );
     }
-    onCompleted();
   };
 
   // Next step navigation handler
@@ -658,6 +652,12 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
 
           <Text style={styles.headerTitle}>{currentConfig.title}</Text>
           <Text style={styles.headerBlurb}>{currentConfig.blurb}</Text>
+          {phone ? (
+            <View style={styles.verifiedPhoneBadge}>
+              <CheckVectorIcon />
+              <Text style={styles.verifiedPhoneText}>Verified: {phone}</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* 3. STEP 1: Profile View */}
@@ -1250,6 +1250,25 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
     marginTop: 8,
     overflow: 'hidden',
+  },
+  verifiedPhoneBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(232, 39, 107, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(232, 39, 107, 0.4)',
+  },
+  verifiedPhoneText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: 0.3,
   },
   progressFill: {
     height: 8,

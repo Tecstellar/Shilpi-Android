@@ -6,6 +6,7 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { Colors } from '../theme/colors';
@@ -76,7 +77,11 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
                     isAccentChip ? styles.avatarAccent : styles.avatarInk,
                   ]}
                 >
-                  <Text style={styles.avatarText}>{initial}</Text>
+                  {c.photoUri ? (
+                    <Image source={{ uri: c.photoUri }} style={styles.avatarImage} />
+                  ) : (
+                    <Text style={styles.avatarText}>{initial}</Text>
+                  )}
                 </View>
 
                 <View style={styles.clientInfo}>
@@ -163,6 +168,11 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarAccent: {
     backgroundColor: Colors.accent,

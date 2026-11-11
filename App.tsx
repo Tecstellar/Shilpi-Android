@@ -79,10 +79,12 @@ export default function App() {
           onLogout={async () => {
             await AsyncStorage.multiRemove([
               '@shilpi_token',
+              '@shilpi_beautician_id',
               '@shilpi_profile',
               '@shilpi_clients',
               '@shilpi_bookings',
               '@shilpi_notifs',
+              '@shilpi_packages',
               '@shilpi_setup_done',
             ]);
             setScreen('login_phone');

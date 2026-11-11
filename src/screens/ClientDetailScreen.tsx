@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Linking,
+  Image,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Colors } from '../theme/colors';
@@ -68,7 +69,11 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
       {/* 1. Ink Profile Card */}
       <View style={styles.inkProfileCard}>
         <View style={styles.avatarGradient}>
-          <Text style={styles.avatarLetter}>{initial}</Text>
+          {client.photoUri ? (
+            <Image source={{ uri: client.photoUri }} style={styles.avatarPhoto} />
+          ) : (
+            <Text style={styles.avatarLetter}>{initial}</Text>
+          )}
         </View>
 
         <View style={styles.nameContainer}>
@@ -117,6 +122,14 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
           <Text style={styles.metricValue}>{fmt(client.profit)}</Text>
         </View>
       </View>
+
+      {/* 3b. Client Notes */}
+      {client.notes ? (
+        <View style={styles.notesCard}>
+          <Text style={styles.notesLabel}>CLIENT NOTES</Text>
+          <Text style={styles.notesText}>{client.notes}</Text>
+        </View>
+      ) : null}
 
       {/* 4. Booking History List */}
       <View style={styles.historyHeader}>
@@ -174,6 +187,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarPhoto: {
+    width: '100%',
+    height: '100%',
   },
   avatarLetter: {
     color: '#ffffff',
@@ -276,6 +294,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#121212',
     marginTop: 4,
+  },
+  notesCard: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(18, 18, 18, 0.06)',
+  },
+  notesLabel: {
+    fontSize: 9.5,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    fontWeight: '700',
+    color: Colors.accent,
+    marginBottom: 6,
+  },
+  notesText: {
+    fontSize: 13.5,
+    color: '#121212',
+    lineHeight: 19,
   },
   historyHeader: {
     paddingHorizontal: 16,

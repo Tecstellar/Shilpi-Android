@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Platform, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient } from '../services/apiClient';
 import { Colors } from '../theme/colors';
@@ -56,7 +56,8 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeSheet, setActiveSheet] = useState<ActionSheetData | null>(null);
 
-  // App Data State — Clean initial state (starts empty, persisted in AsyncStorage)
+  // App Data State — Strictly scoped to authenticated studio (beauticianId)
+  const [beauticianId, setBeauticianId] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [packageGroups, setPackageGroups] = useState<PackageGroup[]>(INITIAL_PKG_GROUPS);
@@ -64,13 +65,18 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   const [artistName, setArtistName] = useState('Artist');
   const [studioLogo, setStudioLogo] = useState<string | undefined>();
 
-  // Load storage data on mount & sync with RDS PostgreSQL
+  // Load storage data on mount & hydrate live studio data from AWS RDS PostgreSQL
   useEffect(() => {
     const loadData = async () => {
       try {
+        let resolvedShopId = await AsyncStorage.getItem('@shilpi_beautician_id');
+
         const storedProfile = await AsyncStorage.getItem('@shilpi_profile');
         if (storedProfile) {
           const parsed = JSON.parse(storedProfile);
+          if (!resolvedShopId && parsed.beauticianId) {
+            resolvedShopId = parsed.beauticianId;
+          }
           if (parsed.ownerName?.trim()) {
             setArtistName(parsed.ownerName.trim());
           } else if (parsed.businessName?.trim()) {
@@ -81,29 +87,71 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           }
         }
 
-        let localClients: Client[] = [];
-        const storedClients = await AsyncStorage.getItem('@shilpi_clients');
-        if (storedClients) {
-          localClients = JSON.parse(storedClients);
-          setClients(localClients);
-        }
-
-        const storedBookings = await AsyncStorage.getItem('@shilpi_bookings');
-        if (storedBookings) {
-          setBookings(JSON.parse(storedBookings));
-        }
-
-        const storedNotifs = await AsyncStorage.getItem('@shilpi_notifs');
-        if (storedNotifs) {
-          setNotifications(JSON.parse(storedNotifs));
-        }
-
         const storedPackages = await AsyncStorage.getItem('@shilpi_packages');
         if (storedPackages) {
           setPackageGroups(JSON.parse(storedPackages));
         }
 
-        // Fetch from PostgreSQL backend database
+        // Hydrate live studio identity from backend (/auth/me)
+        try {
+          const meRes = await apiClient.get('/auth/me');
+          if (meRes.data?.success && meRes.data?.beautician) {
+            const b = meRes.data.beautician;
+            resolvedShopId = b.id;
+            await AsyncStorage.setItem('@shilpi_beautician_id', b.id);
+            await AsyncStorage.setItem(
+              '@shilpi_profile',
+              JSON.stringify({
+                beauticianId: b.id,
+                ownerName: b.ownerName,
+                businessName: b.businessName,
+                businessTypes: b.businessTypes || [],
+                city: b.city || '',
+                address: b.address || '',
+                pincode: b.pincode || '',
+                phone: b.phone || '',
+                logoUri: b.profilePhotoUrl,
+              })
+            );
+            if (b.ownerName?.trim()) {
+              setArtistName(b.ownerName.trim());
+            } else if (b.businessName?.trim()) {
+              setArtistName(b.businessName.trim());
+            }
+            if (b.profilePhotoUrl) {
+              setStudioLogo(b.profilePhotoUrl);
+            }
+          }
+        } catch (meErr: any) {
+          if (meErr?.status === 401) {
+            Alert.alert('Session Expired', 'Please sign in again to continue.', [
+              { text: 'Sign In', onPress: () => onLogout() },
+            ]);
+            return;
+          }
+        }
+
+        if (resolvedShopId) {
+          setBeauticianId(resolvedShopId);
+
+          const [storedClients, storedBookings, storedNotifs] = await Promise.all([
+            AsyncStorage.getItem(`@shilpi_clients_${resolvedShopId}`),
+            AsyncStorage.getItem(`@shilpi_bookings_${resolvedShopId}`),
+            AsyncStorage.getItem(`@shilpi_notifs_${resolvedShopId}`),
+          ]);
+
+          if (storedClients) {
+            setClients(JSON.parse(storedClients));
+          }
+          if (storedBookings) {
+            setBookings(JSON.parse(storedBookings));
+          }
+          if (storedNotifs) {
+            setNotifications(JSON.parse(storedNotifs));
+          }
+        }
+
+        // Fetch shop-scoped clients directly from AWS RDS PostgreSQL
         try {
           const res = await apiClient.get('/clients');
           if (res.data?.success && Array.isArray(res.data.data)) {
@@ -116,20 +164,25 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
               profit: 0,
               history: [],
               notes: c.notes || '',
+              photoUri: c.profilePhotoUrl || undefined,
             }));
 
-            // Merge unique clients (matching on phone or id)
-            const merged = [...dbClients];
-            localClients.forEach((lc) => {
-              if (!merged.some((m) => m.phone === lc.phone || m.id === lc.id)) {
-                merged.push(lc);
-              }
-            });
-            setClients(merged);
-            await AsyncStorage.setItem('@shilpi_clients', JSON.stringify(merged));
+            setClients(dbClients);
+            if (resolvedShopId) {
+              await AsyncStorage.setItem(
+                `@shilpi_clients_${resolvedShopId}`,
+                JSON.stringify(dbClients)
+              );
+            }
           }
-        } catch (apiErr) {
-          console.log('Backend sync offline/fallback:', apiErr);
+        } catch (apiErr: any) {
+          if (apiErr?.status === 401) {
+            Alert.alert('Session Expired', 'Please sign in again to continue.', [
+              { text: 'Sign In', onPress: () => onLogout() },
+            ]);
+          } else {
+            console.log('Backend clients fetch warning:', apiErr);
+          }
         }
       } catch (e) {
         console.warn('Failed to load storage data:', e);
@@ -196,7 +249,9 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   ) => {
     const updated = bookings.map((b) => (b.id === orderId ? { ...b, status } : b));
     setBookings(updated);
-    AsyncStorage.setItem('@shilpi_bookings', JSON.stringify(updated)).catch(() => {});
+    if (beauticianId) {
+      AsyncStorage.setItem(`@shilpi_bookings_${beauticianId}`, JSON.stringify(updated)).catch(() => {});
+    }
   };
 
   const handleSaveBooking = (newBookingData: Partial<Booking>) => {
@@ -225,7 +280,9 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
 
     const updated = [newBooking, ...bookings];
     setBookings(updated);
-    AsyncStorage.setItem('@shilpi_bookings', JSON.stringify(updated)).catch(() => {});
+    if (beauticianId) {
+      AsyncStorage.setItem(`@shilpi_bookings_${beauticianId}`, JSON.stringify(updated)).catch(() => {});
+    }
 
     setCurrentScreen('orders');
     setActiveTab('orders');
@@ -256,26 +313,39 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
       photoUri: clientData.photoUri,
     };
 
-    // 1. Persist directly into PostgreSQL Amazon RDS 'clients' table
+    // 1. Persist directly into PostgreSQL Amazon RDS 'clients' table scoped to this studio
     try {
       const res = await apiClient.post('/clients', {
         name: newClient.name,
         phone: newClient.phone,
         notes: newClient.notes || undefined,
+        profilePhotoUrl: newClient.photoUri || undefined,
       });
-      console.log('Successfully saved to RDS PostgreSQL clients table:', res.data);
-      if (res.data?.data?.id) {
-        newClient.id = res.data.data.id;
+
+      if (!res.data?.success || !res.data?.data) {
+        throw new Error(res.data?.error?.message || 'Failed to save client on server.');
       }
-    } catch (err) {
-      console.warn('Backend database client save error:', err);
+
+      const saved = res.data.data;
+      newClient.id = saved.id;
+      newClient.notes = saved.notes || '';
+      newClient.photoUri = saved.profilePhotoUrl || newClient.photoUri;
+    } catch (err: any) {
+      Alert.alert(
+        'Could Not Save Client',
+        err?.message || 'Unable to save client to database. Please try again.'
+      );
+      return;
     }
 
-    // 2. Update local state and offline AsyncStorage
+    // 2. Update shop-scoped local state and AsyncStorage
+    const activeShopId = beauticianId || (await AsyncStorage.getItem('@shilpi_beautician_id'));
     setClients((prev) => {
       const filtered = prev.filter((c) => c.phone !== newClient.phone && c.id !== newClient.id);
       const updated = [newClient, ...filtered];
-      AsyncStorage.setItem('@shilpi_clients', JSON.stringify(updated)).catch(() => {});
+      if (activeShopId) {
+        AsyncStorage.setItem(`@shilpi_clients_${activeShopId}`, JSON.stringify(updated)).catch(() => {});
+      }
       return updated;
     });
 

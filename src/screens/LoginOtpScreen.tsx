@@ -51,7 +51,19 @@ export const LoginOtpScreen: React.FC<LoginOtpScreenProps> = ({ phone, onGoBack,
         otp: code,
       });
 
-      if (response.data.success) {
+      if (response.data?.success) {
+        // Clear any previous session keys before storing the newly authenticated studio session
+        await AsyncStorage.multiRemove([
+          '@shilpi_token',
+          '@shilpi_beautician_id',
+          '@shilpi_profile',
+          '@shilpi_clients',
+          '@shilpi_bookings',
+          '@shilpi_notifs',
+          '@shilpi_packages',
+          '@shilpi_setup_done',
+        ]);
+
         if (response.data.isNewUser) {
           onVerified(true);
         } else {
@@ -59,9 +71,13 @@ export const LoginOtpScreen: React.FC<LoginOtpScreenProps> = ({ phone, onGoBack,
             await AsyncStorage.setItem('@shilpi_token', response.data.token);
           }
           if (response.data.beautician) {
+            if (response.data.beautician.id) {
+              await AsyncStorage.setItem('@shilpi_beautician_id', response.data.beautician.id);
+            }
             await AsyncStorage.setItem(
               '@shilpi_profile',
               JSON.stringify({
+                beauticianId: response.data.beautician.id,
                 ownerName: response.data.beautician.ownerName,
                 businessName: response.data.beautician.businessName,
                 businessTypes: response.data.beautician.businessTypes || [],
@@ -72,15 +88,15 @@ export const LoginOtpScreen: React.FC<LoginOtpScreenProps> = ({ phone, onGoBack,
                 logoUri: response.data.beautician.profilePhotoUrl,
               })
             );
+            await AsyncStorage.setItem('@shilpi_setup_done', 'true');
           }
           onVerified(false, response.data.token);
         }
       } else {
-        setErrorText(response.data.error?.message || 'Incorrect verification code.');
+        setErrorText(response.data?.error?.message || 'Incorrect verification code.');
       }
     } catch (err: any) {
-      // In offline or local fallback, proceed seamlessly
-      onVerified(false, 'demo-token');
+      setErrorText(err?.message || 'Verification failed. Please check the code and try again.');
     } finally {
       setLoading(false);
     }

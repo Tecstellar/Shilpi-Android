@@ -106,14 +106,15 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
         phone: fullPhone,
       });
 
-      if (response.data.success) {
+      if (response.data?.success) {
         onOtpSent(fullPhone);
       } else {
-        setErrorText(response.data.error?.message || 'Could not send verification code.');
+        setErrorText(response.data?.error?.message || 'Could not send verification code.');
       }
     } catch (err: any) {
-      // In offline or local fallback, proceed smoothly with the demo number
-      onOtpSent(fullPhone);
+      setErrorText(
+        err?.message || 'Unable to connect to Shilpi server. Please check your network.'
+      );
     } finally {
       setLoading(false);
     }
