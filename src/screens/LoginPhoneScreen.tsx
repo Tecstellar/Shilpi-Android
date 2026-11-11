@@ -78,7 +78,7 @@ interface LoginPhoneScreenProps {
 }
 
 export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent }) => {
-  const [phoneNumber, setPhoneNumber] = useState('98765 43210');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [agreed, setAgreed] = useState(false); // Default unkept/unchecked as requested
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState('');
@@ -91,7 +91,7 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
       return;
     }
 
-    const cleaned = (phoneNumber || '9876543210').replace(/\s+/g, '');
+    const cleaned = phoneNumber.replace(/\s+/g, '');
     if (cleaned.length < 10) {
       setErrorText('Please enter a valid 10-digit mobile number.');
       return;

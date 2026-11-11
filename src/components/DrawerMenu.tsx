@@ -203,9 +203,14 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
   const animFooter = useRef(new Animated.Value(0)).current;
 
   // Dynamic user data
-  const [profile, setProfile] = useState<{ ownerName: string; businessName: string }>({
+  const [profile, setProfile] = useState<{
+    ownerName: string;
+    businessName: string;
+    businessTypes: string[];
+  }>({
     ownerName: ownerName || 'Shilpa R.',
     businessName: 'Beauty & Bridal Studio',
+    businessTypes: [],
   });
 
   useEffect(() => {
@@ -217,6 +222,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
           setProfile({
             ownerName: parsed.ownerName?.trim() || ownerName || 'Shilpa R.',
             businessName: parsed.businessName?.trim() || 'Beauty & Bridal Studio',
+            businessTypes: Array.isArray(parsed.businessTypes) ? parsed.businessTypes : [],
           });
         } else if (ownerName) {
           setProfile((prev) => ({ ...prev, ownerName }));
@@ -394,6 +400,11 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 <Text style={styles.ownerName} numberOfLines={1}>
                   {profile.ownerName}
                 </Text>
+                {profile.businessTypes.length > 0 && (
+                  <Text style={styles.businessRoleLine} numberOfLines={1}>
+                    {profile.businessTypes.join(' · ')}
+                  </Text>
+                )}
 
                 <View style={styles.premiumBadge}>
                   <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2.4} style={{ marginRight: 3 }}>
@@ -751,6 +762,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     letterSpacing: -0.2,
+  },
+  businessRoleLine: {
+    color: 'rgba(255, 255, 255, 0.55)',
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 1,
+    letterSpacing: 0.2,
   },
   premiumBadge: {
     flexDirection: 'row',

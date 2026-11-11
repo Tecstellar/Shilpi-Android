@@ -64,6 +64,7 @@ export const LoginOtpScreen: React.FC<LoginOtpScreenProps> = ({ phone, onGoBack,
               JSON.stringify({
                 ownerName: response.data.beautician.ownerName,
                 businessName: response.data.beautician.businessName,
+                businessTypes: response.data.beautician.businessTypes || [],
                 city: response.data.beautician.city || '',
                 address: response.data.beautician.address || '',
                 pincode: response.data.beautician.pincode || '',
