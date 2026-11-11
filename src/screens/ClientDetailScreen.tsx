@@ -36,12 +36,14 @@ interface ClientDetailScreenProps {
   client: Client | null;
   onGoBack: () => void;
   onOpenWhatsAppSheet: (clientName: string, phone: string) => void;
+  onNewBookingForClient?: (clientName: string) => void;
 }
 
 export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
   client,
   onGoBack,
   onOpenWhatsAppSheet,
+  onNewBookingForClient,
 }) => {
   if (!client) {
     return (
@@ -137,24 +139,45 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
       </View>
 
       <View style={styles.historyList}>
-        {client.history.map((h, i) => (
-          <View key={i} style={styles.historyItem}>
-            <View style={styles.historyDateBox}>
-              <Text style={styles.historyDateText}>{h.date}</Text>
-            </View>
+        {client.history.length > 0 ? (
+          client.history.map((h, i) => (
+            <View key={i} style={styles.historyItem}>
+              <View style={styles.historyDateBox}>
+                <Text style={styles.historyDateText}>{h.date}</Text>
+              </View>
 
-            <View style={styles.historyPkgInfo}>
-              <Text style={styles.historyPkgName}>{h.pkg} Look</Text>
-              <Text style={styles.historyStatus}>Delivered & Closed</Text>
-            </View>
+              <View style={styles.historyPkgInfo}>
+                <Text style={styles.historyPkgName}>{h.pkg}</Text>
+                <Text style={styles.historyStatus}>Saved Booking</Text>
+              </View>
 
-            <View style={styles.historyAmountBox}>
-              <Text style={styles.historyAmountText}>{fmt(h.amount)}</Text>
-              <Text style={styles.historyPaidLabel}>PAID</Text>
+              <View style={styles.historyAmountBox}>
+                <Text style={styles.historyAmountText}>{fmt(h.amount)}</Text>
+                <Text style={styles.historyPaidLabel}>BOOKED</Text>
+              </View>
             </View>
+          ))
+        ) : (
+          <View style={styles.historyEmptyRow}>
+            <Text style={styles.historyEmptyText}>No bookings yet for {first(client.name)}.</Text>
           </View>
-        ))}
+        )}
       </View>
+
+      {/* 5. New Booking CTA for this Client */}
+      {onNewBookingForClient && (
+        <View style={styles.newBookingCtaWrap}>
+          <TouchableOpacity
+            style={styles.newBookingCtaBtn}
+            onPress={() => onNewBookingForClient(client.name)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.newBookingCtaText}>
+              ＋ New Booking for {first(client.name)}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={{ height: 100 }} />
     </ScrollView>
@@ -378,5 +401,37 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.accent,
     marginTop: 2,
+  },
+  historyEmptyRow: {
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  historyEmptyText: {
+    fontSize: 13,
+    color: 'rgba(18, 18, 18, 0.45)',
+    fontWeight: '500',
+  },
+  newBookingCtaWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 18,
+  },
+  newBookingCtaBtn: {
+    backgroundColor: Colors.accent,
+    borderRadius: 16,
+    paddingVertical: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  newBookingCtaText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 });

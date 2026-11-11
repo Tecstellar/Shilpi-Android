@@ -50,6 +50,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   const [selectedClientId, setSelectedClientId] = useState<number | string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [bookingInitialDate, setBookingInitialDate] = useState<number | undefined>();
+  const [bookingInitialMonth, setBookingInitialMonth] = useState<string | undefined>();
   const [bookingClientName, setBookingClientName] = useState<string | undefined>();
 
   // Drawer & Sheet States
@@ -121,6 +122,27 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             if (b.profilePhotoUrl) {
               setStudioLogo(b.profilePhotoUrl);
             }
+
+            if (Array.isArray(meRes.data.packages) && meRes.data.packages.length > 0) {
+              const groupedMap = new Map<string, { name: string; price: number }[]>();
+              meRes.data.packages.forEach((p: any) => {
+                const rawCat = String(p.serviceType || 'Bridal');
+                const catName = rawCat.charAt(0).toUpperCase() + rawCat.slice(1);
+                const list = groupedMap.get(catName) || [];
+                list.push({
+                  name: p.name,
+                  price: Math.round(Number(p.pricePaise || 0) / 100),
+                });
+                groupedMap.set(catName, list);
+              });
+              const hydratedGroups: PackageGroup[] = Array.from(groupedMap.entries()).map(
+                ([name, items]) => ({ name, items })
+              );
+              if (hydratedGroups.length > 0) {
+                setPackageGroups(hydratedGroups);
+                await AsyncStorage.setItem('@shilpi_packages', JSON.stringify(hydratedGroups));
+              }
+            }
           }
         } catch (meErr: any) {
           if (meErr?.status === 401) {
@@ -151,11 +173,15 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           }
         }
 
-        // Fetch shop-scoped clients directly from AWS RDS PostgreSQL
+        // Fetch shop-scoped clients & bookings directly from AWS RDS PostgreSQL
         try {
-          const res = await apiClient.get('/clients');
-          if (res.data?.success && Array.isArray(res.data.data)) {
-            const dbClients: Client[] = res.data.data.map((c: any) => ({
+          const [clientsRes, bookingsRes] = await Promise.all([
+            apiClient.get('/clients'),
+            apiClient.get('/bookings').catch(() => null),
+          ]);
+
+          if (clientsRes.data?.success && Array.isArray(clientsRes.data.data)) {
+            const dbClients: Client[] = clientsRes.data.data.map((c: any) => ({
               id: c.id,
               name: c.name,
               phone: c.phone,
@@ -175,6 +201,77 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
               );
             }
           }
+
+          if (bookingsRes?.data?.success && Array.isArray(bookingsRes.data.data)) {
+            const monthShortNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const dayShortNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const dbBookings: Booking[] = bookingsRes.data.data.map((b: any) => {
+              const dt = new Date(b.bookingDate);
+              const dNum = dt.getUTCDate();
+              const mShort = monthShortNames[dt.getUTCMonth()] || 'Sep';
+              const yr = dt.getUTCFullYear();
+              const dow = dayShortNames[new Date(yr, dt.getUTCMonth(), dNum).getDay()];
+
+              let timeStr = '10:00';
+              let meridiemStr = 'AM';
+              if (b.startTime) {
+                const st = new Date(b.startTime);
+                let hrs = st.getHours();
+                const mins = String(st.getMinutes()).padStart(2, '0');
+                meridiemStr = hrs >= 12 ? 'PM' : 'AM';
+                hrs = hrs % 12 || 12;
+                timeStr = `${hrs}:${mins}`;
+              }
+
+              const rawItems = Array.isArray(b.items) ? b.items : [];
+              const travelRow = rawItems.find((i: any) => i.customTitle === 'Travel Charges');
+              const travelAmt = travelRow
+                ? Math.round(Number(travelRow.totalPricePaise || 0) / 100)
+                : 0;
+              const pkgItems = rawItems
+                .filter((i: any) => i.customTitle !== 'Travel Charges')
+                .map((i: any) => ({
+                  name: i.customTitle,
+                  price: Math.round(Number(i.unitPricePaise || 0) / 100),
+                }));
+
+              const statusMapped: 'Upcoming' | 'Completed' | 'Closed' =
+                b.status === 'completed'
+                  ? 'Closed'
+                  : b.status === 'in_progress'
+                  ? 'Completed'
+                  : 'Upcoming';
+
+              return {
+                id: b.id,
+                ref: `Booking #${String(b.id).slice(0, 4).toUpperCase()}`,
+                client: b.client?.name || 'Client',
+                clientId: b.clientId,
+                bookingDate: b.bookingDate,
+                day: dNum,
+                month: mShort,
+                year: yr,
+                dateLong: `${dow} ${dNum} ${mShort} ${yr}`,
+                time: timeStr,
+                meridiem: meridiemStr,
+                items: pkgItems.length > 0 ? pkgItems : [{ name: 'Bridal Look', price: 0 }],
+                travel: travelAmt,
+                advance: Math.round(Number(b.advancePaidPaise || 0) / 100),
+                status: statusMapped,
+                venue: b.eventLocation || 'Studio',
+                address: b.eventLocation || '',
+                notes: b.notes || '',
+              };
+            });
+
+            setBookings(dbBookings);
+            if (resolvedShopId) {
+              await AsyncStorage.setItem(
+                `@shilpi_bookings_${resolvedShopId}`,
+                JSON.stringify(dbBookings)
+              );
+            }
+          }
         } catch (apiErr: any) {
           if (apiErr?.status === 401) {
             Alert.alert('Session Expired', 'Please sign in again to continue.', [
@@ -191,7 +288,31 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     loadData();
   }, []);
 
-  const selectedClient = clients.find((c) => c.id === selectedClientId) || clients[0] || null;
+  const enrichedClients: Client[] = clients.map((c) => {
+    const clientBookings = bookings.filter(
+      (b) => (b.clientId && String(b.clientId) === String(c.id)) || b.client === c.name
+    );
+    if (clientBookings.length === 0) return c;
+    const totalSales = clientBookings.reduce(
+      (sum, b) =>
+        sum + b.items.reduce((s, item) => s + item.price, 0) + (b.travel || 0),
+      0
+    );
+    return {
+      ...c,
+      bookings: Math.max(c.bookings, clientBookings.length),
+      sales: totalSales > 0 ? totalSales : c.sales,
+      profit: totalSales > 0 ? totalSales : c.profit,
+      history: clientBookings.map((b) => ({
+        date: `${b.day} ${b.month}`,
+        pkg: b.items.map((i) => i.name).join(' + '),
+        amount: b.items.reduce((s, item) => s + item.price, 0) + (b.travel || 0),
+      })),
+    };
+  });
+
+  const selectedClient =
+    enrichedClients.find((c) => c.id === selectedClientId) || enrichedClients[0] || null;
   const selectedBooking = bookings.find((b) => b.id === selectedOrderId) || bookings[0] || null;
 
   // Screen titles dictionary matching prototype
@@ -252,28 +373,42 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     if (beauticianId) {
       AsyncStorage.setItem(`@shilpi_bookings_${beauticianId}`, JSON.stringify(updated)).catch(() => {});
     }
+
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(orderId)) {
+      const apiStatus =
+        status === 'Closed' ? 'completed' : status === 'Completed' ? 'in_progress' : 'confirmed';
+      apiClient.patch(`/bookings/${orderId}/status`, { status: apiStatus }).catch(() => {});
+    }
   };
 
-  const handleSaveBooking = (newBookingData: Partial<Booking>) => {
-    const newId = `b_${Date.now()}`;
+  const handleSaveBooking = async (newBookingData: Partial<Booking>) => {
+    const tempId = `b_${Date.now()}`;
     const now = new Date();
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const currentMonth = months[now.getMonth()];
+    const matchedClient = clients.find(
+      (c) =>
+        (newBookingData.clientId && String(c.id) === String(newBookingData.clientId)) ||
+        c.name === newBookingData.client
+    );
 
     const newBooking: Booking = {
-      id: newId,
+      id: tempId,
       ref: newBookingData.ref || `Booking #${Math.floor(1000 + Math.random() * 9000)}`,
       client: newBookingData.client || 'Client',
+      clientId: matchedClient ? String(matchedClient.id) : newBookingData.clientId,
+      bookingDate: newBookingData.bookingDate,
       day: newBookingData.day || now.getDate(),
       month: newBookingData.month || currentMonth,
+      year: newBookingData.year || now.getFullYear(),
       dateLong: newBookingData.dateLong || `${now.getDate()} ${currentMonth} ${now.getFullYear()}`,
       time: newBookingData.time || '10:00',
       meridiem: newBookingData.meridiem || 'AM',
-      items: newBookingData.items || [{ name: 'Bridal Makeup', price: 15000 }],
+      items: newBookingData.items || [{ name: 'Bridal Makeup', price: 0 }],
       travel: newBookingData.travel || 0,
       advance: newBookingData.advance || 0,
       status: 'Upcoming',
-      venue: newBookingData.venue || 'Residence',
+      venue: newBookingData.venue || 'Studio / Client Residence',
       address: newBookingData.address || '',
       notes: newBookingData.notes || '',
     };
@@ -287,16 +422,68 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     setCurrentScreen('orders');
     setActiveTab('orders');
 
-    // Trigger WhatsApp confirmation sheet
+    // Trigger WhatsApp confirmation sheet with client's name immediately
     const total = newBooking.items.reduce((s, i) => s + i.price, 0) + newBooking.travel;
-    const balance = total - newBooking.advance;
+    const balance = Math.max(0, total - newBooking.advance);
     setActiveSheet({
       kicker: 'BOOKING SAVED',
       title: `Send confirmation to ${first(newBooking.client)}?`,
-      message: `Hi ${first(newBooking.client)}, your booking is confirmed.\n\n${newBooking.dateLong} · ${newBooking.time} ${newBooking.meridiem}\n${newBooking.items.map((i) => i.name).join(' + ')}\n${newBooking.venue}\n\nTotal ${fmt(total)} · Advance ${fmt(newBooking.advance)} · Balance ${fmt(balance)}\n\n— ${artistName}, Shilpi`,
+      message: `Hi ${first(newBooking.client)}, your booking is confirmed.\n\n${newBooking.dateLong} · ${newBooking.time} ${newBooking.meridiem}\n${newBooking.items.map((i) => i.name).join(' + ')}\n${newBooking.venue}\n\nTotal ${fmt(total)} · Advance ${fmt(newBooking.advance)} · Balance ${fmt(balance)}${newBooking.notes ? `\nNotes: ${newBooking.notes}` : ''}\n\n— ${artistName}, Shilpi`,
       cta: 'Send on WhatsApp',
       logoUri: studioLogo,
     });
+
+    // Persist booking to AWS RDS PostgreSQL when client has a DB UUID
+    if (matchedClient && /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(String(matchedClient.id))) {
+      try {
+        const isoDate =
+          newBooking.bookingDate ||
+          `${newBooking.year || now.getFullYear()}-${String(Math.max(1, months.indexOf(newBooking.month) + 1)).padStart(2, '0')}-${String(newBooking.day).padStart(2, '0')}`;
+
+        const [hRaw, mRaw] = (newBooking.time || '10:00').split(':');
+        let hrs24 = parseInt(hRaw || '10', 10) || 10;
+        const mins = parseInt(mRaw || '0', 10) || 0;
+        if (newBooking.meridiem === 'PM' && hrs24 < 12) hrs24 += 12;
+        if (newBooking.meridiem === 'AM' && hrs24 === 12) hrs24 = 0;
+        const startIso = `${isoDate}T${String(hrs24).padStart(2, '0')}:${String(mins).padStart(2, '0')}:00.000Z`;
+
+        const apiItems = newBooking.items.map((item) => ({
+          customTitle: item.name,
+          quantity: 1,
+          unitPricePaise: Math.max(0, Math.round(item.price * 100)),
+        }));
+        if (newBooking.travel > 0) {
+          apiItems.push({
+            customTitle: 'Travel Charges',
+            quantity: 1,
+            unitPricePaise: Math.max(0, Math.round(newBooking.travel * 100)),
+          });
+        }
+
+        const res = await apiClient.post('/bookings', {
+          clientId: String(matchedClient.id),
+          bookingDate: isoDate,
+          startTime: startIso,
+          eventLocation: newBooking.venue,
+          advancePaidPaise: Math.max(0, Math.round(newBooking.advance * 100)),
+          notes: newBooking.notes || undefined,
+          items: apiItems,
+        });
+
+        if (res.data?.success && res.data?.data?.id) {
+          const savedId = res.data.data.id;
+          setBookings((prev) => {
+            const synced = prev.map((b) => (b.id === tempId ? { ...b, id: savedId } : b));
+            if (beauticianId) {
+              AsyncStorage.setItem(`@shilpi_bookings_${beauticianId}`, JSON.stringify(synced)).catch(() => {});
+            }
+            return synced;
+          });
+        }
+      } catch (bookingErr) {
+        console.warn('Backend booking save warning:', bookingErr);
+      }
+    }
   };
 
   const handleSaveClient = async (clientData: Partial<Client>, thenCreateBooking?: boolean) => {
@@ -429,6 +616,9 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
 
   // Center FAB (+) Action -> Opens New Booking directly as requested
   const handleNewBooking = () => {
+    setBookingClientName(undefined);
+    setBookingInitialDate(undefined);
+    setBookingInitialMonth(undefined);
     setCurrentScreen('newbooking');
   };
 
@@ -457,8 +647,10 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             artistName={artistName}
             onOpenBooking={handleOpenBooking}
             onOpenOrders={() => handleTabChange('orders')}
-            onStartNewBooking={(day) => {
-              if (day) setBookingInitialDate(day);
+            onStartNewBooking={(day, month) => {
+              setBookingInitialDate(day);
+              setBookingInitialMonth(month);
+              setBookingClientName(undefined);
               setCurrentScreen('newbooking');
             }}
           />
@@ -466,7 +658,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
 
         {currentScreen === 'clients' && (
           <ClientsScreen
-            clients={clients}
+            clients={enrichedClients}
             onOpenClient={handleOpenClient}
             onStartNewClient={() => setCurrentScreen('newclient')}
           />
@@ -477,6 +669,12 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             client={selectedClient}
             onGoBack={handleGoBack}
             onOpenWhatsAppSheet={handleOpenWhatsAppSheet}
+            onNewBookingForClient={(clientName) => {
+              setBookingClientName(clientName);
+              setBookingInitialDate(undefined);
+              setBookingInitialMonth(undefined);
+              setCurrentScreen('newbooking');
+            }}
           />
         )}
 
@@ -484,7 +682,12 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           <OrdersScreen
             bookings={bookings}
             onOpenBooking={handleOpenBooking}
-            onStartNewBooking={() => setCurrentScreen('newbooking')}
+            onStartNewBooking={() => {
+              setBookingClientName(undefined);
+              setBookingInitialDate(undefined);
+              setBookingInitialMonth(undefined);
+              setCurrentScreen('newbooking');
+            }}
           />
         )}
 
@@ -500,9 +703,11 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
 
         {currentScreen === 'newbooking' && (
           <NewBookingScreen
-            clients={clients}
+            clients={enrichedClients}
             packageGroups={packageGroups}
+            bookings={bookings}
             initialDay={bookingInitialDate}
+            initialMonth={bookingInitialMonth}
             initialClientName={bookingClientName}
             onSaveBooking={handleSaveBooking}
             onGoBack={handleGoBack}

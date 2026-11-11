@@ -21,8 +21,11 @@ export interface Booking {
   id: string;
   ref: string;
   client: string;
+  clientId?: string;
+  bookingDate?: string;
   day: number;
   month: string;
+  year?: number;
   dateLong: string;
   time: string;
   meridiem: string;
