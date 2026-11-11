@@ -23,6 +23,7 @@ interface DrawerMenuProps {
   onNavigate: (screen: string) => void;
   onLogout: () => void;
   ownerName?: string;
+  logoUri?: string;
 }
 
 // ----------------- Bespoke Luxury Vector SVG Icons ----------------- //
@@ -188,6 +189,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
   onNavigate,
   onLogout,
   ownerName,
+  logoUri,
 }) => {
   const [isVisible, setIsVisible] = useState(isOpen);
 
@@ -207,10 +209,12 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
     ownerName: string;
     businessName: string;
     businessTypes: string[];
+    logoUri?: string;
   }>({
     ownerName: ownerName || 'Shilpa R.',
     businessName: 'Beauty & Bridal Studio',
     businessTypes: [],
+    logoUri,
   });
 
   useEffect(() => {
@@ -223,14 +227,19 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
             ownerName: parsed.ownerName?.trim() || ownerName || 'Shilpa R.',
             businessName: parsed.businessName?.trim() || 'Beauty & Bridal Studio',
             businessTypes: Array.isArray(parsed.businessTypes) ? parsed.businessTypes : [],
+            logoUri: parsed.logoUri || parsed.profilePhotoUrl || logoUri,
           });
-        } else if (ownerName) {
-          setProfile((prev) => ({ ...prev, ownerName }));
+        } else {
+          setProfile((prev) => ({
+            ...prev,
+            ownerName: ownerName || prev.ownerName,
+            logoUri: logoUri || prev.logoUri,
+          }));
         }
       } catch (e) {}
     };
     loadProfile();
-  }, [isOpen, ownerName]);
+  }, [isOpen, ownerName, logoUri]);
 
   // Entrance and Exit Orchestration
   useEffect(() => {
@@ -390,10 +399,18 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
               },
             ]}
           >
-            {/* Top Row: Avatar + Name + Premium Badge */}
+            {/* Top Row: Studio Logo Circle + Name + Premium Badge */}
             <View style={styles.profileTopRow}>
               <View style={styles.avatarCircle}>
-                <Text style={styles.avatarInitials}>{initials}</Text>
+                {profile.logoUri || logoUri ? (
+                  <Image
+                    source={{ uri: profile.logoUri || logoUri }}
+                    style={styles.avatarImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text style={styles.avatarInitials}>{initials}</Text>
+                )}
               </View>
 
               <View style={styles.profileDetails}>
@@ -412,24 +429,6 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                   </Svg>
                   <Text style={styles.premiumText}>PREMIUM</Text>
                 </View>
-              </View>
-            </View>
-
-            {/* Internal Divider */}
-            <View style={styles.profileCardDivider} />
-
-            {/* Bottom Row: Month Metrics */}
-            <View style={styles.metricsRow}>
-              <View style={styles.metricCol}>
-                <Text style={styles.metricLabel}>This month</Text>
-                <Text style={styles.metricValueWhite}>11 bookings</Text>
-              </View>
-
-              <View style={styles.metricSeparator} />
-
-              <View style={styles.metricCol}>
-                <Text style={styles.metricLabel}>To collect</Text>
-                <Text style={styles.metricValuePink}>₹18,000</Text>
               </View>
             </View>
           </Animated.View>
@@ -481,10 +480,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
               <View style={styles.iconCircleDark}>
                 <PaymentsIcon />
               </View>
-              <View>
-                <Text style={styles.cardTitleWhite}>Payments</Text>
-                <Text style={styles.cardSubPink}>₹18,000 pending</Text>
-              </View>
+              <Text style={styles.cardTitleWhite}>Payments</Text>
             </AnimatedTouchableCard>
 
             {/* Card 4: My Gallery */}
@@ -528,9 +524,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 </View>
                 <Text style={styles.menuRowText}>Notifications</Text>
               </View>
-              <View style={styles.badgePinkPill}>
-                <Text style={styles.badgePinkText}>3 new</Text>
-              </View>
+              <Text style={styles.chevronGray}>›</Text>
             </TouchableOpacity>
 
             {/* Reminders */}
@@ -545,7 +539,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 </View>
                 <Text style={styles.menuRowText}>Reminders</Text>
               </View>
-              <Text style={styles.subtextGray}>3 today</Text>
+              <Text style={styles.chevronGray}>›</Text>
             </TouchableOpacity>
 
             {/* Expenses */}
@@ -738,14 +732,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     borderWidth: 1.8,
     borderColor: '#e8276b',
     backgroundColor: '#1a1016',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 21,
   },
   avatarInitials: {
     color: '#ffffff',
