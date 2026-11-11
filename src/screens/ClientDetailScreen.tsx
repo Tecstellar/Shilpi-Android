@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,15 @@ import {
   TouchableOpacity,
   Linking,
   Image,
+  Modal,
+  TextInput,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Circle } from 'react-native-svg';
 import { Colors } from '../theme/colors';
-import { Client, fmt, first } from '../data/prototypeData';
+import { Client, fmt, first, normalizePhoneKey } from '../data/prototypeData';
 
 const PhoneVectorIcon = ({ color = '#121212' }: { color?: string }) => (
   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
@@ -49,21 +54,72 @@ const HeartVectorIcon = ({ filled }: { filled: boolean }) => (
   </Svg>
 );
 
+const MoreDotsVerticalIcon = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="#ffffff">
+    <Circle cx="12" cy="5" r="2" />
+    <Circle cx="12" cy="12" r="2" />
+    <Circle cx="12" cy="19" r="2" />
+  </Svg>
+);
+
+const EditPencilIcon = () => (
+  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="#121212" strokeWidth={2}>
+    <Path d="M12 20h9" strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const StatusToggleIcon = ({ makeActive }: { makeActive: boolean }) => (
+  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke={makeActive ? '#186d3b' : '#b91c1c'} strokeWidth={2}>
+    <Circle cx="12" cy="12" r="9" />
+    {makeActive ? (
+      <Path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+    ) : (
+      <Path d="M8.5 8.5l7 7" strokeLinecap="round" strokeLinejoin="round" />
+    )}
+  </Svg>
+);
+
 interface ClientDetailScreenProps {
   client: Client | null;
+  allClients?: Client[];
   onGoBack: () => void;
   onOpenWhatsAppSheet: (clientName: string, phone: string) => void;
   onNewBookingForClient?: (clientName: string) => void;
   onToggleVip?: (clientId: number | string) => void;
+  onUpdateClient?: (
+    clientId: number | string,
+    payload: { name: string; phone: string; notes: string }
+  ) => Promise<boolean> | boolean;
+  onToggleActive?: (clientId: number | string, nextActive: boolean) => void;
 }
 
 export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
   client,
+  allClients = [],
   onGoBack,
   onOpenWhatsAppSheet,
   onNewBookingForClient,
   onToggleVip,
+  onUpdateClient,
+  onToggleActive,
 }) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  useEffect(() => {
+    if (client) {
+      setEditName(client.name || '');
+      const key = normalizePhoneKey(client.phone || '');
+      setEditPhone(key.length === 10 ? key : client.phone || '');
+      setEditNotes(client.notes || '');
+    }
+  }, [client?.id, client?.name, client?.phone, client?.notes]);
+
   if (!client) {
     return (
       <View style={{ flex: 1, backgroundColor: '#f4f4f6', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
@@ -79,10 +135,88 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
   }
 
   const initial = client.name.charAt(0);
+  const isClientActive = client.isActive !== false;
 
   const handleCall = () => {
     const rawPhone = client.phone.replace(/[^0-9+]/g, '');
     Linking.openURL(`tel:${rawPhone}`);
+  };
+
+  const openEditSheet = () => {
+    setMenuOpen(false);
+    setEditName(client.name || '');
+    const key = normalizePhoneKey(client.phone || '');
+    setEditPhone(key.length === 10 ? key : client.phone || '');
+    setEditNotes(client.notes || '');
+    setEditModalOpen(true);
+  };
+
+  const handleToggleActivePress = () => {
+    setMenuOpen(false);
+    const nextActive = !isClientActive;
+    Alert.alert(
+      nextActive ? 'Make Client Active' : 'Make Client Inactive',
+      nextActive
+        ? `Reactivate ${client.name} in your active client list?`
+        : `Mark ${client.name} as inactive? You can reactivate them anytime from the Inactive tab.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: nextActive ? 'Make Active' : 'Make Inactive',
+          style: nextActive ? 'default' : 'destructive',
+          onPress: () => onToggleActive?.(client.id, nextActive),
+        },
+      ]
+    );
+  };
+
+  const handleSaveEdit = async () => {
+    const cleanName = editName.trim();
+    if (!cleanName) {
+      Alert.alert('Name Required', 'Please enter the client name.');
+      return;
+    }
+    const phoneKey = normalizePhoneKey(editPhone);
+    if (!phoneKey || phoneKey.length < 10) {
+      Alert.alert(
+        'Mobile Number Required',
+        'A valid 10-digit mobile number is required for every client.'
+      );
+      return;
+    }
+    const duplicate = allClients.find(
+      (c) => String(c.id) !== String(client.id) && normalizePhoneKey(c.phone) === phoneKey
+    );
+    if (duplicate) {
+      Alert.alert(
+        'Duplicate Mobile Number',
+        `This client was already registered in the name of "${duplicate.name}".`
+      );
+      return;
+    }
+
+    const formattedPhone =
+      phoneKey.length === 10
+        ? `+91 ${phoneKey.slice(0, 5)} ${phoneKey.slice(5)}`
+        : editPhone.trim();
+
+    if (!onUpdateClient) {
+      setEditModalOpen(false);
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const ok = await onUpdateClient(client.id, {
+        name: cleanName,
+        phone: formattedPhone,
+        notes: editNotes.trim(),
+      });
+      if (ok) {
+        setEditModalOpen(false);
+      }
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   return (
@@ -105,20 +239,36 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
                 <Text style={styles.vipBadgeText}>VIP</Text>
               </View>
             ) : null}
+            {!isClientActive ? (
+              <View style={styles.inactiveHeaderBadge}>
+                <Text style={styles.inactiveHeaderBadgeText}>INACTIVE</Text>
+              </View>
+            ) : null}
           </View>
           <Text style={styles.clientPhone}>{client.phone}</Text>
         </View>
 
-        {onToggleVip && (
+        <View style={styles.headerActionsCol}>
+          {onToggleVip && (
+            <TouchableOpacity
+              style={[styles.vipHeartBtn, client.isVip && styles.vipHeartBtnActive]}
+              onPress={() => onToggleVip(client.id)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              activeOpacity={0.8}
+            >
+              <HeartVectorIcon filled={!!client.isVip} />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
-            style={[styles.vipHeartBtn, client.isVip && styles.vipHeartBtnActive]}
-            onPress={() => onToggleVip(client.id)}
+            style={styles.moreDotsBtn}
+            onPress={() => setMenuOpen(true)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             activeOpacity={0.8}
+            accessibilityLabel="Client options"
           >
-            <HeartVectorIcon filled={!!client.isVip} />
+            <MoreDotsVerticalIcon />
           </TouchableOpacity>
-        )}
+        </View>
       </View>
 
       {/* 2. Action Buttons (Call & WhatsApp) */}
@@ -217,6 +367,133 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
       )}
 
       <View style={{ height: 100 }} />
+
+      {/* Three-dot Profile Options Modal (Edit & Make Inactive / Active) */}
+      <Modal
+        visible={menuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.menuBackdrop}
+          activeOpacity={1}
+          onPress={() => setMenuOpen(false)}
+        >
+          <View style={styles.menuCard}>
+            <Text style={styles.menuHeading}>CLIENT OPTIONS</Text>
+
+            <TouchableOpacity style={styles.menuOption} onPress={openEditSheet} activeOpacity={0.8}>
+              <View style={styles.menuIconWrap}>
+                <EditPencilIcon />
+              </View>
+              <View style={styles.menuTextCol}>
+                <Text style={styles.menuOptionTitle}>Edit Client Details</Text>
+                <Text style={styles.menuOptionSub}>Update name, mobile number, or notes</Text>
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.menuDivider} />
+
+            <TouchableOpacity
+              style={styles.menuOption}
+              onPress={handleToggleActivePress}
+              activeOpacity={0.8}
+            >
+              <View
+                style={[
+                  styles.menuIconWrap,
+                  { backgroundColor: isClientActive ? 'rgba(185, 28, 28, 0.1)' : '#eaf8ef' },
+                ]}
+              >
+                <StatusToggleIcon makeActive={!isClientActive} />
+              </View>
+              <View style={styles.menuTextCol}>
+                <Text
+                  style={[
+                    styles.menuOptionTitle,
+                    { color: isClientActive ? '#b91c1c' : '#186d3b' },
+                  ]}
+                >
+                  {isClientActive ? 'Make Inactive' : 'Make Active'}
+                </Text>
+                <Text style={styles.menuOptionSub}>
+                  {isClientActive
+                    ? 'Move client out of your active booking directory'
+                    : 'Restore client back to active directory'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Edit Client Modal */}
+      <Modal
+        visible={editModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditModalOpen(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.editBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.editCard}>
+            <Text style={styles.editEyebrow}>EDIT CLIENT</Text>
+            <Text style={styles.editTitle}>Update profile</Text>
+
+            <Text style={styles.editLabel}>FULL NAME *</Text>
+            <TextInput
+              style={styles.editInput}
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Client name"
+              placeholderTextColor="rgba(18, 18, 18, 0.38)"
+            />
+
+            <Text style={styles.editLabel}>MOBILE NUMBER *</Text>
+            <TextInput
+              style={styles.editInput}
+              value={editPhone}
+              onChangeText={(t) => setEditPhone(t.replace(/\D/g, '').slice(0, 12))}
+              keyboardType="phone-pad"
+              placeholder="10-digit mobile number"
+              placeholderTextColor="rgba(18, 18, 18, 0.38)"
+            />
+
+            <Text style={styles.editLabel}>NOTES</Text>
+            <TextInput
+              style={[styles.editInput, styles.editNotesInput]}
+              value={editNotes}
+              onChangeText={setEditNotes}
+              multiline
+              placeholder="Skin type, preferences, remarks..."
+              placeholderTextColor="rgba(18, 18, 18, 0.38)"
+            />
+
+            <View style={styles.editFooterRow}>
+              <TouchableOpacity
+                style={styles.editCancelBtn}
+                onPress={() => setEditModalOpen(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.editCancelText}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.editSaveBtn, savingEdit && { opacity: 0.6 }]}
+                onPress={handleSaveEdit}
+                disabled={savingEdit}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.editSaveText}>
+                  {savingEdit ? 'SAVING...' : 'SAVE CHANGES'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </ScrollView>
   );
 };
@@ -287,6 +564,23 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     color: '#ff6ca0',
   },
+  inactiveHeaderBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  inactiveHeaderBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.7,
+    color: 'rgba(255, 255, 255, 0.78)',
+  },
+  headerActionsCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   vipHeartBtn: {
     width: 38,
     height: 38,
@@ -299,6 +593,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(232, 39, 107, 0.16)',
     borderWidth: 1,
     borderColor: 'rgba(232, 39, 107, 0.45)',
+  },
+  moreDotsBtn: {
+    width: 36,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   clientPhone: {
     fontSize: 13,
@@ -503,5 +805,135 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  menuBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(18, 18, 18, 0.45)',
+    justifyContent: 'flex-end',
+    padding: 16,
+  },
+  menuCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 22,
+    padding: 16,
+    marginBottom: 16,
+  },
+  menuHeading: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    color: 'rgba(18, 18, 18, 0.45)',
+    marginBottom: 10,
+  },
+  menuOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+  },
+  menuIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#f4f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuTextCol: {
+    flex: 1,
+  },
+  menuOptionTitle: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: '#121212',
+  },
+  menuOptionSub: {
+    fontSize: 11.5,
+    color: 'rgba(18, 18, 18, 0.55)',
+    marginTop: 1,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: 'rgba(18, 18, 18, 0.06)',
+    marginVertical: 4,
+  },
+  editBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(18, 18, 18, 0.5)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  editCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 20,
+  },
+  editEyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    color: Colors.accent,
+  },
+  editTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#121212',
+    marginTop: 2,
+    marginBottom: 14,
+  },
+  editLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.7,
+    color: 'rgba(18, 18, 18, 0.55)',
+    marginBottom: 5,
+    marginTop: 10,
+  },
+  editInput: {
+    backgroundColor: Colors.tint,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    fontSize: 14,
+    color: '#121212',
+    borderWidth: 1,
+    borderColor: 'rgba(18, 18, 18, 0.08)',
+  },
+  editNotesInput: {
+    minHeight: 68,
+    textAlignVertical: 'top',
+  },
+  editFooterRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 18,
+  },
+  editCancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: '#f4f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editCancelText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    letterSpacing: 0.7,
+    color: '#121212',
+  },
+  editSaveBtn: {
+    flex: 1.4,
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editSaveText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    letterSpacing: 0.7,
+    color: '#ffffff',
   },
 });

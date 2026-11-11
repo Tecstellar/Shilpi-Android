@@ -12,6 +12,7 @@ import {
   NotificationItem,
   fmt,
   first,
+  normalizePhoneKey,
 } from '../data/prototypeData';
 
 import { TopHeader } from '../components/TopHeader';
@@ -336,6 +337,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
               notes: c.notes || '',
               photoUri: c.profilePhotoUrl || undefined,
               isVip: Boolean(c.isVip),
+              isActive: c.isActive !== false,
             }));
 
             setClients(dbClients);
@@ -635,17 +637,40 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   };
 
   const handleSaveClient = async (clientData: Partial<Client>, thenCreateBooking?: boolean) => {
+    const cleanName = clientData.name?.trim() || '';
+    const rawPhone = clientData.phone?.trim() || '';
+    const phoneKey = normalizePhoneKey(rawPhone);
+
+    if (!cleanName) {
+      Alert.alert('Name Required', 'Please enter the client name.');
+      return;
+    }
+    if (!phoneKey || phoneKey.length < 10) {
+      Alert.alert('Mobile Number Required', 'A valid 10-digit mobile number is required.');
+      return;
+    }
+
+    const existingDup = clients.find((c) => normalizePhoneKey(c.phone) === phoneKey);
+    if (existingDup) {
+      Alert.alert(
+        'Client Already Registered',
+        `This client was already registered in the name of "${existingDup.name}".`
+      );
+      return;
+    }
+
     let clientRecordId: string | number = Date.now();
     const newClient: Client = {
       id: clientRecordId,
-      name: clientData.name?.trim() || 'New Client',
-      phone: clientData.phone?.trim() || '+91 98000 00000',
+      name: cleanName,
+      phone: rawPhone,
       bookings: 0,
       sales: 0,
       profit: 0,
       history: [],
       notes: clientData.notes,
       photoUri: clientData.photoUri,
+      isActive: true,
     };
 
     // 1. Persist directly into PostgreSQL Amazon RDS 'clients' table scoped to this studio
@@ -663,12 +688,15 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
 
       const saved = res.data.data;
       newClient.id = saved.id;
+      newClient.phone = saved.phone || newClient.phone;
       newClient.notes = saved.notes || '';
       newClient.photoUri = saved.profilePhotoUrl || newClient.photoUri;
+      newClient.isActive = saved.isActive !== false;
     } catch (err: any) {
+      const serverMsg = err?.response?.data?.error?.message || err?.message;
       Alert.alert(
         'Could Not Save Client',
-        err?.message || 'Unable to save client to database. Please try again.'
+        serverMsg || 'Unable to save client to database. Please try again.'
       );
       return;
     }
@@ -676,8 +704,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     // 2. Update shop-scoped local state and AsyncStorage
     const activeShopId = beauticianId || (await AsyncStorage.getItem('@shilpi_beautician_id'));
     setClients((prev) => {
-      const filtered = prev.filter((c) => c.phone !== newClient.phone && c.id !== newClient.id);
-      const updated = [newClient, ...filtered];
+      const updated = [newClient, ...prev];
       if (activeShopId) {
         AsyncStorage.setItem(`@shilpi_clients_${activeShopId}`, JSON.stringify(updated)).catch(() => {});
       }
@@ -690,6 +717,67 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     } else {
       setCurrentScreen('clients');
       setActiveTab('clients');
+    }
+  };
+
+  const handleImportContacts = async (contacts: { name: string; phone: string }[]) => {
+    try {
+      const res = await apiClient.post('/clients/import', { contacts });
+      if (!res.data?.success || !res.data?.data) {
+        throw new Error(res.data?.error?.message || 'Failed to import contacts.');
+      }
+      const { imported = [], skippedDuplicates = [], skippedInvalid = [] } = res.data.data;
+
+      if (imported.length > 0) {
+        const mapped: Client[] = imported.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          phone: c.phone,
+          bookings: 0,
+          sales: 0,
+          profit: 0,
+          history: [],
+          notes: c.notes || '',
+          photoUri: c.profilePhotoUrl || undefined,
+          isVip: Boolean(c.isVip),
+          isActive: c.isActive !== false,
+        }));
+
+        const activeShopId = beauticianId || (await AsyncStorage.getItem('@shilpi_beautician_id'));
+        setClients((prev) => {
+          const updated = [...mapped, ...prev];
+          if (activeShopId) {
+            AsyncStorage.setItem(`@shilpi_clients_${activeShopId}`, JSON.stringify(updated)).catch(() => {});
+          }
+          return updated;
+        });
+      }
+
+      if (skippedDuplicates.length > 0 || skippedInvalid.length > 0) {
+        const dupLines = skippedDuplicates
+          .slice(0, 3)
+          .map((d: any) => `• ${d.phone}: already registered in the name of "${d.existingName}"`)
+          .join('\n');
+        Alert.alert(
+          'Import Summary',
+          `Imported ${imported.length} client${imported.length === 1 ? '' : 's'}.` +
+            (dupLines ? `\n\nDuplicates skipped:\n${dupLines}` : '') +
+            (skippedInvalid.length > 0 ? `\n\n${skippedInvalid.length} missing valid number.` : '')
+        );
+      } else {
+        Alert.alert(
+          'Contacts Imported',
+          `Added ${imported.length} client${imported.length === 1 ? '' : 's'} to your directory.`
+        );
+      }
+
+      if (imported.length > 0) {
+        setCurrentScreen('clients');
+        setActiveTab('clients');
+      }
+    } catch (err: any) {
+      const serverMsg = err?.response?.data?.error?.message || err?.message;
+      Alert.alert('Import Failed', serverMsg || 'Could not import selected contacts.');
     }
   };
 
@@ -840,6 +928,93 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         await apiClient.patch(`/clients/${clientId}/vip`, { isVip: nextVip });
       } catch (err) {
         console.warn('Client VIP toggle sync warning:', err);
+      }
+    }
+  };
+
+  const handleUpdateClient = async (
+    clientId: number | string,
+    payload: { name: string; phone: string; notes: string }
+  ): Promise<boolean> => {
+    const cleanName = payload.name.trim();
+    const rawPhone = payload.phone.trim();
+    const phoneKey = normalizePhoneKey(rawPhone);
+
+    if (!cleanName || !phoneKey || phoneKey.length < 10) {
+      Alert.alert('Invalid Details', 'Name and valid 10-digit mobile number are required.');
+      return false;
+    }
+
+    const dup = clients.find(
+      (c) => String(c.id) !== String(clientId) && normalizePhoneKey(c.phone) === phoneKey
+    );
+    if (dup) {
+      Alert.alert(
+        'Duplicate Mobile Number',
+        `This client was already registered in the name of "${dup.name}".`
+      );
+      return false;
+    }
+
+    let nextName = cleanName;
+    let nextPhone = rawPhone;
+    let nextNotes = payload.notes.trim();
+
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(String(clientId))) {
+      try {
+        const res = await apiClient.patch(`/clients/${clientId}`, {
+          name: cleanName,
+          phone: rawPhone,
+          notes: nextNotes,
+        });
+        if (!res.data?.success || !res.data?.data) {
+          throw new Error(res.data?.error?.message || 'Failed to update client');
+        }
+        nextName = res.data.data.name || cleanName;
+        nextPhone = res.data.data.phone || rawPhone;
+        nextNotes = res.data.data.notes || '';
+      } catch (err: any) {
+        const msg = err?.response?.data?.error?.message || err?.message;
+        Alert.alert('Could Not Update Client', msg || 'Please check details and try again.');
+        return false;
+      }
+    }
+
+    const activeShopId = beauticianId || (await AsyncStorage.getItem('@shilpi_beautician_id'));
+    const updatedClients = clients.map((c) =>
+      String(c.id) === String(clientId)
+        ? { ...c, name: nextName, phone: nextPhone, notes: nextNotes }
+        : c
+    );
+    setClients(updatedClients);
+    if (activeShopId) {
+      AsyncStorage.setItem(`@shilpi_clients_${activeShopId}`, JSON.stringify(updatedClients)).catch(() => {});
+    }
+
+    // Keep client names consistent across local bookings
+    setBookings((prev) =>
+      prev.map((b) =>
+        b.clientId && String(b.clientId) === String(clientId) ? { ...b, client: nextName } : b
+      )
+    );
+    return true;
+  };
+
+  const handleToggleClientActive = async (clientId: number | string, nextActive: boolean) => {
+    const activeShopId = beauticianId || (await AsyncStorage.getItem('@shilpi_beautician_id'));
+    const updated = clients.map((c) =>
+      String(c.id) === String(clientId) ? { ...c, isActive: nextActive } : c
+    );
+    setClients(updated);
+    if (activeShopId) {
+      AsyncStorage.setItem(`@shilpi_clients_${activeShopId}`, JSON.stringify(updated)).catch(() => {});
+    }
+
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(String(clientId))) {
+      try {
+        await apiClient.patch(`/clients/${clientId}/status`, { isActive: nextActive });
+      } catch (err) {
+        console.warn('Client active toggle sync warning:', err);
       }
     }
   };
@@ -1080,9 +1255,12 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         {currentScreen === 'client' && (
           <ClientDetailScreen
             client={selectedClient}
+            allClients={enrichedClients}
             onGoBack={handleGoBack}
             onOpenWhatsAppSheet={handleOpenWhatsAppSheet}
             onToggleVip={handleToggleClientVip}
+            onUpdateClient={handleUpdateClient}
+            onToggleActive={handleToggleClientActive}
             onNewBookingForClient={(clientName) => {
               setBookingClientName(clientName);
               setBookingInitialDate(undefined);
@@ -1120,7 +1298,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
 
         {currentScreen === 'newbooking' && (
           <NewBookingScreen
-            clients={enrichedClients}
+            clients={enrichedClients.filter((c) => c.isActive !== false)}
             packageGroups={packageGroups}
             bookings={bookings}
             initialDay={bookingInitialDate}
@@ -1134,7 +1312,12 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         )}
 
         {currentScreen === 'newclient' && (
-          <NewClientScreen onSaveClient={handleSaveClient} onGoBack={handleGoBack} />
+          <NewClientScreen
+            existingClients={enrichedClients}
+            onSaveClient={handleSaveClient}
+            onImportContacts={handleImportContacts}
+            onGoBack={handleGoBack}
+          />
         )}
 
         {currentScreen === 'payments' && (

@@ -28,6 +28,12 @@
           "cameraPermission": "Allow Shilpi to access your camera to scan Web Terminal QR codes and take client portfolio photos."
         }
       ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow Shilpi to access your contacts to import clients into your directory."
+        }
+      ],
       "expo-sharing"
     ]
   }

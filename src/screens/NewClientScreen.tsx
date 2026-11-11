@@ -12,16 +12,40 @@ import {
   Animated,
   Platform,
   KeyboardAvoidingView,
+  Modal,
+  FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Contacts from 'expo-contacts';
 import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
 import { Colors } from '../theme/colors';
-import { Client } from '../data/prototypeData';
+import { Client, normalizePhoneKey } from '../data/prototypeData';
 
 interface NewClientScreenProps {
-  onSaveClient: (client: Partial<Client>, thenCreateBooking?: boolean) => void;
+  existingClients?: Client[];
+  onSaveClient: (client: Partial<Client>, thenCreateBooking?: boolean) => Promise<void> | void;
+  onImportContacts?: (contacts: { name: string; phone: string }[]) => Promise<void>;
   onGoBack: () => void;
 }
+
+interface DeviceContactItem {
+  id: string;
+  name: string;
+  rawPhone: string;
+  phoneKey: string;
+  missingPhone: boolean;
+  duplicateName: string | null;
+}
+
+const ContactsBookIcon = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2}>
+    <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
+    <Circle cx={9} cy={7} r={4} strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M23 21v-2a4 4 0 0 0-3-3.87" strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
 
 // ----------------- Bespoke Luxury SVG Icons ----------------- //
 
@@ -125,14 +149,25 @@ const AnimatedActionButton: React.FC<{
 // ----------------- Main Screen Component ----------------- //
 
 export const NewClientScreen: React.FC<NewClientScreenProps> = ({
+  existingClients = [],
   onSaveClient,
+  onImportContacts,
   onGoBack,
 }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [validationError, setValidationError] = useState<'' | 'name' | 'phone'>('');
+  const [validationError, setValidationError] = useState<'' | 'name' | 'phone' | 'duplicate'>('');
+  const [duplicateOwnerName, setDuplicateOwnerName] = useState('');
+
+  // Contacts Import Modal State
+  const [contactsModalOpen, setContactsModalOpen] = useState(false);
+  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [importingContacts, setImportingContacts] = useState(false);
+  const [deviceContacts, setDeviceContacts] = useState<DeviceContactItem[]>([]);
+  const [contactSearch, setContactSearch] = useState('');
+  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
 
   // Entrance spring animation
   const animMount = useRef(new Animated.Value(0)).current;
@@ -223,6 +258,135 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
     );
   };
 
+  const handleOpenContactsPicker = async () => {
+    try {
+      setLoadingContacts(true);
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== 'granted') {
+        setLoadingContacts(false);
+        Alert.alert(
+          'Contacts Permission Needed',
+          'Please allow access to your phone contacts so you can import clients.'
+        );
+        return;
+      }
+
+      const { data } = await Contacts.getContactsAsync({
+        fields: [Contacts.Fields.Name, Contacts.Fields.PhoneNumbers],
+        sort: Contacts.SortTypes.FirstName,
+      });
+
+      const existingMap = new Map<string, string>();
+      for (const c of existingClients) {
+        const key = normalizePhoneKey(c.phone);
+        if (key) existingMap.set(key, c.name);
+      }
+
+      const mapped: DeviceContactItem[] = (data || []).map((c, idx) => {
+        const displayName =
+          c.name?.trim() ||
+          [c.firstName, c.lastName].filter(Boolean).join(' ').trim() ||
+          'Unnamed Contact';
+        const rawNumber =
+          c.phoneNumbers?.find((p) => p.number && p.number.trim())?.number?.trim() || '';
+        const phoneKey = normalizePhoneKey(rawNumber);
+        const missingPhone = !rawNumber || phoneKey.length < 10;
+        const duplicateName = !missingPhone ? existingMap.get(phoneKey) || null : null;
+
+        return {
+          id: String(c.id || `contact_${idx}`),
+          name: displayName,
+          rawPhone: rawNumber,
+          phoneKey,
+          missingPhone,
+          duplicateName,
+        };
+      });
+
+      setDeviceContacts(mapped);
+      setContactSearch('');
+      setSelectedContactIds([]);
+      setContactsModalOpen(true);
+    } catch (err: any) {
+      Alert.alert(
+        'Could Not Read Contacts',
+        err?.message || 'Unable to load contacts from your device.'
+      );
+    } finally {
+      setLoadingContacts(false);
+    }
+  };
+
+  const toggleSelectContact = (item: DeviceContactItem) => {
+    if (item.missingPhone) {
+      Alert.alert(
+        'Mobile Number Required',
+        `"${item.name}" has no valid mobile number. Contacts without a mobile number cannot be imported.`
+      );
+      return;
+    }
+    if (item.duplicateName) {
+      Alert.alert(
+        'Client Already Registered',
+        `This client was already registered in the name of "${item.duplicateName}".`
+      );
+      return;
+    }
+    setSelectedContactIds((prev) =>
+      prev.includes(item.id) ? prev.filter((id) => id !== item.id) : [...prev, item.id]
+    );
+  };
+
+  const handleConfirmImportContacts = async () => {
+    const selectedItems = deviceContacts.filter((c) => selectedContactIds.includes(c.id));
+    if (selectedItems.length === 0) {
+      Alert.alert('No Contacts Selected', 'Please select one or more contacts to import.');
+      return;
+    }
+
+    // Filter out any in-batch duplicates on phoneKey before sending
+    const seenKeys = new Set<string>();
+    const payload: { name: string; phone: string }[] = [];
+    const batchDuplicates: string[] = [];
+
+    for (const item of selectedItems) {
+      if (item.missingPhone) continue;
+      if (seenKeys.has(item.phoneKey)) {
+        batchDuplicates.push(item.name);
+        continue;
+      }
+      seenKeys.add(item.phoneKey);
+      const formattedPhone =
+        item.phoneKey.length === 10
+          ? `+91 ${item.phoneKey.slice(0, 5)} ${item.phoneKey.slice(5)}`
+          : item.rawPhone;
+      payload.push({ name: item.name, phone: formattedPhone });
+    }
+
+    if (batchDuplicates.length > 0) {
+      Alert.alert(
+        'Duplicate Mobile Number',
+        `Skipped duplicate phone number for: ${batchDuplicates.join(', ')}.`
+      );
+    }
+
+    if (payload.length === 0) return;
+
+    setImportingContacts(true);
+    try {
+      if (onImportContacts) {
+        await onImportContacts(payload);
+      } else {
+        for (const entry of payload) {
+          await onSaveClient({ name: entry.name, phone: entry.phone }, false);
+        }
+      }
+      setContactsModalOpen(false);
+    } finally {
+      setImportingContacts(false);
+    }
+  };
+
   const handleSave = (thenCreateBooking: boolean = false) => {
     if (!name.trim()) {
       setValidationError('name');
@@ -231,9 +395,27 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
     const cleanPhone = phone.replace(/\D/g, '');
     if (!/^\d{10}$/.test(cleanPhone)) {
       setValidationError('phone');
+      Alert.alert(
+        'Mobile Number Required',
+        'Please enter a valid 10-digit mobile number before saving.'
+      );
+      return;
+    }
+    const inputKey = normalizePhoneKey(cleanPhone);
+    const existingDup = existingClients.find(
+      (c) => normalizePhoneKey(c.phone) === inputKey
+    );
+    if (existingDup) {
+      setValidationError('duplicate');
+      setDuplicateOwnerName(existingDup.name);
+      Alert.alert(
+        'Client Already Registered',
+        `This client was already registered in the name of "${existingDup.name}".`
+      );
       return;
     }
     setValidationError('');
+    setDuplicateOwnerName('');
     onSaveClient(
       {
         name: name.trim(),
@@ -265,6 +447,33 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
           <Text style={styles.title}>Add to my client book</Text>
         </View>
 
+        {/* 1b. Import from Phone Contacts Card (above manual form) */}
+        <TouchableOpacity
+          style={styles.importContactsCard}
+          onPress={handleOpenContactsPicker}
+          activeOpacity={0.85}
+          disabled={loadingContacts}
+        >
+          <View style={styles.importIconBadge}>
+            {loadingContacts ? (
+              <ActivityIndicator size="small" color={Colors.accent} />
+            ) : (
+              <ContactsBookIcon />
+            )}
+          </View>
+          <View style={styles.importTextCol}>
+            <Text style={styles.importTitle}>Import from Contacts</Text>
+            <Text style={styles.importSub}>
+              Select one or multiple phone contacts to add
+            </Text>
+          </View>
+          <View style={styles.importActionPill}>
+            <Text style={styles.importActionText}>
+              {loadingContacts ? 'LOADING' : 'IMPORT'}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
         {/* 2. Compact Unified Information Card (Name, Phone, Notes in a small space) */}
         <Animated.View
           style={[
@@ -283,12 +492,17 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
           ]}
         >
           <View style={styles.cardHeaderRow}>
-            <Text style={styles.sectionKicker}>CLIENT DETAILS</Text>
+            <Text style={styles.sectionKicker}>OR ADD MANUALLY</Text>
             {validationError === 'name' && (
               <Text style={styles.errorText}>* Name is required</Text>
             )}
             {validationError === 'phone' && (
-              <Text style={styles.errorText}>* Enter 10-digit phone number</Text>
+              <Text style={styles.errorText}>* Enter 10-digit mobile number</Text>
+            )}
+            {validationError === 'duplicate' && (
+              <Text style={styles.errorText}>
+                * Registered as {duplicateOwnerName}
+              </Text>
             )}
           </View>
 
@@ -315,7 +529,12 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
           <View style={styles.fieldDivider} />
 
           {/* Phone Field */}
-          <View style={[styles.fieldRow, validationError === 'phone' && styles.fieldRowError]}>
+          <View
+            style={[
+              styles.fieldRow,
+              (validationError === 'phone' || validationError === 'duplicate') && styles.fieldRowError,
+            ]}
+          >
             <View style={styles.fieldIconBox}>
               <PhoneIcon />
             </View>
@@ -332,7 +551,10 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
                   onChangeText={(t) => {
                     const digits = t.replace(/\D/g, '').slice(0, 10);
                     setPhone(digits);
-                    if (digits.length === 10 && validationError === 'phone') {
+                    if (validationError === 'duplicate') {
+                      setValidationError('');
+                      setDuplicateOwnerName('');
+                    } else if (digits.length === 10 && validationError === 'phone') {
                       setValidationError('');
                     }
                   }}
@@ -468,6 +690,121 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Multi-Select Contacts Import Modal */}
+      <Modal
+        visible={contactsModalOpen}
+        animationType="slide"
+        onRequestClose={() => setContactsModalOpen(false)}
+      >
+        <View style={styles.contactsModalRoot}>
+          <View style={styles.contactsModalHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.contactsModalEyebrow}>PHONE CONTACTS</Text>
+              <Text style={styles.contactsModalTitle}>Select clients to import</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.contactsModalCloseBtn}
+              onPress={() => setContactsModalOpen(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.contactsModalCloseText}>CLOSE</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.contactsSearchWrap}>
+            <TextInput
+              style={styles.contactsSearchInput}
+              placeholder="Search contacts by name or number..."
+              placeholderTextColor="rgba(18, 18, 18, 0.4)"
+              value={contactSearch}
+              onChangeText={setContactSearch}
+            />
+          </View>
+
+          <FlatList
+            data={deviceContacts.filter(
+              (c) =>
+                c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
+                c.rawPhone.includes(contactSearch)
+            )}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.contactsListContent}
+            ListEmptyComponent={
+              <View style={styles.contactsEmptyWrap}>
+                <Text style={styles.contactsEmptyText}>No matching contacts found.</Text>
+              </View>
+            }
+            renderItem={({ item }) => {
+              const isSelected = selectedContactIds.includes(item.id);
+              const isDisabled = item.missingPhone || Boolean(item.duplicateName);
+              return (
+                <TouchableOpacity
+                  style={[
+                    styles.contactRow,
+                    isSelected && styles.contactRowSelected,
+                    isDisabled && styles.contactRowDisabled,
+                  ]}
+                  onPress={() => toggleSelectContact(item)}
+                  activeOpacity={0.8}
+                >
+                  <View
+                    style={[
+                      styles.contactCheckBox,
+                      isSelected && styles.contactCheckBoxActive,
+                      isDisabled && styles.contactCheckBoxDisabled,
+                    ]}
+                  >
+                    {isSelected ? <CheckIcon /> : null}
+                  </View>
+
+                  <View style={styles.contactTextCol}>
+                    <Text style={styles.contactRowName} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.contactRowPhone} numberOfLines={1}>
+                      {item.rawPhone ? item.rawPhone : 'No mobile number'}
+                    </Text>
+                  </View>
+
+                  {item.missingPhone ? (
+                    <View style={styles.contactWarnPill}>
+                      <Text style={styles.contactWarnText}>NO NUMBER</Text>
+                    </View>
+                  ) : item.duplicateName ? (
+                    <View style={styles.contactDupPill}>
+                      <Text style={styles.contactDupText} numberOfLines={1}>
+                        AS {item.duplicateName.toUpperCase()}
+                      </Text>
+                    </View>
+                  ) : null}
+                </TouchableOpacity>
+              );
+            }}
+          />
+
+          <View style={styles.contactsFooterBar}>
+            <Text style={styles.contactsSelectedCount}>
+              {selectedContactIds.length} selected
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.contactsImportConfirmBtn,
+                (selectedContactIds.length === 0 || importingContacts) && { opacity: 0.45 },
+              ]}
+              onPress={handleConfirmImportContacts}
+              disabled={selectedContactIds.length === 0 || importingContacts}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.contactsImportConfirmText}>
+                {importingContacts
+                  ? 'IMPORTING...'
+                  : `IMPORT ${selectedContactIds.length || ''} CLIENT${selectedContactIds.length === 1 ? '' : 'S'}`}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
@@ -501,6 +838,58 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     marginTop: 4,
     letterSpacing: -0.4,
+  },
+
+  importContactsCard: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(232, 39, 107, 0.25)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  importIconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: Colors.tint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  importTextCol: {
+    flex: 1,
+  },
+  importTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#121212',
+  },
+  importSub: {
+    fontSize: 11.5,
+    color: 'rgba(18, 18, 18, 0.55)',
+    marginTop: 2,
+  },
+  importActionPill: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
+  importActionText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.7,
+    color: '#ffffff',
   },
 
   // 1. Compact Unified Form
@@ -738,5 +1127,163 @@ const styles = StyleSheet.create({
   },
   btnIconWrap: {
     marginRight: 6,
+  },
+  contactsModalRoot: {
+    flex: 1,
+    backgroundColor: '#f4f4f6',
+  },
+  contactsModalHeader: {
+    backgroundColor: '#121216',
+    paddingTop: Platform.OS === 'ios' ? 54 : 24,
+    paddingBottom: 18,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  contactsModalEyebrow: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    color: '#e8276b',
+  },
+  contactsModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginTop: 2,
+  },
+  contactsModalCloseBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
+  contactsModalCloseText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    letterSpacing: 0.7,
+    color: '#ffffff',
+  },
+  contactsSearchWrap: {
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(18, 18, 18, 0.07)',
+  },
+  contactsSearchInput: {
+    backgroundColor: Colors.tint,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#121212',
+  },
+  contactsListContent: {
+    paddingBottom: 24,
+  },
+  contactsEmptyWrap: {
+    padding: 36,
+    alignItems: 'center',
+  },
+  contactsEmptyText: {
+    fontSize: 13.5,
+    color: 'rgba(18, 18, 18, 0.5)',
+  },
+  contactRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(18, 18, 18, 0.06)',
+    gap: 12,
+  },
+  contactRowSelected: {
+    backgroundColor: '#fff5f9',
+  },
+  contactRowDisabled: {
+    opacity: 0.68,
+  },
+  contactCheckBox: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    borderWidth: 1.8,
+    borderColor: 'rgba(18, 18, 18, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contactCheckBoxActive: {
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
+  },
+  contactCheckBoxDisabled: {
+    borderColor: 'rgba(18, 18, 18, 0.14)',
+    backgroundColor: 'rgba(18, 18, 18, 0.04)',
+  },
+  contactTextCol: {
+    flex: 1,
+  },
+  contactRowName: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: '#121212',
+  },
+  contactRowPhone: {
+    fontSize: 12.5,
+    color: 'rgba(18, 18, 18, 0.58)',
+    marginTop: 2,
+  },
+  contactWarnPill: {
+    backgroundColor: '#fef3c7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  contactWarnText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: '#92400e',
+  },
+  contactDupPill: {
+    backgroundColor: '#ffeef4',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    maxWidth: 130,
+  },
+  contactDupText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: Colors.deep,
+  },
+  contactsFooterBar: {
+    backgroundColor: '#121216',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  contactsSelectedCount: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  contactsImportConfirmBtn: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  contactsImportConfirmText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    letterSpacing: 0.7,
+    color: '#ffffff',
   },
 });

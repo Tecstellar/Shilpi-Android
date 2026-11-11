@@ -11,6 +11,16 @@ export interface Client {
   photoUri?: string;
   notes?: string;
   isVip?: boolean;
+  isActive?: boolean;
+}
+
+export function normalizePhoneKey(raw: string): string {
+  const digits = String(raw || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.length === 12 && digits.startsWith('91')) return digits.slice(2);
+  if (digits.length === 11 && digits.startsWith('0')) return digits.slice(1);
+  if (digits.length > 10 && digits.startsWith('91')) return digits.slice(-10);
+  return digits;
 }
 
 export interface BookingItem {

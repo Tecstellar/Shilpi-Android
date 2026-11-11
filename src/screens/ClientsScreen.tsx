@@ -8,9 +8,16 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path, Circle, Line } from 'react-native-svg';
 import { Colors } from '../theme/colors';
 import { Client, fmt } from '../data/prototypeData';
+
+const PlusVectorIcon = ({ color = '#ffffff', size = 18 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5}>
+    <Line x1={12} y1={5} x2={12} y2={19} strokeLinecap="round" />
+    <Line x1={5} y1={12} x2={19} y2={12} strokeLinecap="round" />
+  </Svg>
+);
 
 const UsersEmptyVectorIcon = () => (
   <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={1.8}>
@@ -52,12 +59,17 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
   onStartNewClient,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [vipOnly, setVipOnly] = useState(false);
+  const [filterMode, setFilterMode] = useState<'active' | 'vip' | 'inactive'>('active');
 
-  const vipCount = clients.filter((c) => c.isVip).length;
+  const activeClients = clients.filter((c) => c.isActive !== false);
+  const inactiveClients = clients.filter((c) => c.isActive === false);
+  const vipClients = activeClients.filter((c) => c.isVip);
 
   const filtered = clients.filter((c) => {
-    if (vipOnly && !c.isVip) return false;
+    const isActive = c.isActive !== false;
+    if (filterMode === 'active' && !isActive) return false;
+    if (filterMode === 'vip' && (!isActive || !c.isVip)) return false;
+    if (filterMode === 'inactive' && isActive) return false;
     return (
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.phone.includes(searchQuery)
@@ -66,32 +78,53 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Search Bar & All/VIP filter */}
+      {/* Search Bar + Add Client (+) Icon + Active/VIP/Inactive filters */}
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search clients..."
-          placeholderTextColor="rgba(18, 18, 18, 0.4)"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+        <View style={styles.searchRow}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search clients..."
+            placeholderTextColor="rgba(18, 18, 18, 0.4)"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {onStartNewClient && (
+            <TouchableOpacity
+              style={styles.addPlusBtn}
+              onPress={onStartNewClient}
+              activeOpacity={0.85}
+              accessibilityLabel="Add new client"
+            >
+              <PlusVectorIcon color="#ffffff" size={20} />
+            </TouchableOpacity>
+          )}
+        </View>
         <View style={styles.filterRow}>
           <TouchableOpacity
-            style={[styles.filterPill, !vipOnly && styles.filterPillActive]}
-            onPress={() => setVipOnly(false)}
+            style={[styles.filterPill, filterMode === 'active' && styles.filterPillActive]}
+            onPress={() => setFilterMode('active')}
             activeOpacity={0.8}
           >
-            <Text style={[styles.filterText, !vipOnly && styles.filterTextActive]}>
-              ALL ({clients.length})
+            <Text style={[styles.filterText, filterMode === 'active' && styles.filterTextActive]}>
+              ACTIVE ({activeClients.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.filterPill, vipOnly && styles.filterPillActive]}
-            onPress={() => setVipOnly(true)}
+            style={[styles.filterPill, filterMode === 'vip' && styles.filterPillActive]}
+            onPress={() => setFilterMode('vip')}
             activeOpacity={0.8}
           >
-            <Text style={[styles.filterText, vipOnly && styles.filterTextActive]}>
-              VIP ({vipCount})
+            <Text style={[styles.filterText, filterMode === 'vip' && styles.filterTextActive]}>
+              VIP ({vipClients.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterPill, filterMode === 'inactive' && styles.filterPillActive]}
+            onPress={() => setFilterMode('inactive')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.filterText, filterMode === 'inactive' && styles.filterTextActive]}>
+              INACTIVE ({inactiveClients.length})
             </Text>
           </TouchableOpacity>
         </View>
@@ -130,12 +163,23 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
 
                 <View style={styles.clientInfo}>
                   <View style={styles.nameRow}>
-                    <Text style={styles.clientName} numberOfLines={1}>
+                    <Text
+                      style={[
+                        styles.clientName,
+                        c.isActive === false && styles.clientNameInactive,
+                      ]}
+                      numberOfLines={1}
+                    >
                       {c.name}
                     </Text>
                     {c.isVip ? (
                       <View style={styles.vipBadge}>
                         <Text style={styles.vipBadgeText}>VIP</Text>
+                      </View>
+                    ) : null}
+                    {c.isActive === false ? (
+                      <View style={styles.inactiveBadge}>
+                        <Text style={styles.inactiveBadgeText}>INACTIVE</Text>
                       </View>
                     ) : null}
                   </View>
@@ -167,11 +211,21 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
             <View style={styles.emptyIconCircle}>
               <UsersEmptyVectorIcon />
             </View>
-            <Text style={styles.emptyTitle}>No clients yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Save client details to easily manage appointments, send quotes, and track lifetime billing.
+            <Text style={styles.emptyTitle}>
+              {filterMode === 'inactive'
+                ? 'No inactive clients'
+                : filterMode === 'vip'
+                  ? 'No VIP clients yet'
+                  : 'No clients yet'}
             </Text>
-            {onStartNewClient && (
+            <Text style={styles.emptySubtitle}>
+              {filterMode === 'inactive'
+                ? 'Clients marked inactive from their profile will appear here.'
+                : filterMode === 'vip'
+                  ? 'Tap the heart icon on any client to mark them as a VIP.'
+                  : 'Save client details or import from your contacts to manage appointments and billing.'}
+            </Text>
+            {onStartNewClient && filterMode === 'active' && (
               <TouchableOpacity
                 style={styles.emptyBtn}
                 onPress={onStartNewClient}
@@ -201,7 +255,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(18, 18, 18, 0.07)',
   },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   searchInput: {
+    flex: 1,
     backgroundColor: Colors.tint,
     borderRadius: 14,
     paddingHorizontal: 16,
@@ -210,6 +270,19 @@ const styles = StyleSheet.create({
     color: '#121212',
     borderWidth: 1,
     borderColor: 'rgba(18, 18, 18, 0.06)',
+  },
+  addPlusBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
   },
   filterRow: {
     flexDirection: 'row',
@@ -288,6 +361,9 @@ const styles = StyleSheet.create({
     color: '#121212',
     flexShrink: 1,
   },
+  clientNameInactive: {
+    color: 'rgba(18, 18, 18, 0.5)',
+  },
   vipBadge: {
     backgroundColor: '#ffeef4',
     borderWidth: 1,
@@ -301,6 +377,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.6,
     color: '#e8276b',
+  },
+  inactiveBadge: {
+    backgroundColor: 'rgba(18, 18, 18, 0.08)',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+  },
+  inactiveBadgeText: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    color: 'rgba(18, 18, 18, 0.55)',
   },
   heartBtn: {
     marginLeft: 10,
