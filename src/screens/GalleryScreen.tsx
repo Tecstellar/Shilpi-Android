@@ -91,6 +91,21 @@ const TrashIcon = ({ color = '#d62828', size = 14 }: { color?: string; size?: nu
   </Svg>
 );
 
+const MoreVerticalIcon = ({ color = '#121212', size = 18 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <Circle cx={12} cy={5} r={1.8} />
+    <Circle cx={12} cy={12} r={1.8} />
+    <Circle cx={12} cy={19} r={1.8} />
+  </Svg>
+);
+
+const CheckCircleIcon = ({ color = '#121212', size = 12 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4}>
+    <Circle cx={12} cy={12} r={9} />
+    <Path d="M8.5 12.5l2.5 2.5 4.5-5" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
 // ----------------- Types ----------------- //
 
 export interface GalleryLook {
@@ -180,6 +195,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   const [shareInstaTag, setShareInstaTag] = useState('');
   const [shareInstaUrl, setShareInstaUrl] = useState('');
   const [isSharingPoster, setIsSharingPoster] = useState(false);
+  const [menuLook, setMenuLook] = useState<GalleryLook | null>(null);
   const posterShotRef = useRef<any>(null);
 
   const cacheKey = beauticianId ? `@shilpi_gallery_${beauticianId}` : null;
@@ -485,6 +501,32 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
     }
   };
 
+  const handleTogglePosted = async (look: GalleryLook) => {
+    const nextPosted = !look.postedToInstagram;
+    const optimisticLooks = looks.map((l) =>
+      l.id === look.id ? { ...l, postedToInstagram: nextPosted } : l
+    );
+    setLooks(optimisticLooks);
+
+    try {
+      const res = await apiClient.patch(`/gallery/${look.id}`, {
+        postedToInstagram: nextPosted,
+      });
+      if (res.data?.success && res.data.data) {
+        const syncedLooks = optimisticLooks.map((l) =>
+          l.id === look.id ? { ...l, ...res.data.data } : l
+        );
+        const nextStreaks = res.data.streaks || streaks;
+        setLooks(syncedLooks);
+        setStreaks(nextStreaks);
+        await persistCache(syncedLooks, nextStreaks);
+      }
+    } catch (e: any) {
+      setLooks(looks);
+      Alert.alert('Update Failed', e?.message || 'Could not update posted status.');
+    }
+  };
+
   const handleDeleteLook = (look: GalleryLook) => {
     Alert.alert('Delete Look?', `Remove "${look.title}" from your portfolio gallery?`, [
       { text: 'Cancel', style: 'cancel' },
@@ -606,18 +648,32 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                   </View>
                   <View style={styles.headerActions}>
                     <TouchableOpacity
-                      style={styles.iconActionBtn}
-                      onPress={() => openEditLookModal(post)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      style={[
+                        styles.postedTogglePill,
+                        post.postedToInstagram && styles.postedTogglePillActive,
+                      ]}
+                      onPress={() => handleTogglePosted(post)}
+                      activeOpacity={0.8}
                     >
-                      <EditPencilIcon />
+                      <CheckCircleIcon
+                        color={post.postedToInstagram ? '#ffffff' : 'rgba(18,18,18,0.65)'}
+                        size={12}
+                      />
+                      <Text
+                        style={[
+                          styles.postedToggleText,
+                          post.postedToInstagram && styles.postedToggleTextActive,
+                        ]}
+                      >
+                        Posted
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.iconActionBtn}
-                      onPress={() => handleDeleteLook(post)}
+                      onPress={() => setMenuLook(post)}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                      <TrashIcon />
+                      <MoreVerticalIcon color="#121212" size={18} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -1062,6 +1118,69 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Modal 3: Card Three-Dot Options Menu */}
+      <Modal
+        visible={Boolean(menuLook)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuLook(null)}
+      >
+        <TouchableOpacity
+          style={styles.menuBackdrop}
+          activeOpacity={1}
+          onPress={() => setMenuLook(null)}
+        >
+          <View style={styles.menuActionSheet} onStartShouldSetResponder={() => true}>
+            <Text style={styles.menuSheetTitle} numberOfLines={1}>
+              {menuLook?.title || 'Look Options'}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.menuSheetRow}
+              onPress={() => {
+                const target = menuLook;
+                setMenuLook(null);
+                if (target) openEditLookModal(target);
+              }}
+            >
+              <EditPencilIcon color="#121212" size={16} />
+              <Text style={styles.menuSheetRowText}>Edit Look Details</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuSheetRow}
+              onPress={() => {
+                const target = menuLook;
+                setMenuLook(null);
+                if (target) handleOpenShareModal(target);
+              }}
+            >
+              <InstagramGlyphIcon color={Colors.accent} size={16} />
+              <Text style={styles.menuSheetRowText}>Share / Edit Instagram Tag</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.menuSheetRow, { borderBottomWidth: 0 }]}
+              onPress={() => {
+                const target = menuLook;
+                setMenuLook(null);
+                if (target) handleDeleteLook(target);
+              }}
+            >
+              <TrashIcon color="#d62828" size={16} />
+              <Text style={[styles.menuSheetRowText, { color: '#d62828' }]}>Delete Look</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuSheetCancelBtn}
+              onPress={() => setMenuLook(null)}
+            >
+              <Text style={styles.menuSheetCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -1272,6 +1391,74 @@ const styles = StyleSheet.create({
     padding: 5,
     borderRadius: 8,
     backgroundColor: '#f5f5f7',
+  },
+  postedTogglePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: '#f5f5f7',
+    borderWidth: 1,
+    borderColor: 'rgba(18,18,18,0.1)',
+  },
+  postedTogglePillActive: {
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
+  },
+  postedToggleText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(18,18,18,0.72)',
+  },
+  postedToggleTextActive: {
+    color: '#ffffff',
+  },
+  menuBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+    padding: 16,
+  },
+  menuActionSheet: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 16,
+    paddingBottom: 14,
+  },
+  menuSheetTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: 'rgba(18,18,18,0.55)',
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  menuSheetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 13,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(18,18,18,0.06)',
+  },
+  menuSheetRowText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#121212',
+  },
+  menuSheetCancelBtn: {
+    marginTop: 10,
+    backgroundColor: '#f3f3f6',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  menuSheetCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#121212',
   },
   photosGrid: {
     flexDirection: 'row',
