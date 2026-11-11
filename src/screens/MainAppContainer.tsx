@@ -7,6 +7,7 @@ import {
   INITIAL_PKG_GROUPS,
   Client,
   Booking,
+  ExpenseRecord,
   PackageGroup,
   NotificationItem,
   fmt,
@@ -62,6 +63,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   const [beauticianId, setBeauticianId] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
   const [monthExpenses, setMonthExpenses] = useState<number>(0);
   const [packageGroups, setPackageGroups] = useState<PackageGroup[]>(INITIAL_PKG_GROUPS);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -168,10 +170,11 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         if (resolvedShopId) {
           setBeauticianId(resolvedShopId);
 
-          const [storedClients, storedBookings, storedNotifs] = await Promise.all([
+          const [storedClients, storedBookings, storedNotifs, storedExpenses] = await Promise.all([
             AsyncStorage.getItem(`@shilpi_clients_${resolvedShopId}`),
             AsyncStorage.getItem(`@shilpi_bookings_${resolvedShopId}`),
             AsyncStorage.getItem(`@shilpi_notifs_${resolvedShopId}`),
+            AsyncStorage.getItem(`@shilpi_expenses_${resolvedShopId}`),
           ]);
 
           if (storedClients) {
@@ -184,6 +187,17 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           if (storedNotifs) {
             loadedNotifs = JSON.parse(storedNotifs);
             setNotifications(loadedNotifs);
+          }
+          if (storedExpenses) {
+            const parsedExp: ExpenseRecord[] = JSON.parse(storedExpenses);
+            setExpenses(parsedExp);
+            const t = new Date();
+            const prefix = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`;
+            setMonthExpenses(
+              parsedExp
+                .filter((e) => String(e.expenseDate || '').startsWith(prefix))
+                .reduce((s, e) => s + (e.amount || 0), 0)
+            );
           }
         }
 
@@ -262,17 +276,52 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           }
         };
 
-        // Fetch shop-scoped clients, bookings & dashboard metrics directly from AWS RDS PostgreSQL
+        // Fetch shop-scoped clients, bookings, expenses & dashboard metrics directly from AWS RDS PostgreSQL
         try {
-          const [clientsRes, bookingsRes, overviewRes] = await Promise.all([
+          const [clientsRes, bookingsRes, overviewRes, expensesRes] = await Promise.all([
             apiClient.get('/clients'),
             apiClient.get('/bookings').catch(() => null),
             apiClient.get('/dashboard/overview').catch(() => null),
+            apiClient.get('/expenses').catch(() => null),
           ]);
 
           if (overviewRes?.data?.success && overviewRes.data?.data?.metrics) {
             const rawExpPaise = Number(overviewRes.data.data.metrics.totalExpensesPaise || 0);
             setMonthExpenses(Math.round(rawExpPaise / 100));
+          }
+
+          if (expensesRes?.data?.success && Array.isArray(expensesRes.data.data)) {
+            const shortM = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const dbExpenses: ExpenseRecord[] = expensesRes.data.data.map((e: any) => {
+              const dtStr = String(e.expenseDate || '').slice(0, 10);
+              const dtObj = new Date(`${dtStr}T00:00:00Z`);
+              const dNum = isNaN(dtObj.getUTCDate()) ? '' : String(dtObj.getUTCDate()).padStart(2, '0');
+              const mStr = isNaN(dtObj.getUTCMonth()) ? '' : shortM[dtObj.getUTCMonth()] || '';
+              return {
+                id: e.id,
+                title: e.title,
+                category: e.category,
+                categoryLabel: e.categoryLabel || e.category,
+                amount: Math.round(Number(e.amountPaise || 0) / 100),
+                expenseDate: dtStr,
+                dateLabel: dNum && mStr ? `${dNum} ${mStr}` : dtStr,
+                notes: e.notes || '',
+              };
+            });
+            setExpenses(dbExpenses);
+            const t = new Date();
+            const curPrefix = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`;
+            setMonthExpenses(
+              dbExpenses
+                .filter((e) => e.expenseDate.startsWith(curPrefix))
+                .reduce((sum, e) => sum + e.amount, 0)
+            );
+            if (resolvedShopId) {
+              await AsyncStorage.setItem(
+                `@shilpi_expenses_${resolvedShopId}`,
+                JSON.stringify(dbExpenses)
+              );
+            }
           }
 
           if (clientsRes.data?.success && Array.isArray(clientsRes.data.data)) {
@@ -795,6 +844,74 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     }
   };
 
+  // Studio Expenses CRUD backed by PostgreSQL + real-time Home/Reports sync
+  const recalcMonthExpenses = (list: ExpenseRecord[]) => {
+    const t = new Date();
+    const curPrefix = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`;
+    const total = list
+      .filter((e) => String(e.expenseDate || '').startsWith(curPrefix))
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
+    setMonthExpenses(total);
+  };
+
+  const handleAddExpense = async (payload: {
+    title: string;
+    category: string;
+    amount: number;
+    expenseDate: string;
+    notes?: string;
+  }) => {
+    const res = await apiClient.post('/expenses', {
+      title: payload.title,
+      category: payload.category,
+      amountPaise: Math.max(100, Math.round(payload.amount * 100)),
+      expenseDate: payload.expenseDate,
+      notes: payload.notes || undefined,
+    });
+
+    if (!res.data?.success || !res.data?.data) {
+      throw new Error(res.data?.error?.message || 'Failed to save expense');
+    }
+
+    const e = res.data.data;
+    const shortM = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dtStr = String(e.expenseDate || payload.expenseDate).slice(0, 10);
+    const dtObj = new Date(`${dtStr}T00:00:00Z`);
+    const dNum = isNaN(dtObj.getUTCDate()) ? '' : String(dtObj.getUTCDate()).padStart(2, '0');
+    const mStr = isNaN(dtObj.getUTCMonth()) ? '' : shortM[dtObj.getUTCMonth()] || '';
+
+    const createdRecord: ExpenseRecord = {
+      id: e.id,
+      title: e.title,
+      category: e.category,
+      categoryLabel: e.categoryLabel || e.category,
+      amount: Math.round(Number(e.amountPaise || 0) / 100),
+      expenseDate: dtStr,
+      dateLabel: dNum && mStr ? `${dNum} ${mStr}` : dtStr,
+      notes: e.notes || '',
+    };
+
+    const next = [createdRecord, ...expenses];
+    setExpenses(next);
+    recalcMonthExpenses(next);
+    if (beauticianId) {
+      AsyncStorage.setItem(`@shilpi_expenses_${beauticianId}`, JSON.stringify(next)).catch(() => {});
+    }
+  };
+
+  const handleDeleteExpense = async (expenseId: string) => {
+    const next = expenses.filter((e) => e.id !== expenseId);
+    setExpenses(next);
+    recalcMonthExpenses(next);
+    if (beauticianId) {
+      AsyncStorage.setItem(`@shilpi_expenses_${beauticianId}`, JSON.stringify(next)).catch(() => {});
+    }
+
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(expenseId)) {
+      await apiClient.delete(`/expenses/${expenseId}`).catch(() => {});
+    }
+  };
+
   // Payments Reminder Sheet
   const handleOpenRemindSheet = () => {
     setActiveSheet({
@@ -1007,7 +1124,14 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
 
         {currentScreen === 'reminders' && <RemindersScreen onGoBack={handleGoBack} />}
 
-        {currentScreen === 'expenses' && <ExpensesScreen onGoBack={handleGoBack} />}
+        {currentScreen === 'expenses' && (
+          <ExpensesScreen
+            expenses={expenses}
+            onAddExpense={handleAddExpense}
+            onDeleteExpense={handleDeleteExpense}
+            onGoBack={handleGoBack}
+          />
+        )}
 
         {currentScreen === 'reports' && (
           <ReportsScreen

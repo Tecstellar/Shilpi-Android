@@ -50,6 +50,17 @@ export interface PackageGroup {
   items: PackageItem[];
 }
 
+export interface ExpenseRecord {
+  id: string;
+  title: string;
+  category: string;
+  categoryLabel: string;
+  amount: number;
+  expenseDate: string; // YYYY-MM-DD
+  dateLabel: string;
+  notes?: string;
+}
+
 export interface NotificationItem {
   id: string;
   glyph: string;
