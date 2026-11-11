@@ -182,7 +182,7 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
             const res = await ImagePicker.launchCameraAsync({
               allowsEditing: true,
               aspect: [1, 1],
-              quality: 0.35,
+              quality: 0.2,
               base64: true,
             });
             if (!res.canceled && res.assets && res.assets[0]) {
@@ -204,7 +204,7 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
             const res = await ImagePicker.launchImageLibraryAsync({
               allowsEditing: true,
               aspect: [1, 1],
-              quality: 0.35,
+              quality: 0.2,
               base64: true,
             });
             if (!res.canceled && res.assets && res.assets[0]) {

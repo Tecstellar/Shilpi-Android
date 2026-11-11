@@ -2,7 +2,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://172.22.14.80:4000/api/v1';
-const REQUEST_TIMEOUT_MS = 15000;
+const REQUEST_TIMEOUT_MS = 45000;
 
 async function request(method: 'GET' | 'POST' | 'PATCH', endpoint: string, body?: any) {
   const token = await AsyncStorage.getItem('@shilpi_token');

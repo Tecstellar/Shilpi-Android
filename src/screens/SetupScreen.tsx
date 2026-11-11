@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
   Image,
   Keyboard,
   Animated,
@@ -219,6 +220,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   const [pincode, setPincode] = useState('');
   const [logoUri, setLogoUri] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Step 2: Business Type State (Single or Multi-select)
   const [selectedBusinessTypes, setSelectedBusinessTypes] = useState<string[]>([]);
@@ -419,7 +421,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.35,
+        quality: 0.2,
         base64: true,
       });
 
@@ -494,6 +496,8 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
 
   // Finish setup and save
   const handleFinishSetup = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     const finalBusinessTypes = selectedBusinessTypes.map((t) =>
       t === 'Other' && otherBusinessText.trim() ? `Other (${otherBusinessText.trim()})` : t
     );
@@ -556,6 +560,8 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
         'Could Not Complete Setup',
         e?.message || 'Failed to save your studio details to the server. Please try again.'
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1153,19 +1159,29 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
         {/* 7. Bottom Actions (One-row layout when skippable) */}
         <View style={[styles.bottomActions, currentConfig.skippable && styles.bottomActionsRow]}>
           <TouchableOpacity
-            style={[styles.primaryBtn, currentConfig.skippable && styles.primaryBtnRow]}
+            style={[
+              styles.primaryBtn,
+              currentConfig.skippable && styles.primaryBtnRow,
+              isSubmitting && { opacity: 0.7 },
+            ]}
             onPress={handleNext}
+            disabled={isSubmitting}
             activeOpacity={0.85}
           >
-            <Text style={styles.primaryBtnText} numberOfLines={1}>
-              {currentConfig.cta}
-            </Text>
+            {isSubmitting ? (
+              <ActivityIndicator color="#ffffff" size="small" />
+            ) : (
+              <Text style={styles.primaryBtnText} numberOfLines={1}>
+                {currentConfig.cta}
+              </Text>
+            )}
           </TouchableOpacity>
 
           {currentConfig.skippable && (
             <TouchableOpacity
               style={styles.skipRowBtn}
               onPress={handleSkip}
+              disabled={isSubmitting}
               activeOpacity={0.75}
             >
               <Text style={styles.skipRowBtnText} numberOfLines={1}>
