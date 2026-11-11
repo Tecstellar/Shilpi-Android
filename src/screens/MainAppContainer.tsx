@@ -51,6 +51,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [bookingInitialDate, setBookingInitialDate] = useState<number | undefined>();
   const [bookingInitialMonth, setBookingInitialMonth] = useState<string | undefined>();
+  const [bookingInitialYear, setBookingInitialYear] = useState<number | undefined>();
   const [bookingClientName, setBookingClientName] = useState<string | undefined>();
 
   // Drawer & Sheet States
@@ -61,6 +62,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   const [beauticianId, setBeauticianId] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [monthExpenses, setMonthExpenses] = useState<number>(0);
   const [packageGroups, setPackageGroups] = useState<PackageGroup[]>(INITIAL_PKG_GROUPS);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [artistName, setArtistName] = useState('Artist');
@@ -160,6 +162,9 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           }
         }
 
+        let loadedBookingsSnapshot: Booking[] = [];
+        let loadedNotifs: NotificationItem[] = [];
+
         if (resolvedShopId) {
           setBeauticianId(resolvedShopId);
 
@@ -173,19 +178,102 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             setClients(JSON.parse(storedClients));
           }
           if (storedBookings) {
-            setBookings(JSON.parse(storedBookings));
+            loadedBookingsSnapshot = JSON.parse(storedBookings);
+            setBookings(loadedBookingsSnapshot);
           }
           if (storedNotifs) {
-            setNotifications(JSON.parse(storedNotifs));
+            loadedNotifs = JSON.parse(storedNotifs);
+            setNotifications(loadedNotifs);
           }
         }
 
-        // Fetch shop-scoped clients & bookings directly from AWS RDS PostgreSQL
+        const syncMonthEndNotifications = async (
+          shopId: string | null,
+          currentBookings: Booking[],
+          baseNotifs: NotificationItem[]
+        ) => {
+          const today = new Date();
+          const curYr = today.getFullYear();
+          const curMo = today.getMonth();
+          const curDay = today.getDate();
+          const lastDayOfCurMonth = new Date(curYr, curMo + 1, 0).getDate();
+          const longMonths = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December',
+          ];
+          const shortMonths = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+          ];
+
+          const nextNotifs = [...baseNotifs];
+          let changed = false;
+
+          // 1. On the last day of the active month, publish "Your {Month} report is ready"
+          if (curDay === lastDayOfCurMonth) {
+            const curReportId = `report-${curYr}-${curMo}`;
+            if (!nextNotifs.some((n) => n.id === curReportId)) {
+              const curMonthSales = currentBookings
+                .filter((b) => b.month === shortMonths[curMo] && (!b.year || b.year === curYr))
+                .reduce((s, b) => s + b.items.reduce((isum, i) => isum + i.price, 0) + (b.travel || 0), 0);
+              nextNotifs.unshift({
+                id: curReportId,
+                glyph: '↑',
+                title: `Your ${longMonths[curMo]} report is ready`,
+                body: `Sales ${fmt(curMonthSales)} for ${longMonths[curMo]} ${curYr}. Tap to open Reports.`,
+                time: 'Today',
+                to: 'reports',
+              });
+              changed = true;
+            }
+          }
+
+          // 2. When a previous month just completed (and has bookings), ensure its report notification exists
+          const prevDate = new Date(curYr, curMo - 1, 1);
+          const prevYr = prevDate.getFullYear();
+          const prevMo = prevDate.getMonth();
+          const prevReportId = `report-${prevYr}-${prevMo}`;
+          const hadPrevBookings = currentBookings.some(
+            (b) => b.month === shortMonths[prevMo] && (!b.year || b.year === prevYr)
+          );
+          if (hadPrevBookings && !nextNotifs.some((n) => n.id === prevReportId)) {
+            const prevSales = currentBookings
+              .filter((b) => b.month === shortMonths[prevMo] && (!b.year || b.year === prevYr))
+              .reduce((s, b) => s + b.items.reduce((isum, i) => isum + i.price, 0) + (b.travel || 0), 0);
+            nextNotifs.unshift({
+              id: prevReportId,
+              glyph: '↑',
+              title: `Your ${longMonths[prevMo]} report is ready`,
+              body: `${longMonths[prevMo]} ${prevYr} closed with ${fmt(prevSales)} in sales. Tap to review.`,
+              time: `1 ${shortMonths[curMo]}`,
+              to: 'reports',
+            });
+            changed = true;
+          }
+
+          if (changed) {
+            setNotifications(nextNotifs);
+            if (shopId) {
+              await AsyncStorage.setItem(
+                `@shilpi_notifs_${shopId}`,
+                JSON.stringify(nextNotifs)
+              );
+            }
+          }
+        };
+
+        // Fetch shop-scoped clients, bookings & dashboard metrics directly from AWS RDS PostgreSQL
         try {
-          const [clientsRes, bookingsRes] = await Promise.all([
+          const [clientsRes, bookingsRes, overviewRes] = await Promise.all([
             apiClient.get('/clients'),
             apiClient.get('/bookings').catch(() => null),
+            apiClient.get('/dashboard/overview').catch(() => null),
           ]);
+
+          if (overviewRes?.data?.success && overviewRes.data?.data?.metrics) {
+            const rawExpPaise = Number(overviewRes.data.data.metrics.totalExpensesPaise || 0);
+            setMonthExpenses(Math.round(rawExpPaise / 100));
+          }
 
           if (clientsRes.data?.success && Array.isArray(clientsRes.data.data)) {
             const dbClients: Client[] = clientsRes.data.data.map((c: any) => ({
@@ -278,6 +366,9 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
                 JSON.stringify(dbBookings)
               );
             }
+            await syncMonthEndNotifications(resolvedShopId, dbBookings, loadedNotifs);
+          } else {
+            await syncMonthEndNotifications(resolvedShopId, loadedBookingsSnapshot, loadedNotifs);
           }
         } catch (apiErr: any) {
           if (apiErr?.status === 401) {
@@ -609,6 +700,77 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     });
   };
 
+  // Mark Booking Fully Paid (clears due in To Collect & records payment in PostgreSQL)
+  const handleMarkFullyPaid = async (orderId: string) => {
+    const target = bookings.find((b) => b.id === orderId);
+    if (!target) return;
+
+    const total = target.items.reduce((s, i) => s + i.price, 0) + (target.travel || 0);
+    const paidDiff = Math.max(0, total - (target.advance || 0));
+
+    const updated = bookings.map((b) =>
+      b.id === orderId ? { ...b, advance: total } : b
+    );
+    setBookings(updated);
+    if (beauticianId) {
+      AsyncStorage.setItem(`@shilpi_bookings_${beauticianId}`, JSON.stringify(updated)).catch(() => {});
+    }
+
+    if (paidDiff > 0) {
+      const payNotif: NotificationItem = {
+        id: `pay-${orderId}-${Date.now()}`,
+        glyph: '₹',
+        title: `Payment received — ${fmt(paidDiff)}`,
+        body: `${target.client} settled full balance for ${target.day} ${target.month}.`,
+        time: 'Just now',
+        to: 'orders',
+      };
+      setNotifications((prev) => {
+        const next = [payNotif, ...prev];
+        if (beauticianId) {
+          AsyncStorage.setItem(`@shilpi_notifs_${beauticianId}`, JSON.stringify(next)).catch(() => {});
+        }
+        return next;
+      });
+    }
+
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(orderId)) {
+      try {
+        const res = await apiClient.post(`/bookings/${orderId}/pay`, {
+          markFullyPaid: true,
+          paymentMode: 'upi',
+        });
+        if (res.data?.success && res.data?.data) {
+          const syncedAdvance = Math.round(Number(res.data.data.advancePaidPaise || 0) / 100);
+          setBookings((prev) => {
+            const next = prev.map((b) => (b.id === orderId ? { ...b, advance: syncedAdvance } : b));
+            if (beauticianId) {
+              AsyncStorage.setItem(`@shilpi_bookings_${beauticianId}`, JSON.stringify(next)).catch(() => {});
+            }
+            return next;
+          });
+        }
+      } catch (err) {
+        console.warn('Mark fully paid sync warning:', err);
+      }
+    }
+
+    Alert.alert('Fully Paid', `${target.client}'s balance is now marked as fully paid.`);
+  };
+
+  // Personalized Booking Reminder Sheet (from Home Calendar or Order)
+  const handleSendBookingReminder = (order: Booking) => {
+    const total = order.items.reduce((s, i) => s + i.price, 0) + (order.travel || 0);
+    const balance = Math.max(0, total - (order.advance || 0));
+    setActiveSheet({
+      kicker: 'WHATSAPP · BOOKING REMINDER',
+      title: `Send reminder to ${first(order.client)}?`,
+      message: `Hi ${first(order.client)}, a gentle reminder for your appointment on ${order.dateLong} at ${order.time} ${order.meridiem}.\n\nService: ${order.items.map((i) => i.name).join(' + ')}\nVenue: ${order.venue}${balance > 0 ? `\nBalance due: ${fmt(balance)}` : '\nPayment status: Fully Paid'}\n\nLooking forward to styling you!\n— ${artistName}, ${studioName}`,
+      cta: 'Send Reminder',
+      logoUri: studioLogo,
+    });
+  };
+
   // Payments Reminder Sheet
   const handleOpenRemindSheet = () => {
     setActiveSheet({
@@ -637,6 +799,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     setBookingClientName(undefined);
     setBookingInitialDate(undefined);
     setBookingInitialMonth(undefined);
+    setBookingInitialYear(undefined);
     setCurrentScreen('newbooking');
   };
 
@@ -662,12 +825,17 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         {currentScreen === 'home' && (
           <HomeScreen
             bookings={bookings}
+            monthExpenses={monthExpenses}
             artistName={artistName}
             onOpenBooking={handleOpenBooking}
             onOpenOrders={() => handleTabChange('orders')}
-            onStartNewBooking={(day, month) => {
+            onSendBookingReminder={handleSendBookingReminder}
+            onCloseBooking={handleCloseBooking}
+            onMarkFullyPaid={handleMarkFullyPaid}
+            onStartNewBooking={(day, month, year) => {
               setBookingInitialDate(day);
               setBookingInitialMonth(month);
+              setBookingInitialYear(year);
               setBookingClientName(undefined);
               setCurrentScreen('newbooking');
             }}
@@ -691,6 +859,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
               setBookingClientName(clientName);
               setBookingInitialDate(undefined);
               setBookingInitialMonth(undefined);
+              setBookingInitialYear(undefined);
               setCurrentScreen('newbooking');
             }}
           />
@@ -704,6 +873,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
               setBookingClientName(undefined);
               setBookingInitialDate(undefined);
               setBookingInitialMonth(undefined);
+              setBookingInitialYear(undefined);
               setCurrentScreen('newbooking');
             }}
           />
@@ -716,6 +886,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             onUpdateStatus={handleUpdateBookingStatus}
             onOpenConfirmSheet={handleOpenConfirmSheet}
             onCloseBooking={handleCloseBooking}
+            onMarkFullyPaid={handleMarkFullyPaid}
           />
         )}
 
@@ -726,6 +897,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             bookings={bookings}
             initialDay={bookingInitialDate}
             initialMonth={bookingInitialMonth}
+            initialYear={bookingInitialYear}
             initialClientName={bookingClientName}
             onSaveBooking={handleSaveBooking}
             onGoBack={handleGoBack}
@@ -774,7 +946,13 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
 
         {currentScreen === 'expenses' && <ExpensesScreen onGoBack={handleGoBack} />}
 
-        {currentScreen === 'reports' && <ReportsScreen onGoBack={handleGoBack} />}
+        {currentScreen === 'reports' && (
+          <ReportsScreen
+            bookings={bookings}
+            monthExpenses={monthExpenses}
+            onGoBack={handleGoBack}
+          />
+        )}
 
         {currentScreen === 'subscription' && (
           <SubscriptionScreen onPayByUpi={handlePayByUpi} onGoBack={handleGoBack} />

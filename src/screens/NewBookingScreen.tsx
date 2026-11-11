@@ -43,6 +43,7 @@ interface NewBookingScreenProps {
   bookings?: Booking[];
   initialDay?: number;
   initialMonth?: string;
+  initialYear?: number;
   initialClientName?: string;
   onSaveBooking: (newBooking: Partial<Booking>) => void;
   onGoBack: () => void;
@@ -55,6 +56,7 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
   bookings = [],
   initialDay,
   initialMonth,
+  initialYear,
   initialClientName,
   onSaveBooking,
   onStartNewClient,
@@ -67,18 +69,21 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
   const resolvedInitMonthIdx = initialMonth
     ? Math.max(0, MONTH_SHORT.indexOf(initialMonth))
     : currentMonthIdx;
+  const resolvedInitYear = initialYear || currentYear;
 
   const [selectedClient, setSelectedClient] = useState<string>(
     initialClientName || clients[0]?.name || ''
   );
   const [monthOffset, setMonthOffset] = useState<number>(
-    initialMonth ? resolvedInitMonthIdx - currentMonthIdx : 0
+    initialMonth || initialYear
+      ? (resolvedInitYear - currentYear) * 12 + (resolvedInitMonthIdx - currentMonthIdx)
+      : 0
   );
   const [selectedDay, setSelectedDay] = useState<number>(initialDay || currentDay);
   const [selectedMonthShort, setSelectedMonthShort] = useState<string>(
     initialMonth || MONTH_SHORT[currentMonthIdx]
   );
-  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const [selectedYear, setSelectedYear] = useState<number>(resolvedInitYear);
 
   const [time, setTime] = useState('6:30 AM');
   const [selectedPackages, setSelectedPackages] = useState<string[]>([]);
@@ -99,14 +104,18 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
     if (initialDay) {
       setSelectedDay(initialDay);
     }
+    if (initialYear) {
+      setSelectedYear(initialYear);
+    }
     if (initialMonth) {
       const idx = MONTH_SHORT.indexOf(initialMonth);
       if (idx >= 0) {
+        const yr = initialYear || currentYear;
         setSelectedMonthShort(initialMonth);
-        setMonthOffset(idx - currentMonthIdx);
+        setMonthOffset((yr - currentYear) * 12 + (idx - currentMonthIdx));
       }
     }
-  }, [initialDay, initialMonth]);
+  }, [initialDay, initialMonth, initialYear]);
 
   // Calendar grid calculations
   const displayedDate = new Date(currentYear, currentMonthIdx + monthOffset, 1);

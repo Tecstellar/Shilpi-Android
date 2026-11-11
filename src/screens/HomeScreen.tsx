@@ -18,17 +18,25 @@ import {
 
 interface HomeScreenProps {
   bookings: Booking[];
+  monthExpenses?: number;
   onOpenBooking: (bookingId: string) => void;
   onOpenOrders: () => void;
-  onStartNewBooking?: (day?: number, month?: string) => void;
+  onStartNewBooking?: (day?: number, month?: string, year?: number) => void;
+  onSendBookingReminder?: (booking: Booking) => void;
+  onCloseBooking?: (booking: Booking) => void;
+  onMarkFullyPaid?: (bookingId: string) => void;
   artistName?: string;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   bookings,
+  monthExpenses = 0,
   onOpenBooking,
   onOpenOrders,
   onStartNewBooking,
+  onSendBookingReminder,
+  onCloseBooking,
+  onMarkFullyPaid,
   artistName: propArtistName,
 }) => {
   // 1. Animated Quote vertical transition
@@ -125,19 +133,51 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [calOpen, setCalOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState(currentDay);
   const [selectedMonth, setSelectedMonth] = useState(currentMonthShort);
+  const [selectedYear, setSelectedYear] = useState(currentYear);
   const [monthOffset, setMonthOffset] = useState(0);
 
-  // Dynamic 14-day calendar strip
+  const getBookingDateObj = (b: Booking): Date => {
+    if (b.bookingDate) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(b.bookingDate));
+      if (m) {
+        return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      }
+    }
+    const mIdx = Math.max(0, monthNames.indexOf(b.month));
+    return new Date(b.year || currentYear, mIdx, b.day);
+  };
+
+  const getBookingTimeMinutes = (b: Booking): number => {
+    const [hStr, mStr] = (b.time || '10:00').split(':');
+    let hrs = parseInt(hStr || '10', 10) || 10;
+    const mins = parseInt(mStr || '0', 10) || 0;
+    if (b.meridiem === 'PM' && hrs < 12) hrs += 12;
+    if (b.meridiem === 'AM' && hrs === 12) hrs = 0;
+    return hrs * 60 + mins;
+  };
+
+  const getBookingsForDate = (dayNum: number, mShort: string, yrNum: number) =>
+    bookings
+      .filter((b) => {
+        const dt = getBookingDateObj(b);
+        return (
+          dt.getDate() === dayNum &&
+          monthNames[dt.getMonth()] === mShort &&
+          dt.getFullYear() === yrNum
+        );
+      })
+      .sort((a, b) => getBookingTimeMinutes(a) - getBookingTimeMinutes(b));
+
+  // Dynamic 14-day calendar strip (all bookings rendered as status-colored dots)
   const twoWeeksDays = Array.from({ length: 14 }, (_, i) => {
     const d = new Date(now);
     d.setDate(now.getDate() + i);
     const dayNum = d.getDate();
     const dow = dayNames[d.getDay()].charAt(0);
     const mShort = monthNames[d.getMonth()];
-    const dots = bookings.filter(
-      (b) => b.day === dayNum && b.month === mShort && b.status !== 'Closed'
-    ).length;
-    return { num: dayNum, dow, month: mShort, dots };
+    const yrNum = d.getFullYear();
+    const dayBookings = getBookingsForDate(dayNum, mShort, yrNum);
+    return { num: dayNum, dow, month: mShort, year: yrNum, dayBookings };
   });
 
   // Dynamic Full Month days calculation supporting month navigation
@@ -152,42 +192,199 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const monthLead = Array.from({ length: firstDayOfMonth }, () => null);
   const monthDays = Array.from({ length: daysInCurrentMonth }, (_, i) => i + 1);
 
-  const getDotsForDay = (d: number) => {
-    return bookings.filter(
-      (b) => b.month === displayedMonthShort && b.day === d && b.status !== 'Closed'
-    ).length;
-  };
+  const selectedDayBookings = getBookingsForDate(selectedDay, selectedMonth, selectedYear);
 
-  const selectedDayBookings = bookings.filter(
-    (b) => b.day === selectedDay && (b.month === selectedMonth || !b.month) && b.status !== 'Closed'
-  );
+  // Real Current Week (Sunday 00:00 -> Saturday 23:59 containing today)
+  const weekStart = new Date(currentYear, now.getMonth(), currentDay - now.getDay(), 0, 0, 0);
+  const weekEnd = new Date(currentYear, now.getMonth(), currentDay - now.getDay() + 6, 23, 59, 59);
 
-  const thisWeekBookings = bookings.filter((b) => b.status === 'Upcoming');
+  const thisWeekBookings = bookings
+    .filter((b) => {
+      const dt = getBookingDateObj(b);
+      return dt >= weekStart && dt <= weekEnd;
+    })
+    .sort((a, b) => {
+      const diff = getBookingDateObj(a).getTime() - getBookingDateObj(b).getTime();
+      return diff !== 0 ? diff : getBookingTimeMinutes(a) - getBookingTimeMinutes(b);
+    });
 
-  const laterThisMonthBookings = bookings.filter(
-    (b) => b.month === currentMonthShort && b.day > currentDay + 7 && b.status === 'Upcoming'
-  );
+  const laterThisMonthBookings = bookings
+    .filter((b) => {
+      const dt = getBookingDateObj(b);
+      return (
+        dt.getMonth() === now.getMonth() &&
+        dt.getFullYear() === currentYear &&
+        dt > weekEnd &&
+        b.status === 'Upcoming'
+      );
+    })
+    .sort((a, b) => getBookingDateObj(a).getTime() - getBookingDateObj(b).getTime());
 
-  // 4. Dynamic KPI Calculations
-  const thisMonthBookings = bookings.filter(
-    (b) => b.status !== 'Closed'
-  );
+  // 4. Dynamic Real-Time KPI Calculations (scoped strictly to current live month & year)
+  const thisMonthBookings = bookings.filter((b) => {
+    const dt = getBookingDateObj(b);
+    return dt.getMonth() === now.getMonth() && dt.getFullYear() === currentYear;
+  });
 
-  const toCollect = bookings
-    .filter((b) => b.status === 'Upcoming')
-    .reduce((sum, b) => {
-      const bTotal = b.items.reduce((s, item) => s + item.price, 0) + (b.travel || 0);
-      const bBal = Math.max(0, bTotal - (b.advance || 0));
-      return sum + bBal;
-    }, 0);
+  const toCollect = bookings.reduce((sum, b) => {
+    const bTotal = b.items.reduce((s, item) => s + item.price, 0) + (b.travel || 0);
+    const bBal = Math.max(0, bTotal - (b.advance || 0));
+    return sum + bBal;
+  }, 0);
 
   const monthSales = thisMonthBookings.reduce((sum, b) => {
     const bTotal = b.items.reduce((s, item) => s + item.price, 0) + (b.travel || 0);
     return sum + bTotal;
   }, 0);
 
-  const monthExpenses = 0;
-  const monthProfit = Math.max(0, monthSales - monthExpenses);
+  const netMonthProfit = monthSales - monthExpenses;
+  const formattedMonthProfit =
+    netMonthProfit < 0 ? `-${fmt(Math.abs(netMonthProfit))}` : fmt(netMonthProfit);
+
+  const renderBookingDots = (dayBookings: Booking[], isDarkBg: boolean) => {
+    const visible = dayBookings.slice(0, 4);
+    return (
+      <View style={styles.dotsRow}>
+        {visible.map((b, idx) => {
+          const isFinished = b.status === 'Closed' || b.status === 'Completed';
+          const dotColor = isFinished
+            ? isDarkBg
+              ? '#22c55e'
+              : '#16a34a'
+            : isDarkBg
+            ? '#ff4d8d'
+            : Colors.accent;
+          return <View key={b.id || idx} style={[styles.dot, { backgroundColor: dotColor }]} />;
+        })}
+        {dayBookings.length > 4 && (
+          <Text style={[styles.extraDotsText, isDarkBg && { color: '#ffffff' }]}>+</Text>
+        )}
+      </View>
+    );
+  };
+
+  const renderSelectedDayPanel = (containerStyle: any) => (
+    <View style={containerStyle}>
+      <View style={styles.selectedDayHeaderRow}>
+        <Text style={styles.selectedDayTitle}>
+          {selectedDayBookings.length} BOOKING
+          {selectedDayBookings.length === 1 ? '' : 'S'} ON {selectedDay}{' '}
+          {selectedMonth.toUpperCase()} {selectedYear}
+        </Text>
+        {selectedDayBookings.length > 0 && (
+          <TouchableOpacity
+            onPress={() => onStartNewBooking?.(selectedDay, selectedMonth, selectedYear)}
+            activeOpacity={0.7}
+            style={styles.addBookingSmallBtn}
+          >
+            <Text style={styles.addBookingSmallText}>＋ ADD</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {selectedDayBookings.length > 0 ? (
+        selectedDayBookings.map((b) => {
+          const total = b.items.reduce((sum, item) => sum + item.price, 0) + (b.travel || 0);
+          const balance = Math.max(0, total - (b.advance || 0));
+          const isFinished = b.status === 'Closed' || b.status === 'Completed';
+
+          return (
+            <View key={b.id} style={styles.selectedDayCardWrap}>
+              <TouchableOpacity
+                style={styles.selectedDayItemCard}
+                onPress={() => onOpenBooking(b.id)}
+                activeOpacity={0.75}
+              >
+                <View style={styles.selectedDayTimeCol}>
+                  <Text style={styles.selectedDayTime}>{b.time}</Text>
+                  <Text style={styles.selectedDayMeridiem}>{b.meridiem}</Text>
+                </View>
+                <View style={styles.selectedDayInfoCol}>
+                  <View style={styles.clientStatusRow}>
+                    <Text style={styles.selectedDayClient} numberOfLines={1}>
+                      {b.client}
+                    </Text>
+                    <View
+                      style={[
+                        styles.miniStatusBadge,
+                        isFinished ? styles.miniStatusDone : styles.miniStatusUpcoming,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.miniStatusText,
+                          isFinished ? styles.miniStatusTextDone : styles.miniStatusTextUpcoming,
+                        ]}
+                      >
+                        {b.status.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.selectedDaySub} numberOfLines={1}>
+                    {b.items.map((i) => i.name).join(' + ')} · {b.venue}
+                  </Text>
+                </View>
+                <View style={styles.amountColumn}>
+                  <Text style={styles.selectedDayAmount}>{fmt(total)}</Text>
+                  <Text
+                    style={[
+                      styles.balancePill,
+                      balance > 0 ? styles.balanceDueText : styles.paidGreenText,
+                    ]}
+                  >
+                    {balance > 0 ? `${fmt(balance)} due` : 'Paid'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.dayQuickActionsRow}>
+                {balance > 0 && onMarkFullyPaid && (
+                  <TouchableOpacity
+                    style={styles.quickActionPaidBtn}
+                    onPress={() => onMarkFullyPaid(b.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.quickActionPaidText}>MARK PAID</Text>
+                  </TouchableOpacity>
+                )}
+                {b.status === 'Upcoming' && onSendBookingReminder && (
+                  <TouchableOpacity
+                    style={styles.quickActionSecondaryBtn}
+                    onPress={() => onSendBookingReminder(b)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.quickActionSecondaryText}>SEND REMINDER</Text>
+                  </TouchableOpacity>
+                )}
+                {b.status !== 'Closed' && onCloseBooking && (
+                  <TouchableOpacity
+                    style={styles.quickActionCloseBtn}
+                    onPress={() => onCloseBooking(b)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.quickActionCloseText}>CLOSE BOOKING</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          );
+        })
+      ) : (
+        <View style={styles.emptyDayActionRow}>
+          <Text style={styles.emptyDayText}>
+            No bookings on {selectedDay} {selectedMonth} — the day is free.
+          </Text>
+          <TouchableOpacity
+            style={styles.bookItBtn}
+            onPress={() => onStartNewBooking?.(selectedDay, selectedMonth, selectedYear)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.bookItBtnText}>BOOK IT</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <ScrollView
@@ -253,16 +450,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
         {/* Row 2 */}
         <View style={styles.statCardWhite}>
-          <Text style={styles.statLabel}>{currentMonthShort.toUpperCase()} SALES</Text>
+          <Text style={styles.statLabel} numberOfLines={1} adjustsFontSizeToFit>
+            {currentMonthLong.toUpperCase()} SALES
+          </Text>
           <Text style={styles.statValue}>{fmt(monthSales)}</Text>
         </View>
         <View style={styles.statCardWhite}>
-          <Text style={styles.statLabel}>{currentMonthShort.toUpperCase()} EXPENSES</Text>
+          <Text style={styles.statLabel} numberOfLines={1} adjustsFontSizeToFit>
+            {currentMonthLong.toUpperCase()} EXPENSE
+          </Text>
           <Text style={styles.statValue}>{fmt(monthExpenses)}</Text>
         </View>
         <View style={styles.statCardPeach}>
-          <Text style={styles.statLabel}>{currentMonthShort.toUpperCase()} PROFIT</Text>
-          <Text style={styles.statValue}>{fmt(monthProfit)}</Text>
+          <Text style={styles.statLabel} numberOfLines={1} adjustsFontSizeToFit>
+            {currentMonthLong.toUpperCase()} PROFIT
+          </Text>
+          <Text style={styles.statValue}>{formattedMonthProfit}</Text>
         </View>
       </View>
 
@@ -282,7 +485,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <View style={styles.bookingListCard}>
           {thisWeekBookings.map((b) => {
             const total = b.items.reduce((sum, item) => sum + item.price, 0) + b.travel;
-            const balance = total - b.advance;
+            const balance = Math.max(0, total - b.advance);
+            const isFinished = b.status === 'Closed' || b.status === 'Completed';
 
             return (
               <TouchableOpacity
@@ -292,16 +496,34 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                 activeOpacity={0.7}
               >
                 <View style={styles.timeColumn}>
+                  <Text style={styles.weekDateTag}>{b.day} {b.month}</Text>
                   <Text style={styles.timeText}>{b.time}</Text>
                   <Text style={styles.meridiemText}>{b.meridiem}</Text>
                 </View>
 
                 <View style={styles.bookingDetails}>
-                  <Text style={styles.clientName}>{b.client}</Text>
-                  <Text style={styles.packagesText}>
+                  <View style={styles.clientStatusRow}>
+                    <Text style={styles.clientName} numberOfLines={1}>{b.client}</Text>
+                    <View
+                      style={[
+                        styles.miniStatusBadge,
+                        isFinished ? styles.miniStatusDone : styles.miniStatusUpcoming,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.miniStatusText,
+                          isFinished ? styles.miniStatusTextDone : styles.miniStatusTextUpcoming,
+                        ]}
+                      >
+                        {b.status.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={styles.packagesText} numberOfLines={1}>
                     {b.items.map((i) => i.name).join(' + ')}
                   </Text>
-                  <Text style={styles.venueText}>{b.venue}</Text>
+                  <Text style={styles.venueText} numberOfLines={1}>{b.venue}</Text>
                 </View>
 
                 <View style={styles.amountColumn}>
@@ -309,7 +531,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   <Text
                     style={[
                       styles.balancePill,
-                      balance > 0 ? styles.balanceDueText : styles.paidText,
+                      balance > 0 ? styles.balanceDueText : styles.paidGreenText,
                     ]}
                   >
                     {balance > 0 ? `${fmt(balance)} due` : 'Paid'}
@@ -323,7 +545,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <View style={styles.emptyCard}>
           <Text style={styles.emptyCardTitle}>No bookings this week</Text>
           <Text style={styles.emptyCardSub}>
-            Tap the ＋ button below to create your first client booking.
+            Tap any date below or ＋ below to book a client.
           </Text>
         </View>
       )}
@@ -345,6 +567,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </View>
       </TouchableOpacity>
 
+      {/* Calendar Color Legend */}
+      <View style={styles.legendStripRow}>
+        <View style={styles.legendChip}>
+          <View style={[styles.dot, { backgroundColor: Colors.accent }]} />
+          <Text style={styles.legendChipText}>Upcoming</Text>
+        </View>
+        <View style={styles.legendChip}>
+          <View style={[styles.dot, { backgroundColor: '#16a34a' }]} />
+          <Text style={styles.legendChipText}>Completed / Closed</Text>
+        </View>
+      </View>
+
       {/* Collapsed 14-day strip */}
       {!calOpen && (
         <>
@@ -354,27 +588,38 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             contentContainerStyle={styles.twoWeeksStrip}
           >
             {twoWeeksDays.map((d) => {
-              const isToday = d.num === currentDay && d.month === currentMonthShort;
-              const isSel = selectedDay === d.num && selectedMonth === d.month;
+              const isToday =
+                d.num === currentDay && d.month === currentMonthShort && d.year === currentYear;
+              const isSel =
+                selectedDay === d.num && selectedMonth === d.month && selectedYear === d.year;
 
               return (
                 <TouchableOpacity
-                  key={`${d.month}-${d.num}`}
+                  key={`${d.year}-${d.month}-${d.num}`}
                   style={[
                     styles.stripCell,
-                    isToday && styles.stripCellToday,
-                    isSel && !isToday && styles.stripCellSelected,
+                    isToday && !isSel && styles.stripCellToday,
+                    isSel && styles.stripCellSelected,
                   ]}
                   onPress={() => {
                     setSelectedDay(d.num);
                     setSelectedMonth(d.month);
+                    setSelectedYear(d.year);
+                    const targetMonthOffset =
+                      (d.year - currentYear) * 12 +
+                      (monthNames.indexOf(d.month) - now.getMonth());
+                    setMonthOffset(targetMonthOffset);
                   }}
                   activeOpacity={0.8}
                 >
                   <Text
                     style={[
                       styles.stripDow,
-                      isToday ? styles.stripDowToday : styles.stripDowDefault,
+                      isSel
+                        ? styles.stripDowSelected
+                        : isToday
+                        ? styles.stripDowToday
+                        : styles.stripDowDefault,
                     ]}
                   >
                     {d.dow}
@@ -382,82 +627,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   <Text
                     style={[
                       styles.stripNum,
-                      isToday ? styles.stripNumToday : styles.stripNumDefault,
+                      isSel
+                        ? styles.stripNumSelected
+                        : isToday
+                        ? styles.stripNumToday
+                        : styles.stripNumDefault,
                     ]}
                   >
                     {d.num}
                   </Text>
-                  <View style={styles.dotsRow}>
-                    {Array.from({ length: d.dots }).map((_, idx) => (
-                      <View
-                        key={idx}
-                        style={[
-                          styles.dot,
-                          isToday ? styles.dotWhite : styles.dotPink,
-                        ]}
-                      />
-                    ))}
-                  </View>
+                  {renderBookingDots(d.dayBookings, isSel)}
                 </TouchableOpacity>
               );
             })}
           </ScrollView>
 
-          {/* Prototype Selected Day Detail Card below strip */}
-          <View style={styles.stripDetailBox}>
-            <View style={styles.selectedDayHeaderRow}>
-              <Text style={styles.selectedDayTitle}>
-                {selectedDayBookings.length} BOOKING
-                {selectedDayBookings.length === 1 ? '' : 'S'} ON {selectedDay} {selectedMonth.toUpperCase()}
-              </Text>
-              {selectedDayBookings.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => onStartNewBooking?.(selectedDay, selectedMonth)}
-                  activeOpacity={0.7}
-                  style={styles.addBookingSmallBtn}
-                >
-                  <Text style={styles.addBookingSmallText}>＋ ADD</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {selectedDayBookings.length > 0 ? (
-              selectedDayBookings.map((b) => {
-                const total = b.items.reduce((sum, item) => sum + item.price, 0) + (b.travel || 0);
-                return (
-                  <TouchableOpacity
-                    key={b.id}
-                    style={styles.selectedDayItemCard}
-                    onPress={() => onOpenBooking(b.id)}
-                    activeOpacity={0.75}
-                  >
-                    <View style={styles.selectedDayTimeCol}>
-                      <Text style={styles.selectedDayTime}>{b.time}</Text>
-                      <Text style={styles.selectedDayMeridiem}>{b.meridiem}</Text>
-                    </View>
-                    <View style={styles.selectedDayInfoCol}>
-                      <Text style={styles.selectedDayClient}>{b.client}</Text>
-                      <Text style={styles.selectedDaySub} numberOfLines={1}>
-                        {b.items.map((i) => i.name).join(' + ')} · {b.venue}
-                      </Text>
-                    </View>
-                    <Text style={styles.selectedDayAmount}>{fmt(total)}</Text>
-                  </TouchableOpacity>
-                );
-              })
-            ) : (
-              <View style={styles.emptyDayActionRow}>
-                <Text style={styles.emptyDayText}>No bookings — the day is free.</Text>
-                <TouchableOpacity
-                  style={styles.bookItBtn}
-                  onPress={() => onStartNewBooking?.(selectedDay, selectedMonth)}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.bookItBtnText}>BOOK IT</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
+          {/* Selected Day Detail Card below strip */}
+          {renderSelectedDayPanel(styles.stripDetailBox)}
         </>
       )}
 
@@ -497,21 +683,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               <View key={`lead-${i}`} style={styles.blankCell} />
             ))}
             {monthDays.map((d) => {
-              const dots = getDotsForDay(d);
+              const dayBookings = getBookingsForDate(d, displayedMonthShort, displayedYear);
               const isToday = d === currentDay && monthOffset === 0;
-              const isSel = selectedDay === d && selectedMonth === displayedMonthShort;
+              const isSel =
+                selectedDay === d &&
+                selectedMonth === displayedMonthShort &&
+                selectedYear === displayedYear;
 
               return (
                 <TouchableOpacity
                   key={d}
                   style={[
                     styles.monthCell,
-                    isSel && styles.monthCellSelected,
                     isToday && !isSel && styles.monthCellToday,
+                    isSel && styles.monthCellSelected,
                   ]}
                   onPress={() => {
                     setSelectedDay(d);
                     setSelectedMonth(displayedMonthShort);
+                    setSelectedYear(displayedYear);
                   }}
                   activeOpacity={0.8}
                 >
@@ -524,77 +714,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                   >
                     {d}
                   </Text>
-                  <View style={styles.dotsRow}>
-                    {Array.from({ length: dots }).map((_, dotIdx) => (
-                      <View
-                        key={dotIdx}
-                        style={[
-                          styles.dot,
-                          isSel ? styles.dotWhite : styles.dotPink,
-                        ]}
-                      />
-                    ))}
-                  </View>
+                  {renderBookingDots(dayBookings, isSel)}
                 </TouchableOpacity>
               );
             })}
           </View>
 
-          {/* Selected day booking preview inside calendar */}
-          <View style={styles.selectedDayBox}>
-            <View style={styles.selectedDayHeaderRow}>
-              <Text style={styles.selectedDayTitle}>
-                {selectedDayBookings.length} BOOKING
-                {selectedDayBookings.length === 1 ? '' : 'S'} ON {selectedDay} {selectedMonth.toUpperCase()}
-              </Text>
-              {selectedDayBookings.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => onStartNewBooking?.(selectedDay, selectedMonth)}
-                  activeOpacity={0.7}
-                  style={styles.addBookingSmallBtn}
-                >
-                  <Text style={styles.addBookingSmallText}>＋ ADD</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {selectedDayBookings.length > 0 ? (
-              selectedDayBookings.map((b) => {
-                const total = b.items.reduce((sum, item) => sum + item.price, 0) + (b.travel || 0);
-                return (
-                  <TouchableOpacity
-                    key={b.id}
-                    style={styles.selectedDayItemCard}
-                    onPress={() => onOpenBooking(b.id)}
-                    activeOpacity={0.75}
-                  >
-                    <View style={styles.selectedDayTimeCol}>
-                      <Text style={styles.selectedDayTime}>{b.time}</Text>
-                      <Text style={styles.selectedDayMeridiem}>{b.meridiem}</Text>
-                    </View>
-                    <View style={styles.selectedDayInfoCol}>
-                      <Text style={styles.selectedDayClient}>{b.client}</Text>
-                      <Text style={styles.selectedDaySub} numberOfLines={1}>
-                        {b.items.map((i) => i.name).join(' + ')} · {b.venue}
-                      </Text>
-                    </View>
-                    <Text style={styles.selectedDayAmount}>{fmt(total)}</Text>
-                  </TouchableOpacity>
-                );
-              })
-            ) : (
-              <View style={styles.emptyDayActionRow}>
-                <Text style={styles.emptyDayText}>No bookings — the day is free.</Text>
-                <TouchableOpacity
-                  style={styles.bookItBtn}
-                  onPress={() => onStartNewBooking?.(selectedDay, selectedMonth)}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.bookItBtnText}>BOOK IT</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
+          {/* Selected day booking preview inside full-month calendar */}
+          {renderSelectedDayPanel(styles.selectedDayBox)}
         </View>
       )}
 
@@ -941,6 +1068,60 @@ const styles = StyleSheet.create({
   paidText: {
     color: 'rgba(18, 18, 18, 0.45)',
   },
+  paidGreenText: {
+    color: '#16a34a',
+  },
+  weekDateTag: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: Colors.deep,
+    textTransform: 'uppercase',
+    marginBottom: 1,
+  },
+  clientStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  miniStatusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+  },
+  miniStatusUpcoming: {
+    backgroundColor: 'rgba(232, 39, 107, 0.12)',
+  },
+  miniStatusDone: {
+    backgroundColor: 'rgba(22, 163, 74, 0.14)',
+  },
+  miniStatusText: {
+    fontSize: 8.5,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+  },
+  miniStatusTextUpcoming: {
+    color: Colors.deep,
+  },
+  miniStatusTextDone: {
+    color: '#15803d',
+  },
+  legendStripRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingBottom: 6,
+  },
+  legendChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  legendChipText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: 'rgba(18, 18, 18, 0.6)',
+  },
   calendarToggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -986,12 +1167,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stripCellToday: {
-    backgroundColor: Colors.accent,
-  },
-  stripCellSelected: {
     backgroundColor: Colors.tint,
     borderWidth: 1,
     borderColor: Colors.accent,
+  },
+  stripCellSelected: {
+    backgroundColor: '#121212',
   },
   stripDow: {
     fontSize: 9,
@@ -1002,7 +1183,10 @@ const styles = StyleSheet.create({
     color: 'rgba(18, 18, 18, 0.55)',
   },
   stripDowToday: {
-    color: 'rgba(255, 255, 255, 0.75)',
+    color: Colors.deep,
+  },
+  stripDowSelected: {
+    color: 'rgba(255, 255, 255, 0.72)',
   },
   stripNum: {
     fontSize: 14,
@@ -1013,18 +1197,28 @@ const styles = StyleSheet.create({
     color: '#121212',
   },
   stripNumToday: {
+    color: Colors.deep,
+  },
+  stripNumSelected: {
     color: '#ffffff',
   },
   dotsRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 2,
     marginTop: 4,
-    height: 4,
+    height: 6,
   },
   dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+    width: 4.5,
+    height: 4.5,
+    borderRadius: 2.5,
+  },
+  extraDotsText: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#121212',
+    lineHeight: 8,
   },
   dotPink: {
     backgroundColor: Colors.accent,
@@ -1097,10 +1291,12 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   monthCellSelected: {
-    backgroundColor: Colors.accent,
+    backgroundColor: '#121212',
   },
   monthCellToday: {
     backgroundColor: Colors.tint,
+    borderWidth: 1,
+    borderColor: Colors.accent,
   },
   monthCellNum: {
     fontSize: 13,
@@ -1160,16 +1356,63 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
+  selectedDayCardWrap: {
+    backgroundColor: '#fbf9f8',
+    borderRadius: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(18, 18, 18, 0.06)',
+    overflow: 'hidden',
+  },
   selectedDayItemCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fbf9f8',
-    borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(18, 18, 18, 0.05)',
+  },
+  dayQuickActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingBottom: 10,
+    paddingTop: 2,
+  },
+  quickActionPaidBtn: {
+    backgroundColor: '#16a34a',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  quickActionPaidText: {
+    color: '#ffffff',
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  quickActionSecondaryBtn: {
+    backgroundColor: 'rgba(232, 39, 107, 0.1)',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  quickActionSecondaryText: {
+    color: Colors.deep,
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  quickActionCloseBtn: {
+    backgroundColor: '#121212',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  quickActionCloseText: {
+    color: '#ffffff',
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   selectedDayTimeCol: {
     width: 60,

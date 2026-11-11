@@ -17,6 +17,7 @@ interface OrderDetailScreenProps {
   onUpdateStatus: (orderId: string, status: 'Upcoming' | 'Completed' | 'Closed') => void;
   onOpenConfirmSheet: (order: Booking) => void;
   onCloseBooking: (order: Booking) => void;
+  onMarkFullyPaid?: (orderId: string) => void;
 }
 
 export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
@@ -25,6 +26,7 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
   onUpdateStatus,
   onOpenConfirmSheet,
   onCloseBooking,
+  onMarkFullyPaid,
 }) => {
   const [profile, setProfile] = useState<{ businessName?: string; logoUri?: string; ownerName?: string }>({});
 
@@ -158,9 +160,21 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
               balance > 0 ? styles.balanceDue : styles.balancePaid,
             ]}
           >
-            {balance > 0 ? fmt(balance) : 'Paid'}
+            {balance > 0 ? fmt(balance) : 'Fully Paid'}
           </Text>
         </View>
+
+        {balance > 0 && onMarkFullyPaid && (
+          <TouchableOpacity
+            style={styles.markPaidBtn}
+            onPress={() => onMarkFullyPaid(order.id)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.markPaidBtnText}>
+              MARK AS FULLY PAID ({fmt(balance)})
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* 4. Venue & Address */}
@@ -423,7 +437,21 @@ const styles = StyleSheet.create({
     color: Colors.deep,
   },
   balancePaid: {
-    color: 'rgba(18, 18, 18, 0.5)',
+    color: '#16a34a',
+  },
+  markPaidBtn: {
+    marginTop: 12,
+    backgroundColor: '#121212',
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  markPaidBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
   },
   infoCard: {
     backgroundColor: '#ffffff',

@@ -7,53 +7,85 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Colors } from '../theme/colors';
-import { fmt } from '../data/prototypeData';
+import { Booking, fmt } from '../data/prototypeData';
 
 interface ReportsScreenProps {
+  bookings?: Booking[];
+  monthExpenses?: number;
   onGoBack: () => void;
 }
 
-export const ReportsScreen: React.FC<ReportsScreenProps> = ({ onGoBack }) => {
+const MONTH_SHORT_ARR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTH_LONG_ARR = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+export const ReportsScreen: React.FC<ReportsScreenProps> = ({
+  bookings = [],
+  monthExpenses = 0,
+  onGoBack,
+}) => {
   const [view, setView] = useState<'Monthly' | 'Annual'>('Monthly');
+
+  const now = new Date();
+  const currentMonthIdx = now.getMonth();
+  const currentMonthShort = MONTH_SHORT_ARR[currentMonthIdx];
+  const currentMonthLong = MONTH_LONG_ARR[currentMonthIdx];
+  const currentYear = now.getFullYear();
 
   const isMonthly = view === 'Monthly';
 
-  const profit = isMonthly ? 90000 : 742000;
-  const sales = isMonthly ? 125000 : 1046000;
-  const expenses = isMonthly ? 35000 : 304000;
-  const period = isMonthly ? 'September 2026' : '2026 Full Year';
+  const filteredBookings = bookings.filter((b) =>
+    isMonthly
+      ? b.month === currentMonthShort && (!b.year || b.year === currentYear)
+      : !b.year || b.year === currentYear
+  );
 
-  const monthlyBars = [
-    { label: 'Apr', salesPct: '50%', profitPct: '32%' },
-    { label: 'May', salesPct: '62%', profitPct: '44%' },
-    { label: 'Jun', salesPct: '76%', profitPct: '54%' },
-    { label: 'Jul', salesPct: '57%', profitPct: '38%' },
-    { label: 'Aug', salesPct: '88%', profitPct: '63%' },
-    { label: 'Sep', salesPct: '100%', profitPct: '72%' },
-  ];
+  const sales = filteredBookings.reduce(
+    (sum, b) => sum + b.items.reduce((s, item) => s + item.price, 0) + (b.travel || 0),
+    0
+  );
+  const collected = filteredBookings.reduce((sum, b) => sum + (b.advance || 0), 0);
+  const pending = Math.max(0, sales - collected);
+  const expenses = monthExpenses;
+  const profit = sales - expenses;
+  const avgVal = filteredBookings.length > 0 ? Math.round(sales / filteredBookings.length) : 0;
+  const period = isMonthly ? `${currentMonthLong} ${currentYear}` : `${currentYear} Full Year`;
 
-  const annualBars = [
-    { label: 'Q1', salesPct: '44%', profitPct: '28%' },
-    { label: 'Q2', salesPct: '75%', profitPct: '52%' },
-    { label: 'Q3', salesPct: '88%', profitPct: '63%' },
-    { label: 'Q4', salesPct: '100%', profitPct: '73%' },
-  ];
+  const monthIndices = Array.from({ length: 6 }, (_, i) => (currentMonthIdx - 5 + i + 12) % 12);
+  const monthlySeries = monthIndices.map((mIdx) => {
+    const mName = MONTH_SHORT_ARR[mIdx];
+    const mSales = bookings
+      .filter((b) => b.month === mName && (!b.year || b.year === currentYear))
+      .reduce((sum, b) => sum + b.items.reduce((s, item) => s + item.price, 0) + (b.travel || 0), 0);
+    return { label: mName, sales: mSales };
+  });
+  const maxMonthSales = Math.max(1, ...monthlySeries.map((m) => m.sales));
+  const monthlyBars = monthlySeries.map((m) => ({
+    label: m.label,
+    salesPct: `${Math.max(4, Math.round((m.sales / maxMonthSales) * 100))}%`,
+    profitPct: `${Math.max(4, Math.round((Math.max(0, m.sales - (m.label === currentMonthShort ? expenses : 0)) / maxMonthSales) * 100))}%`,
+  }));
+
+  const annualQuarterSales = [0, 1, 2, 3].map((q) => {
+    const qMonths = [q * 3, q * 3 + 1, q * 3 + 2].map((idx) => MONTH_SHORT_ARR[idx]);
+    return bookings
+      .filter((b) => qMonths.includes(b.month) && (!b.year || b.year === currentYear))
+      .reduce((sum, b) => sum + b.items.reduce((s, item) => s + item.price, 0) + (b.travel || 0), 0);
+  });
+  const maxQSales = Math.max(1, ...annualQuarterSales);
+  const annualBars = annualQuarterSales.map((qSales, q) => ({
+    label: `Q${q + 1}`,
+    salesPct: `${Math.max(4, Math.round((qSales / maxQSales) * 100))}%`,
+    profitPct: `${Math.max(4, Math.round((qSales / maxQSales) * 100))}%`,
+  }));
 
   const bars = isMonthly ? monthlyBars : annualBars;
 
-  const metrics = isMonthly
-    ? [
-        { label: 'Bookings', value: '11' },
-        { label: 'Avg booking value', value: fmt(11364) },
-        { label: 'Payments received', value: fmt(72500) },
-        { label: 'Pending payments', value: fmt(18000) },
-      ]
-    : [
-        { label: 'Bookings', value: '96' },
-        { label: 'Avg booking value', value: fmt(10896) },
-        { label: 'Payments received', value: fmt(988000) },
-        { label: 'Pending payments', value: fmt(58000) },
-      ];
+  const metrics = [
+    { label: 'Bookings', value: String(filteredBookings.length) },
+    { label: 'Avg booking value', value: fmt(avgVal) },
+    { label: 'Payments received', value: fmt(collected) },
+    { label: 'Pending payments', value: fmt(pending) },
+  ];
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent}>
