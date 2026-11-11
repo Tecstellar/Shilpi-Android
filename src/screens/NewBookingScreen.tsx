@@ -9,8 +9,9 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Circle, Polyline } from 'react-native-svg';
 import { Colors } from '../theme/colors';
 import {
   Client,
@@ -26,6 +27,13 @@ const CheckVectorIcon = () => (
   </Svg>
 );
 
+const ClockVectorIcon = ({ color = '#121212', size = 18 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.1}>
+    <Circle cx="12" cy="12" r="9" />
+    <Polyline points="12 7 12 12 15.5 14" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
 const MONTH_SHORT = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
@@ -35,7 +43,8 @@ const MONTH_LONG = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const TIME_PRESETS = ['6:00 AM', '7:30 AM', '10:00 AM', '2:00 PM', '5:00 PM'];
+const PICKER_HOURS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const PICKER_MINUTES = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
 interface NewBookingScreenProps {
   clients: Client[];
@@ -86,11 +95,33 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
   const [selectedYear, setSelectedYear] = useState<number>(resolvedInitYear);
 
   const [time, setTime] = useState('6:30 AM');
+  const [timeModalVisible, setTimeModalVisible] = useState(false);
+  const [pickerHour, setPickerHour] = useState(6);
+  const [pickerMinute, setPickerMinute] = useState(30);
+  const [pickerPeriod, setPickerPeriod] = useState<'AM' | 'PM'>('AM');
   const [selectedPackages, setSelectedPackages] = useState<string[]>([]);
   const [advanceText, setAdvanceText] = useState('');
   const [travelText, setTravelText] = useState('');
   const [venue, setVenue] = useState('');
   const [notes, setNotes] = useState('');
+
+  const openTimePicker = () => {
+    const match = time.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (match) {
+      const hr = Math.min(12, Math.max(1, parseInt(match[1], 10)));
+      const min = Math.min(59, Math.max(0, parseInt(match[2], 10)));
+      setPickerHour(hr);
+      setPickerMinute(min);
+      setPickerPeriod(match[3].toUpperCase() === 'PM' ? 'PM' : 'AM');
+    }
+    setTimeModalVisible(true);
+  };
+
+  const confirmTimePicker = () => {
+    const formatted = `${pickerHour}:${String(pickerMinute).padStart(2, '0')} ${pickerPeriod}`;
+    setTime(formatted);
+    setTimeModalVisible(false);
+  };
 
   useEffect(() => {
     if (initialClientName) {
@@ -390,39 +421,24 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
         {/* 3. Time Picker */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>TIME</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipsRow}
+          <TouchableOpacity
+            style={styles.timePickerTrigger}
+            onPress={openTimePicker}
+            activeOpacity={0.85}
           >
-            {TIME_PRESETS.map((preset) => {
-              const isSel = time.trim().toUpperCase() === preset;
-              return (
-                <TouchableOpacity
-                  key={preset}
-                  style={[styles.timeChip, isSel && styles.timeChipActive]}
-                  onPress={() => setTime(preset)}
-                  activeOpacity={0.8}
-                >
-                  <Text
-                    style={[
-                      styles.timeChipText,
-                      isSel && styles.timeChipTextActive,
-                    ]}
-                  >
-                    {preset}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-          <TextInput
-            style={[styles.textInput, { marginTop: 10 }]}
-            value={time}
-            onChangeText={setTime}
-            placeholder="e.g. 6:30 AM"
-            placeholderTextColor="rgba(18, 18, 18, 0.38)"
-          />
+            <View style={styles.timePickerLeft}>
+              <View style={styles.timeClockBadge}>
+                <ClockVectorIcon color={Colors.deep} size={17} />
+              </View>
+              <View>
+                <Text style={styles.timePickerValue}>{time}</Text>
+                <Text style={styles.timePickerHint}>Tap to choose hour & minutes</Text>
+              </View>
+            </View>
+            <View style={styles.timePickerActionPill}>
+              <Text style={styles.timePickerActionText}>PICK TIME</Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* 4. Select Services & Packages */}
@@ -537,6 +553,120 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
 
         <View style={{ height: 110 }} />
       </ScrollView>
+
+      {/* Interactive Time Picker Modal */}
+      <Modal
+        visible={timeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTimeModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.timeModalCard}>
+            <View style={styles.timeModalHeader}>
+              <View>
+                <Text style={styles.timeModalEyebrow}>SESSION START TIME</Text>
+                <Text style={styles.timeModalDisplay}>
+                  {pickerHour}:{String(pickerMinute).padStart(2, '0')} {pickerPeriod}
+                </Text>
+              </View>
+              <View style={styles.periodSegment}>
+                {(['AM', 'PM'] as const).map((p) => {
+                  const active = pickerPeriod === p;
+                  return (
+                    <TouchableOpacity
+                      key={p}
+                      style={[styles.periodBtn, active && styles.periodBtnActive]}
+                      onPress={() => setPickerPeriod(p)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.periodBtnText, active && styles.periodBtnTextActive]}>
+                        {p}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <Text style={styles.pickerGroupLabel}>HOUR</Text>
+            <View style={styles.pickerGrid}>
+              {PICKER_HOURS.map((hr) => {
+                const active = pickerHour === hr;
+                return (
+                  <TouchableOpacity
+                    key={hr}
+                    style={[styles.pickerCell, active && styles.pickerCellActive]}
+                    onPress={() => setPickerHour(hr)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.pickerCellText, active && styles.pickerCellTextActive]}>
+                      {hr}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <View style={styles.minuteHeaderRow}>
+              <Text style={styles.pickerGroupLabel}>MINUTE</Text>
+              <View style={styles.fineStepperRow}>
+                <TouchableOpacity
+                  style={styles.fineStepBtn}
+                  onPress={() => setPickerMinute((m) => (m + 59) % 60)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.fineStepText}>-1m</Text>
+                </TouchableOpacity>
+                <Text style={styles.fineMinuteReadout}>
+                  {String(pickerMinute).padStart(2, '0')}
+                </Text>
+                <TouchableOpacity
+                  style={styles.fineStepBtn}
+                  onPress={() => setPickerMinute((m) => (m + 1) % 60)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.fineStepText}>+1m</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={styles.pickerGrid}>
+              {PICKER_MINUTES.map((min) => {
+                const active = pickerMinute === min;
+                return (
+                  <TouchableOpacity
+                    key={min}
+                    style={[styles.pickerCell, active && styles.pickerCellActive]}
+                    onPress={() => setPickerMinute(min)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.pickerCellText, active && styles.pickerCellTextActive]}>
+                      {String(min).padStart(2, '0')}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <View style={styles.modalFooterRow}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setTimeModalVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalCancelText}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirmBtn}
+                onPress={confirmTimePicker}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.modalConfirmText}>SET TIME</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
@@ -740,21 +870,199 @@ const styles = StyleSheet.create({
     color: '#121212',
     marginTop: 2,
   },
-  timeChip: {
-    backgroundColor: '#f4f4f6',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 999,
+  timePickerTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.tint,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(232, 39, 107, 0.22)',
   },
-  timeChipActive: {
-    backgroundColor: '#121212',
+  timePickerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  timeChipText: {
-    fontSize: 12,
-    fontWeight: '600',
+  timeClockBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timePickerValue: {
+    fontSize: 16,
+    fontWeight: '700',
     color: '#121212',
   },
-  timeChipTextActive: {
+  timePickerHint: {
+    fontSize: 11,
+    color: 'rgba(18, 18, 18, 0.55)',
+    marginTop: 1,
+  },
+  timePickerActionPill: {
+    backgroundColor: '#121212',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
+  timePickerActionText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: '#ffffff',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(18, 18, 18, 0.52)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  timeModalCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 18,
+  },
+  timeModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#121212',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 14,
+  },
+  timeModalEyebrow: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 1,
+    color: Colors.accent,
+  },
+  timeModalDisplay: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginTop: 2,
+  },
+  periodSegment: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: 999,
+    padding: 3,
+    gap: 4,
+  },
+  periodBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
+  periodBtnActive: {
+    backgroundColor: Colors.accent,
+  },
+  periodBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.72)',
+  },
+  periodBtnTextActive: {
+    color: '#ffffff',
+  },
+  pickerGroupLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    color: 'rgba(18, 18, 18, 0.55)',
+    marginBottom: 8,
+  },
+  minuteHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  fineStepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  fineStepBtn: {
+    backgroundColor: Colors.tint,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  fineStepText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: Colors.deep,
+  },
+  fineMinuteReadout: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#121212',
+    minWidth: 20,
+    textAlign: 'center',
+  },
+  pickerGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  pickerCell: {
+    width: '15.2%',
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: '#f4f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerCellActive: {
+    backgroundColor: Colors.accent,
+  },
+  pickerCellText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#121212',
+  },
+  pickerCellTextActive: {
+    color: '#ffffff',
+  },
+  modalFooterRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 18,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: '#f4f4f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: '#121212',
+  },
+  modalConfirmBtn: {
+    flex: 1.4,
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalConfirmText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    letterSpacing: 0.8,
     color: '#ffffff',
   },
   groupBlock: {
