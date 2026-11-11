@@ -7,7 +7,9 @@ import {
   TouchableWithoutFeedback,
   ScrollView,
   Image,
+  useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../theme/colors';
 
 export interface ActionSheetData {
@@ -25,6 +27,10 @@ interface ActionBottomSheetProps {
 }
 
 export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({ sheet, onClose }) => {
+  const { width, fontScale } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isCompact = width < 380 || fontScale > 1.15;
+
   if (!sheet) return null;
 
   return (
@@ -33,12 +39,17 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({ sheet, onC
         <View style={styles.backdrop} />
       </TouchableWithoutFeedback>
 
-      <View style={styles.sheetContainer}>
+      <View
+        style={[
+          styles.sheetContainer,
+          { paddingBottom: Math.max(insets.bottom, 20) + 12 },
+        ]}
+      >
         {/* Drag handle line */}
         <View style={styles.handleBar} />
 
         <View style={styles.headerRow}>
-          <View style={{ flex: 1, paddingRight: 10 }}>
+          <View style={{ flex: 1, minWidth: 0, paddingRight: 10 }}>
             <Text style={styles.kicker}>{sheet.kicker}</Text>
             <Text style={styles.title}>{sheet.title}</Text>
           </View>
@@ -55,9 +66,9 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({ sheet, onC
           </View>
         </ScrollView>
 
-        <View style={styles.buttonRow}>
+        <View style={[styles.buttonRow, isCompact && styles.buttonRowCompact]}>
           <TouchableOpacity
-            style={styles.cancelButton}
+            style={[styles.cancelButton, isCompact && styles.btnFullCompact]}
             onPress={onClose}
             activeOpacity={0.8}
           >
@@ -65,14 +76,21 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({ sheet, onC
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.primaryButton}
+            style={[styles.primaryButton, isCompact && styles.btnFullCompact]}
             onPress={() => {
               if (sheet.onConfirm) sheet.onConfirm();
               onClose();
             }}
             activeOpacity={0.8}
           >
-            <Text style={styles.primaryText}>{sheet.cta.toUpperCase()}</Text>
+            <Text
+              style={styles.primaryText}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+            >
+              {sheet.cta.toUpperCase()}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -95,6 +113,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(18, 18, 18, 0.45)',
   },
   sheetContainer: {
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
     backgroundColor: '#ffffff',
     borderTopLeftRadius: 26,
     borderTopRightRadius: 26,
@@ -168,32 +189,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
+  buttonRowCompact: {
+    flexDirection: 'column-reverse',
+  },
+  btnFullCompact: {
+    flex: undefined,
+    width: '100%',
+  },
   cancelButton: {
     flex: 1,
+    minHeight: 48,
     backgroundColor: '#f4f4f6',
     paddingVertical: 14,
+    paddingHorizontal: 14,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 0.9,
     color: '#121212',
   },
   primaryButton: {
     flex: 2,
+    minHeight: 48,
     backgroundColor: Colors.accent,
     paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   primaryText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '700',
     letterSpacing: 0.8,
     color: '#ffffff',
+    textAlign: 'center',
   },
 });

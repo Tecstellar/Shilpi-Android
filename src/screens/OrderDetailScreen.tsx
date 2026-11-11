@@ -1,19 +1,58 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Pressable,
+  Animated,
   Image,
   Linking,
   Platform,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle, Polyline } from 'react-native-svg';
 import { Colors } from '../theme/colors';
 import { Booking, fmt } from '../data/prototypeData';
+
+const ScalePressable: React.FC<{
+  onPress: () => void;
+  disabled?: boolean;
+  style?: any;
+  containerStyle?: any;
+  accessibilityLabel?: string;
+  children: React.ReactNode;
+}> = ({ onPress, disabled, style, containerStyle, accessibilityLabel, children }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  const animateTo = (val: number) => {
+    Animated.spring(scale, {
+      toValue: val,
+      useNativeDriver: true,
+      speed: 28,
+      bounciness: 4,
+    }).start();
+  };
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      onPressIn={() => !disabled && animateTo(0.975)}
+      onPressOut={() => animateTo(1)}
+      style={containerStyle}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled: !!disabled }}
+    >
+      <Animated.View style={[style, disabled && { opacity: 0.6 }, { transform: [{ scale }] }]}>
+        {children}
+      </Animated.View>
+    </Pressable>
+  );
+};
 
 const MapPinIcon = ({ color = Colors.deep, size = 16 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2}>
@@ -59,7 +98,13 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
   onCloseBooking,
   onMarkFullyPaid,
 }) => {
+  const { width, fontScale } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isCompact = width < 380 || fontScale > 1.15;
+  const isWideActionRow = width >= 440 && fontScale <= 1.1;
+
   const [profile, setProfile] = useState<{ businessName?: string; logoUri?: string; ownerName?: string }>({});
+  const [paying, setPaying] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -123,39 +168,59 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
     }
   };
 
+  const handleMarkPaidPress = async () => {
+    if (!onMarkFullyPaid || paying) return;
+    setPaying(true);
+    try {
+      await Promise.resolve(onMarkFullyPaid(order.id));
+    } finally {
+      setPaying(false);
+    }
+  };
+
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[
+        styles.scrollContent,
+        { paddingBottom: Math.max(insets.bottom, 24) + 96 },
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
       {/* 1. Black Ink Booking Pass Card with Studio Logo */}
       <View style={styles.inkHeaderCard}>
-        <View style={styles.headerTopRow}>
-          <View style={styles.headerTitles}>
-            <Text style={styles.refCode}>{order.ref}</Text>
-            <Text style={styles.clientTitle}>{order.client}</Text>
-          </View>
-          {profile.logoUri ? (
-            <View style={styles.headerLogoContainer}>
-              <Image source={{ uri: profile.logoUri }} style={styles.headerLogoImage} resizeMode="cover" />
+        <View style={styles.responsiveInner}>
+          <View style={styles.headerTopRow}>
+            <View style={styles.headerTitles}>
+              <Text style={styles.refCode}>{order.ref}</Text>
+              <Text style={styles.clientTitle}>{order.client}</Text>
             </View>
-          ) : null}
-        </View>
+            {profile.logoUri ? (
+              <View style={styles.headerLogoContainer}>
+                <Image source={{ uri: profile.logoUri }} style={styles.headerLogoImage} resizeMode="cover" />
+              </View>
+            ) : null}
+          </View>
 
-        <View style={styles.metaRow}>
-          <Text style={styles.metaDate}>
-            {order.dateLong} · {order.time} {order.meridiem}
-          </Text>
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusBadgeText}>{order.status.toUpperCase()}</Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.metaDate}>
+              {order.dateLong} · {order.time} {order.meridiem}
+            </Text>
+            <View style={styles.statusBadge}>
+              <Text style={styles.statusBadgeText}>{order.status.toUpperCase()}</Text>
+            </View>
           </View>
         </View>
       </View>
 
-      {/* 2. Packages & Payment Breakdown */}
-      <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionTitle}>PACKAGES & PAYMENT</Text>
-        <Text style={[styles.invoiceTag, balance <= 0 && styles.invoiceTagPaid]}>
-          {balance > 0 ? 'BALANCE DUE' : 'PAID IN FULL'}
-        </Text>
-      </View>
+      <View style={styles.responsiveInner}>
+        {/* 2. Packages & Payment Breakdown */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>PACKAGES & PAYMENT</Text>
+          <Text style={[styles.invoiceTag, balance <= 0 && styles.invoiceTagPaid]}>
+            {balance > 0 ? 'BALANCE DUE' : 'PAID IN FULL'}
+          </Text>
+        </View>
 
       <View style={styles.tableCard}>
         {/* Studio Logo Header stamped on the bill */}
@@ -212,15 +277,22 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
         </View>
 
         {balance > 0 && onMarkFullyPaid && (
-          <TouchableOpacity
+          <ScalePressable
             style={styles.markPaidBtn}
-            onPress={() => onMarkFullyPaid(order.id)}
-            activeOpacity={0.85}
+            onPress={handleMarkPaidPress}
+            disabled={paying}
+            accessibilityLabel={`Mark as fully paid ${fmt(balance)}`}
           >
-            <Text style={styles.markPaidBtnText}>
-              MARK AS FULLY PAID ({fmt(balance)})
+            <CheckCircleIcon color="#ffffff" size={16} />
+            <Text
+              style={styles.markPaidBtnText}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+            >
+              {paying ? 'RECORDING PAYMENT...' : `MARK AS FULLY PAID (${fmt(balance)})`}
             </Text>
-          </TouchableOpacity>
+          </ScalePressable>
         )}
       </View>
 
@@ -233,26 +305,28 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
         <Text style={styles.venueHeading}>{venueLabel}</Text>
         {addressLabel ? <Text style={styles.addressText}>{addressLabel}</Text> : null}
 
-        <TouchableOpacity
-          style={styles.mapStripCard}
+        <ScalePressable
+          style={[styles.mapStripCard, isCompact && styles.mapStripCardCompact]}
           onPress={handleOpenMaps}
-          activeOpacity={0.85}
+          accessibilityLabel={`Open ${venueLabel} in Maps`}
         >
           <View style={styles.mapStripLeft}>
             <View style={styles.mapPinBadge}>
               <MapPinIcon color={Colors.deep} size={16} />
             </View>
             <View style={styles.mapStripTextWrap}>
-              <Text style={styles.mapStripEyebrow}>DIRECTIONS</Text>
+              <Text style={styles.mapStripPrimary} numberOfLines={1}>
+                Open venue in Maps
+              </Text>
               <Text style={styles.mapStripSub} numberOfLines={1}>
                 {venueLabel}
               </Text>
             </View>
           </View>
-          <View style={styles.openMapsBtn}>
+          <View style={[styles.openMapsBtn, isCompact && styles.openMapsBtnCompact]}>
             <Text style={styles.openMapsBtnText}>OPEN IN MAPS</Text>
           </View>
-        </TouchableOpacity>
+        </ScalePressable>
       </View>
 
       {/* 4. Notes (only when notes are provided) */}
@@ -269,50 +343,79 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
         </>
       ) : null}
 
-      {/* 5. Action Buttons */}
+      {/* 5. Action Buttons — Adaptive Layout (Stacked full-width pills on phones, split grid on wider screens) */}
       <View style={styles.ctaRow}>
-        <TouchableOpacity
+        <ScalePressable
           style={styles.whatsAppBtn}
           onPress={() => onOpenConfirmSheet(order)}
-          activeOpacity={0.85}
+          accessibilityLabel="Send WhatsApp confirmation"
         >
-          <MessageIcon color="#ffffff" size={16} />
-          <Text style={styles.whatsAppBtnText}>SEND WHATSAPP CONFIRMATION</Text>
-        </TouchableOpacity>
+          <MessageIcon color="#ffffff" size={17} />
+          <Text
+            style={styles.whatsAppBtnText}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+          >
+            SEND WHATSAPP CONFIRMATION
+          </Text>
+        </ScalePressable>
 
         {canMarkCompleted && canCloseBooking ? (
-          <View style={styles.dualActionRow}>
-            <TouchableOpacity
-              style={[styles.dualActionBtn, styles.markCompletedBtn]}
+          <View style={[styles.secondaryActionGroup, isWideActionRow && styles.secondaryActionRow]}>
+            <ScalePressable
+              containerStyle={isWideActionRow ? styles.flex1Col : undefined}
+              style={styles.markCompletedBtn}
               onPress={() => onUpdateStatus(order.id, 'Completed')}
-              activeOpacity={0.85}
+              accessibilityLabel="Mark booking completed"
             >
               <CheckCircleIcon color="#121212" size={17} />
-              <Text style={styles.markCompletedBtnText}>MARK COMPLETED</Text>
-            </TouchableOpacity>
+              <Text
+                style={styles.markCompletedBtnText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+              >
+                MARK COMPLETED
+              </Text>
+            </ScalePressable>
 
-            <TouchableOpacity
-              style={[styles.dualActionBtn, styles.closePhotosBtn]}
+            <ScalePressable
+              containerStyle={isWideActionRow ? styles.flex1Col : undefined}
+              style={styles.closePhotosBtn}
               onPress={() => onCloseBooking(order)}
-              activeOpacity={0.85}
+              accessibilityLabel="Close booking and add photos"
             >
               <CameraIcon color="#ffffff" size={17} />
-              <Text style={styles.closePhotosBtnText}>CLOSE BOOKING · ADD PHOTOS</Text>
-            </TouchableOpacity>
+              <Text
+                style={styles.closePhotosBtnText}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+              >
+                {isWideActionRow ? 'CLOSE · ADD PHOTOS' : 'CLOSE BOOKING · ADD PHOTOS'}
+              </Text>
+            </ScalePressable>
           </View>
         ) : canCloseBooking ? (
-          <TouchableOpacity
-            style={styles.singleCloseBtn}
+          <ScalePressable
+            style={styles.closePhotosBtn}
             onPress={() => onCloseBooking(order)}
-            activeOpacity={0.85}
+            accessibilityLabel="Close booking and add photos"
           >
-            <CameraIcon color="#ffffff" size={16} />
-            <Text style={styles.closePhotosBtnText}>CLOSE BOOKING · ADD PHOTOS</Text>
-          </TouchableOpacity>
+            <CameraIcon color="#ffffff" size={17} />
+            <Text
+              style={styles.closePhotosBtnText}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+            >
+              CLOSE BOOKING · ADD PHOTOS
+            </Text>
+          </ScalePressable>
         ) : null}
       </View>
-
-      <View style={{ height: 100 }} />
+      </View>
     </ScrollView>
   );
 };
@@ -323,7 +426,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f4f6',
   },
   scrollContent: {
-    paddingBottom: 24,
+    flexGrow: 1,
+  },
+  responsiveInner: {
+    width: '100%',
+    maxWidth: 680,
+    alignSelf: 'center',
   },
   inkHeaderCard: {
     backgroundColor: '#121212',
@@ -372,11 +480,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 8,
     marginTop: 8,
   },
   metaDate: {
     fontSize: 12.5,
-    color: 'rgba(255, 255, 255, 0.65)',
+    color: 'rgba(255, 255, 255, 0.78)',
+    flexShrink: 1,
   },
   statusBadge: {
     backgroundColor: Colors.accent,
@@ -470,6 +581,7 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(18, 18, 18, 0.05)',
@@ -479,10 +591,14 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(18, 18, 18, 0.12)',
   },
   itemName: {
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 12,
     fontSize: 13.5,
     color: '#121212',
   },
   itemPrice: {
+    flexShrink: 0,
     fontSize: 13.5,
     fontWeight: '700',
     color: '#121212',
@@ -513,18 +629,24 @@ const styles = StyleSheet.create({
     color: '#16a34a',
   },
   markPaidBtn: {
-    marginTop: 12,
+    marginTop: 14,
+    marginBottom: 4,
+    minHeight: 50,
     backgroundColor: '#121212',
-    borderRadius: 12,
-    paddingVertical: 11,
+    borderRadius: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
   },
   markPaidBtnText: {
     color: '#ffffff',
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '700',
-    letterSpacing: 0.8,
+    letterSpacing: 0.7,
+    textAlign: 'center',
   },
   infoCard: {
     backgroundColor: '#ffffff',
@@ -532,7 +654,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: 'rgba(18, 18, 18, 0.07)',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
   venueHeading: {
     fontSize: 14.5,
@@ -541,12 +663,13 @@ const styles = StyleSheet.create({
   },
   addressText: {
     fontSize: 12.5,
-    color: 'rgba(18, 18, 18, 0.6)',
+    color: 'rgba(18, 18, 18, 0.65)',
     marginTop: 3,
     lineHeight: 18,
   },
   mapStripCard: {
     marginTop: 12,
+    minHeight: 58,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(232, 39, 107, 0.18)',
@@ -558,45 +681,59 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
+  mapStripCardCompact: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+  },
   mapStripLeft: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
   mapPinBadge: {
-    width: 34,
-    height: 34,
+    width: 36,
+    height: 36,
     borderRadius: 11,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   mapStripTextWrap: {
     flex: 1,
+    minWidth: 0,
   },
-  mapStripEyebrow: {
-    fontSize: 9.5,
+  mapStripPrimary: {
+    fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 0.9,
-    color: Colors.deep,
+    color: '#121212',
   },
   mapStripSub: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#121212',
+    fontWeight: '500',
+    color: Colors.deep,
     marginTop: 1,
   },
   openMapsBtn: {
     backgroundColor: '#ffffff',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(18, 18, 18, 0.1)',
+    borderColor: 'rgba(18, 18, 18, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  openMapsBtnCompact: {
+    alignSelf: 'flex-start',
+    width: '100%',
   },
   openMapsBtnText: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: '700',
     letterSpacing: 0.8,
     color: '#121212',
@@ -605,17 +742,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   notesCalloutCard: {
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.accent2,
-    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(232, 39, 107, 0.18)',
+    borderRadius: 16,
     backgroundColor: Colors.tint,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
   },
   notesText: {
     fontSize: 13,
-    color: 'rgba(18, 18, 18, 0.85)',
-    lineHeight: 19,
+    color: '#121212',
+    lineHeight: 20,
   },
   ctaRow: {
     paddingHorizontal: 16,
@@ -623,64 +760,74 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   whatsAppBtn: {
+    minHeight: 52,
     backgroundColor: Colors.accent,
-    paddingVertical: 15,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    elevation: 3,
   },
   whatsAppBtnText: {
     fontSize: 11.5,
     fontWeight: '700',
-    letterSpacing: 0.8,
+    letterSpacing: 0.7,
     color: '#ffffff',
+    textAlign: 'center',
   },
-  dualActionRow: {
+  secondaryActionGroup: {
+    gap: 10,
+  },
+  secondaryActionRow: {
     flexDirection: 'row',
     gap: 10,
   },
-  dualActionBtn: {
+  flex1Col: {
     flex: 1,
-    minHeight: 70,
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
+    minWidth: 0,
   },
   markCompletedBtn: {
+    minHeight: 52,
     backgroundColor: '#ffffff',
     borderWidth: 1.5,
     borderColor: 'rgba(18, 18, 18, 0.14)',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   markCompletedBtnText: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 0.7,
+    letterSpacing: 0.6,
     color: '#121212',
     textAlign: 'center',
   },
   closePhotosBtn: {
+    minHeight: 52,
     backgroundColor: '#121212',
-  },
-  singleCloseBtn: {
-    backgroundColor: '#121212',
-    paddingVertical: 15,
-    paddingHorizontal: 16,
     borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
   closePhotosBtnText: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 0.7,
+    letterSpacing: 0.6,
     color: '#ffffff',
     textAlign: 'center',
   },

@@ -1,14 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Pressable,
+  Animated,
+  useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Rect, Line, Circle } from 'react-native-svg';
 import { Colors } from '../theme/colors';
 import { Booking, fmt } from '../data/prototypeData';
+
+const PlusVectorIcon = ({ color = '#ffffff', size = 16 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5}>
+    <Line x1={12} y1={5} x2={12} y2={19} strokeLinecap="round" />
+    <Line x1={5} y1={12} x2={19} y2={12} strokeLinecap="round" />
+  </Svg>
+);
+
+const ScalePressable: React.FC<{
+  onPress: () => void;
+  style?: any;
+  accessibilityLabel?: string;
+  children: React.ReactNode;
+}> = ({ onPress, style, accessibilityLabel, children }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  const animateTo = (val: number) => {
+    Animated.spring(scale, {
+      toValue: val,
+      useNativeDriver: true,
+      speed: 28,
+      bounciness: 4,
+    }).start();
+  };
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => animateTo(0.975)}
+      onPressOut={() => animateTo(1)}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+    >
+      <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>
+    </Pressable>
+  );
+};
 
 const CalendarEmptyVectorIcon = () => (
   <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={1.8}>
@@ -35,6 +74,9 @@ export const OrdersScreen: React.FC<OrdersScreenProps> = ({
   onOpenBooking,
   onStartNewBooking,
 }) => {
+  const { width, fontScale } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isCompact = width < 380 || fontScale > 1.15;
   const [filter, setFilter] = useState<'Upcoming' | 'Completed' | 'Closed'>('Upcoming');
 
   const filtered = bookings.filter((b) => b.status === filter);
@@ -47,96 +89,142 @@ export const OrdersScreen: React.FC<OrdersScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* 1. Filter Tabs matching Prototype */}
-      <View style={styles.tabsRow}>
-        {tabs.map((tab) => {
-          const isActive = filter === tab.label;
-          return (
-            <TouchableOpacity
-              key={tab.label}
-              style={[styles.tabPill, isActive && styles.tabPillActive]}
-              onPress={() => setFilter(tab.label)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
-                {tab.label.toUpperCase()} <Text style={styles.tabCount}>{tab.count}</Text>
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+      {/* 1. Responsive Filter Tabs + Quick New Booking Action */}
+      <View style={styles.headerControlsBar}>
+        <View style={styles.controlsInner}>
+          <View style={styles.tabsRow}>
+            {tabs.map((tab) => {
+              const isActive = filter === tab.label;
+              return (
+                <TouchableOpacity
+                  key={tab.label}
+                  style={[
+                    styles.tabPill,
+                    isActive && styles.tabPillActive,
+                    isCompact && styles.tabPillCompact,
+                  ]}
+                  onPress={() => setFilter(tab.label)}
+                  activeOpacity={0.82}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${tab.label} bookings (${tab.count})`}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      isActive && styles.tabTextActive,
+                      isCompact && styles.tabTextCompact,
+                    ]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.78}
+                  >
+                    {tab.label.toUpperCase()} ({tab.count})
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            {onStartNewBooking && (
+              <ScalePressable
+                onPress={onStartNewBooking}
+                style={styles.quickAddBtn}
+                accessibilityLabel="Create new booking"
+              >
+                <PlusVectorIcon color="#ffffff" size={18} />
+              </ScalePressable>
+            )}
+          </View>
+        </View>
       </View>
 
       {/* 2. Orders List or Empty State */}
       <ScrollView
         style={styles.listScroll}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: Math.max(insets.bottom, 20) + 96 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        {filtered.length > 0 ? (
-          filtered.map((b) => {
-            const total = b.items.reduce((sum, item) => sum + item.price, 0) + b.travel;
-            const balance = total - b.advance;
+        <View style={styles.listInner}>
+          {filtered.length > 0 ? (
+            filtered.map((b) => {
+              const total = b.items.reduce((sum, item) => sum + item.price, 0) + b.travel;
+              const balance = Math.max(0, total - b.advance);
 
-            return (
-              <TouchableOpacity
-                key={b.id}
-                style={styles.orderRow}
-                onPress={() => onOpenBooking(b.id)}
-                activeOpacity={0.7}
-              >
-                {/* Date Box */}
-                <View style={styles.dateBox}>
-                  <Text style={styles.dayNum}>{b.day}</Text>
-                  <Text style={styles.monthLabel}>{b.month.toUpperCase()}</Text>
-                  <Text style={styles.timeLabel}>{b.time}</Text>
-                </View>
+              return (
+                <ScalePressable
+                  key={b.id}
+                  style={styles.orderRow}
+                  onPress={() => onOpenBooking(b.id)}
+                  accessibilityLabel={`Booking for ${b.client} on ${b.day} ${b.month}`}
+                >
+                  {/* Date Box */}
+                  <View style={[styles.dateBox, isCompact && styles.dateBoxCompact]}>
+                    <Text style={styles.dayNum}>{b.day}</Text>
+                    <Text style={styles.monthLabel}>{b.month.toUpperCase()}</Text>
+                    <Text style={styles.timeLabel} numberOfLines={1}>
+                      {b.time}
+                    </Text>
+                  </View>
 
-                {/* Order Info */}
-                <View style={styles.orderInfo}>
-                  <Text style={styles.clientName}>{b.client}</Text>
-                  <Text style={styles.pkgText}>
-                    {b.items.map((i) => i.name).join(' + ')}
-                  </Text>
-                  <Text style={styles.venueText}>{b.venue}</Text>
-                </View>
+                  {/* Order Info */}
+                  <View style={styles.orderInfo}>
+                    <Text style={styles.clientName} numberOfLines={1}>
+                      {b.client}
+                    </Text>
+                    <Text style={styles.pkgText} numberOfLines={2}>
+                      {b.items.map((i) => i.name).join(' + ')}
+                    </Text>
+                    <Text style={styles.venueText} numberOfLines={1}>
+                      {b.venue}
+                    </Text>
+                  </View>
 
-                {/* Amount & Status */}
-                <View style={styles.amountBox}>
-                  <Text style={styles.amountText}>{fmt(total)}</Text>
-                  <Text
-                    style={[
-                      styles.balancePill,
-                      balance > 0 ? styles.balanceDueText : styles.paidText,
-                    ]}
-                  >
-                    {balance > 0 ? `${fmt(balance)} due` : 'Paid'}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })
-        ) : (
-          <View style={styles.emptyContainer}>
-            <View style={styles.emptyIconCircle}>
-              <CalendarEmptyVectorIcon />
+                  {/* Amount & Balance Status */}
+                  <View style={styles.amountBox}>
+                    <Text style={styles.amountText}>{fmt(total)}</Text>
+                    <View
+                      style={[
+                        styles.balanceBadge,
+                        balance > 0 ? styles.balanceDueBadge : styles.paidBadge,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.balancePill,
+                          balance > 0 ? styles.balanceDueText : styles.paidText,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {balance > 0 ? `${fmt(balance)} due` : 'Paid'}
+                      </Text>
+                    </View>
+                  </View>
+                </ScalePressable>
+              );
+            })
+          ) : (
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconCircle}>
+                <CalendarEmptyVectorIcon />
+              </View>
+              <Text style={styles.emptyTitle}>No {filter.toLowerCase()} bookings</Text>
+              <Text style={styles.emptySubtitle}>
+                When you record a client bridal, reception, or party appointment, it will be organized here.
+              </Text>
+              {onStartNewBooking && (
+                <ScalePressable
+                  style={styles.emptyBtn}
+                  onPress={onStartNewBooking}
+                  accessibilityLabel="New Booking"
+                >
+                  <PlusVectorIcon color="#ffffff" size={16} />
+                  <Text style={styles.emptyBtnText}>New Booking</Text>
+                </ScalePressable>
+              )}
             </View>
-            <Text style={styles.emptyTitle}>No {filter.toLowerCase()} bookings</Text>
-            <Text style={styles.emptySubtitle}>
-              When you record a client bridal, reception, or party appointment, it will be organized here.
-            </Text>
-            {onStartNewBooking && (
-              <TouchableOpacity
-                style={styles.emptyBtn}
-                onPress={onStartNewBooking}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.emptyBtnText}>＋ New Booking</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-
-        <View style={{ height: 100 }} />
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -147,17 +235,30 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f4f4f6',
   },
+  headerControlsBar: {
+    backgroundColor: '#f4f4f6',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(18, 18, 18, 0.06)',
+  },
+  controlsInner: {
+    width: '100%',
+    maxWidth: 680,
+    alignSelf: 'center',
+  },
   tabsRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#f4f4f6',
   },
   tabPill: {
     flex: 1,
+    minHeight: 44,
+    minWidth: 0,
     backgroundColor: '#ffffff',
     paddingVertical: 10,
+    paddingHorizontal: 8,
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
@@ -167,31 +268,51 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
+  tabPillCompact: {
+    paddingHorizontal: 6,
+  },
   tabPillActive: {
     backgroundColor: Colors.accent,
   },
   tabText: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: '700',
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
     color: '#121212',
+    textAlign: 'center',
+  },
+  tabTextCompact: {
+    fontSize: 9.5,
+    letterSpacing: 0.3,
   },
   tabTextActive: {
     color: '#ffffff',
   },
-  tabCount: {
-    opacity: 0.65,
+  quickAddBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#121212',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   listScroll: {
     flex: 1,
   },
   listContent: {
+    flexGrow: 1,
+  },
+  listInner: {
+    width: '100%',
+    maxWidth: 680,
+    alignSelf: 'center',
     backgroundColor: '#ffffff',
-    paddingBottom: 110,
   },
   orderRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 74,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
@@ -199,10 +320,15 @@ const styles = StyleSheet.create({
   },
   dateBox: {
     width: 60,
+    flexShrink: 0,
     borderRightWidth: 1,
     borderRightColor: 'rgba(18, 18, 18, 0.07)',
     paddingRight: 8,
     alignItems: 'center',
+  },
+  dateBoxCompact: {
+    width: 52,
+    paddingRight: 6,
   },
   dayNum: {
     fontSize: 18,
@@ -223,6 +349,7 @@ const styles = StyleSheet.create({
   },
   orderInfo: {
     flex: 1,
+    minWidth: 0,
     paddingHorizontal: 12,
   },
   clientName: {
@@ -232,33 +359,45 @@ const styles = StyleSheet.create({
   },
   pkgText: {
     fontSize: 12,
-    color: 'rgba(18, 18, 18, 0.7)',
+    color: 'rgba(18, 18, 18, 0.72)',
     marginTop: 2,
   },
   venueText: {
-    fontSize: 11,
-    color: 'rgba(18, 18, 18, 0.45)',
+    fontSize: 11.5,
+    color: 'rgba(18, 18, 18, 0.55)',
     marginTop: 2,
   },
   amountBox: {
     alignItems: 'flex-end',
+    flexShrink: 0,
   },
   amountText: {
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: '700',
     color: '#121212',
+  },
+  balanceBadge: {
+    marginTop: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  balanceDueBadge: {
+    backgroundColor: '#ffeef4',
+  },
+  paidBadge: {
+    backgroundColor: '#eaf8ef',
   },
   balancePill: {
     fontSize: 9.5,
     fontWeight: '700',
     textTransform: 'uppercase',
-    marginTop: 4,
   },
   balanceDueText: {
     color: Colors.deep,
   },
   paidText: {
-    color: 'rgba(18, 18, 18, 0.45)',
+    color: '#186d3b',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -294,10 +433,15 @@ const styles = StyleSheet.create({
   },
   emptyBtn: {
     backgroundColor: Colors.accent,
+    minHeight: 48,
     paddingVertical: 12,
     paddingHorizontal: 22,
     borderRadius: 14,
     marginTop: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     shadowColor: Colors.accent,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,

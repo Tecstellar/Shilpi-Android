@@ -1,17 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Pressable,
+  Animated,
   TextInput,
   Alert,
   KeyboardAvoidingView,
   Platform,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
-import Svg, { Path, Circle, Polyline } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path, Circle, Polyline, Line } from 'react-native-svg';
 import { Colors } from '../theme/colors';
 import {
   Client,
@@ -20,6 +24,36 @@ import {
   fmt,
   first,
 } from '../data/prototypeData';
+
+const ScalePressable: React.FC<{
+  onPress: () => void;
+  style?: any;
+  containerStyle?: any;
+  accessibilityLabel?: string;
+  children: React.ReactNode;
+}> = ({ onPress, style, containerStyle, accessibilityLabel, children }) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  const animateTo = (val: number) => {
+    Animated.spring(scale, {
+      toValue: val,
+      useNativeDriver: true,
+      speed: 28,
+      bounciness: 4,
+    }).start();
+  };
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => animateTo(0.975)}
+      onPressOut={() => animateTo(1)}
+      style={containerStyle}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+    >
+      <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>
+    </Pressable>
+  );
+};
 
 const CheckVectorIcon = () => (
   <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={3}>
@@ -31,6 +65,23 @@ const ClockVectorIcon = ({ color = '#121212', size = 18 }: { color?: string; siz
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.1}>
     <Circle cx="12" cy="12" r="9" />
     <Polyline points="12 7 12 12 15.5 14" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const ChevronVectorIcon = ({ dir }: { dir: 'left' | 'right' }) => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#121212" strokeWidth={2.3}>
+    <Path
+      d={dir === 'left' ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6'}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+const PlusSmallVectorIcon = () => (
+  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={Colors.deep} strokeWidth={2.5}>
+    <Line x1={12} y1={5} x2={12} y2={19} strokeLinecap="round" />
+    <Line x1={5} y1={12} x2={19} y2={12} strokeLinecap="round" />
   </Svg>
 );
 
@@ -70,6 +121,15 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
   onSaveBooking,
   onStartNewClient,
 }) => {
+  const { width, fontScale } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isCompact = width < 380 || fontScale > 1.15;
+  const boundedWidth = Math.min(width, 680);
+  const calendarCellWidth = Math.max(34, Math.floor((boundedWidth - 64) / 7));
+  const modalInnerWidth = Math.min(width - 40, 460) - 36;
+  const pickerCols = width < 340 ? 4 : 6;
+  const pickerCellWidth = Math.floor((modalInnerWidth - 6 * (pickerCols - 1)) / pickerCols);
+
   const now = new Date();
   const currentDay = now.getDate();
   const currentMonthIdx = now.getMonth();
@@ -256,10 +316,14 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
     >
       <ScrollView
         style={styles.screen}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 24) + 84 },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.responsiveInner}>
         {/* 1. Client Selector + New Client */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>CLIENT</Text>
@@ -293,12 +357,13 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
               onPress={onStartNewClient}
               activeOpacity={0.8}
             >
-              <Text style={styles.newClientText}>＋ New client</Text>
+              <PlusSmallVectorIcon />
+              <Text style={styles.newClientText}>New client</Text>
             </TouchableOpacity>
           </ScrollView>
           {clients.length === 0 && (
             <Text style={styles.emptyClientHint}>
-              No clients saved yet. Tap "+ New client" to add one first.
+              No clients saved yet. Tap "New client" to add one first.
             </Text>
           )}
         </View>
@@ -310,8 +375,9 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
               onPress={() => setMonthOffset((prev) => prev - 1)}
               style={styles.monthNavBtn}
               activeOpacity={0.7}
+              accessibilityLabel="Previous month"
             >
-              <Text style={styles.monthNavText}>‹</Text>
+              <ChevronVectorIcon dir="left" />
             </TouchableOpacity>
             <Text style={styles.monthTitle}>
               {displayedMonthLong.toUpperCase()} {displayedYear}
@@ -320,14 +386,15 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
               onPress={() => setMonthOffset((prev) => prev + 1)}
               style={styles.monthNavBtn}
               activeOpacity={0.7}
+              accessibilityLabel="Next month"
             >
-              <Text style={styles.monthNavText}>›</Text>
+              <ChevronVectorIcon dir="right" />
             </TouchableOpacity>
           </View>
 
           <View style={styles.dowRow}>
             {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((d) => (
-              <Text key={d} style={styles.dowLabel}>
+              <Text key={d} style={[styles.dowLabel, { width: calendarCellWidth }]}>
                 {d}
               </Text>
             ))}
@@ -335,7 +402,7 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
 
           <View style={styles.monthGrid}>
             {monthLead.map((_, i) => (
-              <View key={`lead-${i}`} style={styles.blankCell} />
+              <View key={`lead-${i}`} style={[styles.blankCell, { width: calendarCellWidth }]} />
             ))}
             {monthDays.map((d) => {
               const dayList = getBookingsForDate(
@@ -362,6 +429,7 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
                   key={d}
                   style={[
                     styles.monthCell,
+                    { width: calendarCellWidth },
                     isToday && !isSel && styles.monthCellToday,
                     isSel && styles.monthCellSelected,
                   ]}
@@ -421,24 +489,28 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
         {/* 3. Time Picker */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>TIME</Text>
-          <TouchableOpacity
+          <ScalePressable
             style={styles.timePickerTrigger}
             onPress={openTimePicker}
-            activeOpacity={0.85}
+            accessibilityLabel={`Session time ${time}, tap to pick time`}
           >
             <View style={styles.timePickerLeft}>
               <View style={styles.timeClockBadge}>
                 <ClockVectorIcon color={Colors.deep} size={17} />
               </View>
-              <View>
-                <Text style={styles.timePickerValue}>{time}</Text>
-                <Text style={styles.timePickerHint}>Tap to choose hour & minutes</Text>
+              <View style={styles.timePickerTextCol}>
+                <Text style={styles.timePickerValue} numberOfLines={1}>
+                  {time}
+                </Text>
+                <Text style={styles.timePickerHint} numberOfLines={1}>
+                  Tap to choose hour & minutes
+                </Text>
               </View>
             </View>
             <View style={styles.timePickerActionPill}>
               <Text style={styles.timePickerActionText}>PICK TIME</Text>
             </View>
-          </TouchableOpacity>
+          </ScalePressable>
         </View>
 
         {/* 4. Select Services & Packages */}
@@ -481,8 +553,8 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>PAYMENTS, VENUE & NOTES</Text>
 
-          <View style={styles.twoColRow}>
-            <View style={[styles.inputField, { flex: 1 }]}>
+          <View style={[styles.twoColRow, isCompact && styles.twoColStacked]}>
+            <View style={[styles.inputField, !isCompact && styles.flex1MinZero]}>
               <Text style={styles.inputLabel}>Advance (₹)</Text>
               <TextInput
                 style={styles.textInput}
@@ -494,7 +566,7 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
               />
             </View>
 
-            <View style={[styles.inputField, { flex: 1 }]}>
+            <View style={[styles.inputField, !isCompact && styles.flex1MinZero]}>
               <Text style={styles.inputLabel}>Travel Charges (₹)</Text>
               <TextInput
                 style={styles.textInput}
@@ -534,24 +606,25 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
         </View>
 
         {/* 6. Summary & Save Booking Bar */}
-        <View style={styles.summaryBar}>
+        <View style={[styles.summaryBar, isCompact && styles.summaryBarCompact]}>
           <View style={styles.summaryTextCol}>
-            <Text style={styles.summaryLabel}>TOTAL: {fmt(grandTotal)}</Text>
-            <Text style={styles.summaryBalance}>
+            <Text style={styles.summaryLabel} numberOfLines={1}>
+              Total: {fmt(grandTotal)}
+            </Text>
+            <Text style={styles.summaryBalance} numberOfLines={1}>
               Balance due: {fmt(balance)}
             </Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.saveBtn}
+          <ScalePressable
+            style={[styles.saveBtn, isCompact && styles.saveBtnFull]}
             onPress={handleSave}
-            activeOpacity={0.85}
+            accessibilityLabel="Save booking"
           >
             <Text style={styles.saveBtnText}>SAVE BOOKING</Text>
-          </TouchableOpacity>
+          </ScalePressable>
         </View>
-
-        <View style={{ height: 110 }} />
+        </View>
       </ScrollView>
 
       {/* Interactive Time Picker Modal */}
@@ -596,7 +669,11 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
                 return (
                   <TouchableOpacity
                     key={hr}
-                    style={[styles.pickerCell, active && styles.pickerCellActive]}
+                    style={[
+                      styles.pickerCell,
+                      { width: pickerCellWidth },
+                      active && styles.pickerCellActive,
+                    ]}
                     onPress={() => setPickerHour(hr)}
                     activeOpacity={0.8}
                   >
@@ -636,7 +713,11 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
                 return (
                   <TouchableOpacity
                     key={min}
-                    style={[styles.pickerCell, active && styles.pickerCellActive]}
+                    style={[
+                      styles.pickerCell,
+                      { width: pickerCellWidth },
+                      active && styles.pickerCellActive,
+                    ]}
                     onPress={() => setPickerMinute(min)}
                     activeOpacity={0.8}
                   >
@@ -680,7 +761,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f4f6',
   },
   scrollContent: {
-    paddingBottom: 32,
+    flexGrow: 1,
+  },
+  responsiveInner: {
+    width: '100%',
+    maxWidth: 680,
+    alignSelf: 'center',
   },
   sectionCard: {
     backgroundColor: '#ffffff',
@@ -708,15 +794,17 @@ const styles = StyleSheet.create({
   },
   clientChip: {
     backgroundColor: '#f4f4f6',
+    minHeight: 44,
     paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     borderRadius: 999,
+    justifyContent: 'center',
   },
   clientChipActive: {
     backgroundColor: Colors.accent,
   },
   clientChipText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#121212',
   },
@@ -725,12 +813,16 @@ const styles = StyleSheet.create({
   },
   newClientChip: {
     backgroundColor: Colors.tint,
+    minHeight: 44,
     paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     borderRadius: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   newClientText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
     color: Colors.deep,
   },
@@ -746,32 +838,24 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   monthNavBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#f4f4f6',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  monthNavText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#121212',
-    marginTop: -2,
-  },
   monthTitle: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
     letterSpacing: 1.1,
     color: '#121212',
   },
   dowRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
     marginBottom: 6,
   },
   dowLabel: {
-    width: '14.2%',
     textAlign: 'center',
     fontSize: 9.5,
     fontWeight: '700',
@@ -783,12 +867,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   blankCell: {
-    width: '14.28%',
-    height: 44,
+    height: 46,
   },
   monthCell: {
-    width: '14.28%',
-    height: 44,
+    height: 46,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -874,25 +956,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 58,
     backgroundColor: Colors.tint,
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,
+    gap: 10,
     borderWidth: 1,
     borderColor: 'rgba(232, 39, 107, 0.22)',
   },
   timePickerLeft: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
   timeClockBadge: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
+  },
+  timePickerTextCol: {
+    flex: 1,
+    minWidth: 0,
   },
   timePickerValue: {
     fontSize: 16,
@@ -900,15 +991,18 @@ const styles = StyleSheet.create({
     color: '#121212',
   },
   timePickerHint: {
-    fontSize: 11,
-    color: 'rgba(18, 18, 18, 0.55)',
+    fontSize: 11.5,
+    color: 'rgba(18, 18, 18, 0.6)',
     marginTop: 1,
   },
   timePickerActionPill: {
     backgroundColor: '#121212',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    minHeight: 36,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
     borderRadius: 999,
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   timePickerActionText: {
     fontSize: 10,
@@ -920,9 +1014,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(18, 18, 18, 0.52)',
     justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 20,
   },
   timeModalCard: {
+    width: '100%',
+    maxWidth: 460,
     backgroundColor: '#ffffff',
     borderRadius: 24,
     padding: 18,
@@ -1014,7 +1111,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   pickerCell: {
-    width: '15.2%',
+    minHeight: 44,
     paddingVertical: 9,
     borderRadius: 12,
     backgroundColor: '#f4f4f6',
@@ -1039,6 +1136,7 @@ const styles = StyleSheet.create({
   },
   modalCancelBtn: {
     flex: 1,
+    minHeight: 48,
     paddingVertical: 13,
     borderRadius: 14,
     backgroundColor: '#f4f4f6',
@@ -1053,6 +1151,7 @@ const styles = StyleSheet.create({
   },
   modalConfirmBtn: {
     flex: 1.4,
+    minHeight: 48,
     paddingVertical: 13,
     borderRadius: 14,
     backgroundColor: Colors.accent,
@@ -1078,24 +1177,26 @@ const styles = StyleSheet.create({
   pkgToggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    minHeight: 50,
+    paddingVertical: 12,
     paddingHorizontal: 12,
     backgroundColor: '#f7f7f7',
     borderRadius: 14,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   pkgToggleRowActive: {
     backgroundColor: Colors.accent,
   },
   checkbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 5,
     borderWidth: 1.5,
     borderColor: 'rgba(18, 18, 18, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
+    flexShrink: 0,
   },
   checkboxActive: {
     borderColor: '#ffffff',
@@ -1103,18 +1204,29 @@ const styles = StyleSheet.create({
   },
   pkgName: {
     flex: 1,
-    fontSize: 13,
+    minWidth: 0,
+    paddingRight: 10,
+    fontSize: 13.5,
     fontWeight: '600',
     color: '#121212',
   },
   pkgPrice: {
-    fontSize: 13,
+    flexShrink: 0,
+    fontSize: 13.5,
     fontWeight: '700',
     color: '#121212',
   },
   twoColRow: {
     flexDirection: 'row',
     gap: 10,
+  },
+  twoColStacked: {
+    flexDirection: 'column',
+    gap: 0,
+  },
+  flex1MinZero: {
+    flex: 1,
+    minWidth: 0,
   },
   inputField: {
     marginTop: 10,
@@ -1148,31 +1260,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
+  },
+  summaryBarCompact: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
   },
   summaryTextCol: {
     flex: 1,
+    minWidth: 0,
   },
   summaryLabel: {
-    fontSize: 10,
-    letterSpacing: 1,
-    color: Colors.accent,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.72)',
+    fontWeight: '600',
   },
   summaryBalance: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
     marginTop: 2,
   },
   saveBtn: {
+    minHeight: 48,
     backgroundColor: Colors.accent,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
+    paddingVertical: 13,
+    paddingHorizontal: 20,
     borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  saveBtnFull: {
+    width: '100%',
   },
   saveBtnText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '700',
     letterSpacing: 0.8,
     color: '#ffffff',
