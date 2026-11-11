@@ -13,6 +13,7 @@ import {
   Share,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -176,6 +177,14 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   artistName = 'Artist',
   studioLogo,
 }) => {
+  const { width: screenWidth } = useWindowDimensions();
+  const cardInnerWidth = Math.max(260, screenWidth - 64);
+  const primaryGridHeight = Math.round(Math.min(280, Math.max(195, cardInnerWidth * 0.66)));
+  const extraSlotHeight = Math.round(Math.min(165, Math.max(105, cardInnerWidth * 0.36)));
+  const posterWidth = Math.max(250, screenWidth - 64);
+  const posterHeroHeight = Math.round(Math.min(250, Math.max(175, posterWidth * 0.62)));
+  const posterDetailHeight = Math.round(Math.min(145, Math.max(96, posterWidth * 0.34)));
+
   const [looks, setLooks] = useState<GalleryLook[]>([]);
   const [streaks, setStreaks] = useState<StudioStreaks>(DEFAULT_STREAKS);
   const [isLoading, setIsLoading] = useState(true);
@@ -357,9 +366,8 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
           return;
         }
         const res = await ImagePicker.launchCameraAsync({
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.2,
+          allowsEditing: false,
+          quality: 0.25,
           base64: true,
         });
         if (!res.canceled && res.assets?.[0]) {
@@ -374,9 +382,8 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
           return;
         }
         const res = await ImagePicker.launchImageLibraryAsync({
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.2,
+          allowsEditing: false,
+          quality: 0.25,
           base64: true,
         });
         if (!res.canceled && res.assets?.[0]) {
@@ -678,10 +685,10 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                   </View>
                 </View>
 
-                {/* Primary 3-Slot Grid (Hero + Detail 1 + Detail 2) */}
-                <View style={styles.photosGrid}>
+                {/* Primary 3-Slot Grid (Hero + Detail 1 + Detail 2) — responsive & uncropped faces */}
+                <View style={[styles.photosGrid, { height: primaryGridHeight }]}>
                   <TouchableOpacity
-                    style={styles.largeSlot}
+                    style={[styles.largeSlot, post.imageUrl ? styles.filledSlotFrame : null]}
                     activeOpacity={0.85}
                     onPress={() =>
                       handleTapSlot(post, 0, 'Finished Look Photo', Boolean(post.imageUrl))
@@ -689,7 +696,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                   >
                     {post.imageUrl ? (
                       <>
-                        <Image source={{ uri: post.imageUrl }} style={styles.slotImageFill} resizeMode="cover" />
+                        <Image source={{ uri: post.imageUrl }} style={styles.slotImageFill} resizeMode="contain" />
                         <View style={styles.slotCornerBadge}>
                           <Text style={styles.slotCornerBadgeText}>FINISHED LOOK</Text>
                         </View>
@@ -707,13 +714,13 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
 
                   <View style={styles.rightThumbnails}>
                     <TouchableOpacity
-                      style={styles.smallSlot}
+                      style={[styles.smallSlot, detail1 ? styles.filledSlotFrame : null]}
                       activeOpacity={0.85}
                       onPress={() => handleTapSlot(post, 1, 'Detail 1 Photo', Boolean(detail1))}
                     >
                       {detail1 ? (
                         <>
-                          <Image source={{ uri: detail1 }} style={styles.slotImageFill} resizeMode="cover" />
+                          <Image source={{ uri: detail1 }} style={styles.slotImageFill} resizeMode="contain" />
                           <View style={styles.smallSlotCorner}>
                             <Text style={styles.slotCornerBadgeText}>DETAIL 1</Text>
                           </View>
@@ -727,13 +734,13 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={styles.smallSlot}
+                      style={[styles.smallSlot, detail2 ? styles.filledSlotFrame : null]}
                       activeOpacity={0.85}
                       onPress={() => handleTapSlot(post, 2, 'Detail 2 Photo', Boolean(detail2))}
                     >
                       {detail2 ? (
                         <>
-                          <Image source={{ uri: detail2 }} style={styles.slotImageFill} resizeMode="cover" />
+                          <Image source={{ uri: detail2 }} style={styles.slotImageFill} resizeMode="contain" />
                           <View style={styles.smallSlotCorner}>
                             <Text style={styles.slotCornerBadgeText}>DETAIL 2</Text>
                           </View>
@@ -748,16 +755,16 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                   </View>
                 </View>
 
-                {/* Optional Extra Photos (Detail 3 & Detail 4, up to 5 photos total) */}
+                {/* Optional Extra Photos (Detail 3 & Detail 4, responsive full-width strip up to 5 photos) */}
                 {(detail3 || detail4 || photoCount < 5) && (
                   <View style={styles.extraStripRow}>
                     {detail3 ? (
                       <TouchableOpacity
-                        style={styles.extraThumbSlot}
+                        style={[styles.extraThumbSlot, styles.filledSlotFrame, { height: extraSlotHeight }]}
                         activeOpacity={0.85}
                         onPress={() => handleTapSlot(post, 3, 'Detail 3 Photo', true)}
                       >
-                        <Image source={{ uri: detail3 }} style={styles.slotImageFill} resizeMode="cover" />
+                        <Image source={{ uri: detail3 }} style={styles.slotImageFill} resizeMode="contain" />
                         <View style={styles.smallSlotCorner}>
                           <Text style={styles.slotCornerBadgeText}>DETAIL 3</Text>
                         </View>
@@ -766,11 +773,11 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
 
                     {detail4 ? (
                       <TouchableOpacity
-                        style={styles.extraThumbSlot}
+                        style={[styles.extraThumbSlot, styles.filledSlotFrame, { height: extraSlotHeight }]}
                         activeOpacity={0.85}
                         onPress={() => handleTapSlot(post, 4, 'Detail 4 Photo', true)}
                       >
-                        <Image source={{ uri: detail4 }} style={styles.slotImageFill} resizeMode="cover" />
+                        <Image source={{ uri: detail4 }} style={styles.slotImageFill} resizeMode="contain" />
                         <View style={styles.smallSlotCorner}>
                           <Text style={styles.slotCornerBadgeText}>DETAIL 4</Text>
                         </View>
@@ -779,7 +786,10 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
 
                     {photoCount < 5 && (
                       <TouchableOpacity
-                        style={styles.addExtraTile}
+                        style={[
+                          styles.addExtraTile,
+                          (detail3 || detail4) ? { height: extraSlotHeight } : null,
+                        ]}
                         activeOpacity={0.8}
                         onPress={() => {
                           const nextIdx = !post.imageUrl
@@ -997,29 +1007,63 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                       />
                     </View>
 
-                    {/* Collage of 3 to 5 Uploaded Photos */}
+                    {/* Responsive Collage of 3, 4, or 5 Uploaded Photos without cropping faces */}
                     {(() => {
                       const photos = getAllLookPhotos(shareModalLook);
                       const hero = photos[0];
                       const rest = photos.slice(1);
+
+                      // For 3 photos: side-by-side Hero + 2 stacked details
+                      if (photos.length <= 3) {
+                        return (
+                          <View style={[styles.posterCollageWrap, { height: posterHeroHeight }]}>
+                            <View style={styles.posterHeroBox}>
+                              {hero ? (
+                                <Image source={{ uri: hero }} style={styles.slotImageFill} resizeMode="contain" />
+                              ) : null}
+                              <View style={styles.posterFinishedChip}>
+                                <Text style={styles.posterFinishedChipText}>FINISHED LOOK</Text>
+                              </View>
+                            </View>
+
+                            <View style={styles.posterDetailsCol}>
+                              {rest.map((uri, idx) => (
+                                <View key={idx} style={styles.posterDetailCell}>
+                                  <Image source={{ uri }} style={styles.slotImageFill} resizeMode="contain" />
+                                </View>
+                              ))}
+                            </View>
+                          </View>
+                        );
+                      }
+
+                      // For 4 or 5 photos: Hero banner on top + responsive 2x2 or 3-col grid below
+                      const rows: string[][] =
+                        rest.length === 4 ? [rest.slice(0, 2), rest.slice(2, 4)] : [rest];
+
                       return (
-                        <View style={styles.posterCollageWrap}>
-                          <View style={styles.posterHeroBox}>
+                        <View style={styles.posterMultiColWrap}>
+                          <View style={[styles.posterTopHeroBox, { height: posterHeroHeight }]}>
                             {hero ? (
-                              <Image source={{ uri: hero }} style={styles.slotImageFill} resizeMode="cover" />
+                              <Image source={{ uri: hero }} style={styles.slotImageFill} resizeMode="contain" />
                             ) : null}
                             <View style={styles.posterFinishedChip}>
                               <Text style={styles.posterFinishedChipText}>FINISHED LOOK</Text>
                             </View>
                           </View>
 
-                          <View style={styles.posterDetailsCol}>
-                            {rest.map((uri, idx) => (
-                              <View key={idx} style={styles.posterDetailCell}>
-                                <Image source={{ uri }} style={styles.slotImageFill} resizeMode="cover" />
-                              </View>
-                            ))}
-                          </View>
+                          {rows.map((rowUris, rIdx) => (
+                            <View key={rIdx} style={styles.posterGridRow}>
+                              {rowUris.map((uri, cIdx) => (
+                                <View
+                                  key={cIdx}
+                                  style={[styles.posterGridCell, { height: posterDetailHeight }]}
+                                >
+                                  <Image source={{ uri }} style={styles.slotImageFill} resizeMode="contain" />
+                                </View>
+                              ))}
+                            </View>
+                          ))}
                         </View>
                       );
                     })()}
@@ -1462,18 +1506,20 @@ const styles = StyleSheet.create({
   },
   photosGrid: {
     flexDirection: 'row',
-    height: 190,
     gap: 6,
     paddingHorizontal: 16,
   },
   largeSlot: {
-    flex: 2,
+    flex: 1.5,
     backgroundColor: Colors.tint,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
     position: 'relative',
+  },
+  filledSlotFrame: {
+    backgroundColor: '#16161b',
   },
   slotImageFill: {
     width: '100%',
@@ -1537,23 +1583,22 @@ const styles = StyleSheet.create({
   },
   extraStripRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
     gap: 6,
     paddingHorizontal: 16,
-    marginTop: 8,
+    marginTop: 6,
   },
   extraThumbSlot: {
-    width: 68,
-    height: 68,
-    borderRadius: 10,
+    flex: 1,
+    borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: Colors.tint,
   },
   addExtraTile: {
     flex: 1,
-    height: 44,
-    borderRadius: 10,
+    minHeight: 46,
+    borderRadius: 12,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: Colors.accent,
@@ -1562,6 +1607,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+    paddingHorizontal: 8,
   },
   addExtraText: {
     color: Colors.accent,
@@ -1782,15 +1828,34 @@ const styles = StyleSheet.create({
   },
   posterCollageWrap: {
     flexDirection: 'row',
-    height: 210,
     gap: 5,
   },
   posterHeroBox: {
-    flex: 1.5,
+    flex: 1.45,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#1e1e24',
+    backgroundColor: '#18181e',
     position: 'relative',
+  },
+  posterMultiColWrap: {
+    gap: 5,
+  },
+  posterTopHeroBox: {
+    width: '100%',
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#18181e',
+    position: 'relative',
+  },
+  posterGridRow: {
+    flexDirection: 'row',
+    gap: 5,
+  },
+  posterGridCell: {
+    flex: 1,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#18181e',
   },
   posterFinishedChip: {
     position: 'absolute',
