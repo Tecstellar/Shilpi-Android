@@ -11,17 +11,15 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import Svg, { Path, Line } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
 import { Colors } from '../theme/colors';
 import { ExpenseRecord, fmt } from '../data/prototypeData';
 
-const TrashIcon = () => (
-  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="rgba(18, 18, 18, 0.4)" strokeWidth={2}>
-    <Path d="M3 6h18" strokeLinecap="round" strokeLinejoin="round" />
-    <Path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" strokeLinecap="round" strokeLinejoin="round" />
-    <Path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" strokeLinecap="round" strokeLinejoin="round" />
-    <Line x1={10} y1={11} x2={10} y2={17} strokeLinecap="round" />
-    <Line x1={14} y1={11} x2={14} y2={17} strokeLinecap="round" />
+const MoreVerticalIcon = () => (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="rgba(18, 18, 18, 0.55)">
+    <Circle cx={12} cy={5} r={1.8} />
+    <Circle cx={12} cy={12} r={1.8} />
+    <Circle cx={12} cy={19} r={1.8} />
   </Svg>
 );
 
@@ -46,15 +44,18 @@ const toIsoDateLocal = (d: Date): string => {
   return `${yr}-${mo}-${dy}`;
 };
 
+interface ExpensePayload {
+  title: string;
+  category: string;
+  amount: number;
+  expenseDate: string;
+  notes?: string;
+}
+
 interface ExpensesScreenProps {
   expenses: ExpenseRecord[];
-  onAddExpense: (payload: {
-    title: string;
-    category: string;
-    amount: number;
-    expenseDate: string;
-    notes?: string;
-  }) => Promise<void>;
+  onAddExpense: (payload: ExpensePayload) => Promise<void>;
+  onUpdateExpense?: (expenseId: string, payload: ExpensePayload) => Promise<void>;
   onDeleteExpense?: (expenseId: string) => Promise<void>;
   onGoBack: () => void;
 }
@@ -62,6 +63,7 @@ interface ExpensesScreenProps {
 export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
   expenses,
   onAddExpense,
+  onUpdateExpense,
   onDeleteExpense,
 }) => {
   const now = new Date();
@@ -71,6 +73,9 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
   const currentMonthPrefix = `${currentYear}-${String(currentMonthIdx + 1).padStart(2, '0')}`;
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null>(null);
+  const [menuExpense, setMenuExpense] = useState<ExpenseRecord | null>(null);
+
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('cosmetics');
   const [amountText, setAmountText] = useState('');
@@ -83,18 +88,22 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
   );
   const totalSpent = monthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
-  // Aggregate real category totals for current month
   const categorySums = EXPENSE_CATEGORY_OPTIONS.map((opt) => {
     const amount = monthExpenses
       .filter((e) => e.category === opt.key)
       .reduce((sum, e) => sum + (e.amount || 0), 0);
     return { key: opt.key, name: opt.label, amount };
-  }).filter((c) => c.amount > 0 || ['cosmetics', 'hair_products', 'travel', 'saree_materials', 'salary'].includes(c.key));
+  }).filter(
+    (c) =>
+      c.amount > 0 ||
+      ['cosmetics', 'hair_products', 'travel', 'saree_materials', 'salary'].includes(c.key)
+  );
 
   const maxCatAmount = Math.max(1, ...categorySums.map((c) => c.amount));
   const highestAmount = Math.max(...categorySums.map((c) => c.amount));
 
   const resetForm = () => {
+    setEditingExpense(null);
     setTitle('');
     setCategory('cosmetics');
     setAmountText('');
@@ -102,8 +111,19 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
     setNotes('');
   };
 
-  const handleOpenForm = () => {
+  const handleOpenCreateForm = () => {
     resetForm();
+    setModalOpen(true);
+  };
+
+  const handleOpenEditForm = (item: ExpenseRecord) => {
+    setMenuExpense(null);
+    setEditingExpense(item);
+    setTitle(item.title);
+    setCategory(item.category || 'cosmetics');
+    setAmountText(String(item.amount || ''));
+    setExpenseDate(item.expenseDate || toIsoDateLocal(new Date()));
+    setNotes(item.notes || '');
     setModalOpen(true);
   };
 
@@ -112,7 +132,10 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
     const numericAmount = parseFloat(amountText.replace(/,/g, '').trim());
 
     if (!trimmedTitle) {
-      Alert.alert('Expense Title Required', 'Please enter what you spent on (e.g. Airbrush foundation).');
+      Alert.alert(
+        'Expense Title Required',
+        'Please enter what you spent on (e.g. Airbrush foundation).'
+      );
       return;
     }
     if (!numericAmount || isNaN(numericAmount) || numericAmount <= 0) {
@@ -124,15 +147,21 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
       return;
     }
 
+    const payload: ExpensePayload = {
+      title: trimmedTitle,
+      category,
+      amount: Math.round(numericAmount),
+      expenseDate: expenseDate.trim(),
+      notes: notes.trim() || undefined,
+    };
+
     setSaving(true);
     try {
-      await onAddExpense({
-        title: trimmedTitle,
-        category,
-        amount: Math.round(numericAmount),
-        expenseDate: expenseDate.trim(),
-        notes: notes.trim() || undefined,
-      });
+      if (editingExpense && onUpdateExpense) {
+        await onUpdateExpense(editingExpense.id, payload);
+      } else {
+        await onAddExpense(payload);
+      }
       setModalOpen(false);
       resetForm();
     } catch (err: any) {
@@ -143,19 +172,16 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
   };
 
   const confirmDelete = (item: ExpenseRecord) => {
+    setMenuExpense(null);
     if (!onDeleteExpense) return;
-    Alert.alert(
-      'Delete Expense',
-      `Remove "${item.title}" (${fmt(item.amount)})?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => onDeleteExpense(item.id),
-        },
-      ]
-    );
+    Alert.alert('Delete Expense', `Remove "${item.title}" (${fmt(item.amount)})?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => onDeleteExpense(item.id),
+      },
+    ]);
   };
 
   const todayIso = toIsoDateLocal(now);
@@ -181,7 +207,8 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
 
         <View style={styles.card}>
           {categorySums.map((cat) => {
-            const pct = cat.amount > 0 ? Math.max(6, Math.round((cat.amount / maxCatAmount) * 100)) : 0;
+            const pct =
+              cat.amount > 0 ? Math.max(6, Math.round((cat.amount / maxCatAmount) * 100)) : 0;
             const isTop = cat.amount > 0 && cat.amount === highestAmount;
             return (
               <View key={cat.key} style={styles.catRow}>
@@ -205,46 +232,62 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
           })}
         </View>
 
-        {/* 3. Logged Expenses List */}
+        {/* 3. Recent Expenses (Matches Home "This Week" Bookings UI) */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>RECENT EXPENSES</Text>
+          <Text style={styles.sectionTitle}>
+            RECENT EXPENSES · {expenses.length}
+          </Text>
         </View>
 
         {expenses.length > 0 ? (
-          <View style={styles.card}>
-            {expenses.map((exp, idx) => (
-              <View
-                key={exp.id}
-                style={[
-                  styles.expenseRow,
-                  idx === expenses.length - 1 && { borderBottomWidth: 0 },
-                ]}
-              >
-                <View style={styles.dateCol}>
-                  <Text style={styles.dateText}>{exp.dateLabel}</Text>
+          <View style={styles.recentListCard}>
+            {expenses.map((exp, idx) => {
+              const yearPart = String(exp.expenseDate || '').slice(0, 4);
+              return (
+                <View
+                  key={exp.id}
+                  style={[
+                    styles.recentRow,
+                    idx === expenses.length - 1 && { borderBottomWidth: 0 },
+                  ]}
+                >
+                  <View style={styles.dateColumn}>
+                    <Text style={styles.dateMainText}>{exp.dateLabel}</Text>
+                    <Text style={styles.dateYearText}>{yearPart}</Text>
+                  </View>
+
+                  <View style={styles.expenseDetails}>
+                    <Text style={styles.expTitleText} numberOfLines={1}>
+                      {exp.title}
+                    </Text>
+                    <Text style={styles.expCategoryText} numberOfLines={1}>
+                      {exp.categoryLabel}
+                    </Text>
+                    {exp.notes ? (
+                      <Text style={styles.expNotesText} numberOfLines={1}>
+                        {exp.notes}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.amountMenuGroup}>
+                    <View style={styles.amountColumn}>
+                      <Text style={styles.totalAmount}>{fmt(exp.amount)}</Text>
+                      <Text style={styles.loggedPill}>EXPENSE</Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={styles.menuDotsBtn}
+                      onPress={() => setMenuExpense(exp)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      activeOpacity={0.7}
+                    >
+                      <MoreVerticalIcon />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <View style={styles.nameCol}>
-                  <Text style={styles.expName}>{exp.title}</Text>
-                  <Text style={styles.expCat}>
-                    {exp.categoryLabel}
-                    {exp.notes ? ` · ${exp.notes}` : ''}
-                  </Text>
-                </View>
-                <View style={styles.amountCol}>
-                  <Text style={styles.expAmount}>{fmt(exp.amount)}</Text>
-                </View>
-                {onDeleteExpense && (
-                  <TouchableOpacity
-                    style={styles.deleteBtn}
-                    onPress={() => confirmDelete(exp)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    activeOpacity={0.7}
-                  >
-                    <TrashIcon />
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
+              );
+            })}
           </View>
         ) : (
           <View style={styles.emptyCard}>
@@ -259,7 +302,7 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
         <View style={styles.btnContainer}>
           <TouchableOpacity
             style={styles.logBtn}
-            onPress={handleOpenForm}
+            onPress={handleOpenCreateForm}
             activeOpacity={0.85}
           >
             <Text style={styles.logBtnText}>＋ LOG EXPENSE</Text>
@@ -269,12 +312,64 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Log Expense Form Modal */}
+      {/* 3-Dot Action Sheet Modal (Edit / Delete) */}
+      <Modal
+        visible={!!menuExpense}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuExpense(null)}
+      >
+        <TouchableOpacity
+          style={styles.menuBackdrop}
+          activeOpacity={1}
+          onPress={() => setMenuExpense(null)}
+        >
+          <View style={styles.menuSheet}>
+            {menuExpense && (
+              <>
+                <Text style={styles.menuHeaderKicker}>EXPENSE OPTIONS</Text>
+                <Text style={styles.menuHeaderTitle} numberOfLines={1}>
+                  {menuExpense.title} · {fmt(menuExpense.amount)}
+                </Text>
+
+                <TouchableOpacity
+                  style={styles.menuOptionBtn}
+                  onPress={() => handleOpenEditForm(menuExpense)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.menuOptionText}>Edit Expense</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.menuOptionBtn, styles.menuDeleteBtn]}
+                  onPress={() => confirmDelete(menuExpense)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.menuDeleteText}>Delete Expense</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.menuCancelBtn}
+                  onPress={() => setMenuExpense(null)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.menuCancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Log / Edit Expense Form Modal */}
       <Modal
         visible={modalOpen}
         transparent
         animationType="slide"
-        onRequestClose={() => setModalOpen(false)}
+        onRequestClose={() => {
+          setModalOpen(false);
+          resetForm();
+        }}
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -283,12 +378,19 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
           <View style={styles.modalSheet}>
             <View style={styles.modalHeaderRow}>
               <View>
-                <Text style={styles.modalKicker}>NEW STUDIO EXPENSE</Text>
-                <Text style={styles.modalTitle}>Log Expense</Text>
+                <Text style={styles.modalKicker}>
+                  {editingExpense ? 'UPDATE EXPENSE' : 'NEW STUDIO EXPENSE'}
+                </Text>
+                <Text style={styles.modalTitle}>
+                  {editingExpense ? 'Edit Expense' : 'Log Expense'}
+                </Text>
               </View>
               <TouchableOpacity
                 style={styles.closeChip}
-                onPress={() => setModalOpen(false)}
+                onPress={() => {
+                  setModalOpen(false);
+                  resetForm();
+                }}
                 activeOpacity={0.75}
               >
                 <Text style={styles.closeChipText}>Close</Text>
@@ -340,7 +442,12 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
                   style={[styles.dateChip, expenseDate === todayIso && styles.dateChipActive]}
                   onPress={() => setExpenseDate(todayIso)}
                 >
-                  <Text style={[styles.dateChipText, expenseDate === todayIso && styles.dateChipTextActive]}>
+                  <Text
+                    style={[
+                      styles.dateChipText,
+                      expenseDate === todayIso && styles.dateChipTextActive,
+                    ]}
+                  >
                     Today ({todayIso})
                   </Text>
                 </TouchableOpacity>
@@ -348,7 +455,12 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
                   style={[styles.dateChip, expenseDate === yesterdayIso && styles.dateChipActive]}
                   onPress={() => setExpenseDate(yesterdayIso)}
                 >
-                  <Text style={[styles.dateChipText, expenseDate === yesterdayIso && styles.dateChipTextActive]}>
+                  <Text
+                    style={[
+                      styles.dateChipText,
+                      expenseDate === yesterdayIso && styles.dateChipTextActive,
+                    ]}
+                  >
                     Yesterday
                   </Text>
                 </TouchableOpacity>
@@ -374,7 +486,10 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
               <View style={styles.modalActionsRow}>
                 <TouchableOpacity
                   style={styles.cancelBtn}
-                  onPress={() => setModalOpen(false)}
+                  onPress={() => {
+                    setModalOpen(false);
+                    resetForm();
+                  }}
                   disabled={saving}
                   activeOpacity={0.8}
                 >
@@ -387,7 +502,11 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
                   activeOpacity={0.85}
                 >
                   <Text style={styles.saveBtnText}>
-                    {saving ? 'SAVING...' : 'SAVE EXPENSE'}
+                    {saving
+                      ? 'SAVING...'
+                      : editingExpense
+                      ? 'SAVE CHANGES'
+                      : 'SAVE EXPENSE'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -480,52 +599,90 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 4,
   },
-  expenseRow: {
+  // Matches HomeScreen "THIS WEEK · BOOKINGS" card container & rows
+  recentListCard: {
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(18, 18, 18, 0.07)',
+  },
+  recentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
+    paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(18, 18, 18, 0.06)',
+    borderBottomColor: 'rgba(18, 18, 18, 0.07)',
   },
-  dateCol: {
-    width: 58,
+  dateColumn: {
+    width: 68,
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(18, 18, 18, 0.07)',
+    paddingRight: 8,
   },
-  dateText: {
-    fontSize: 11.5,
+  dateMainText: {
+    fontSize: 13.5,
     fontWeight: '700',
-    color: 'rgba(18, 18, 18, 0.55)',
+    color: '#121212',
     textTransform: 'uppercase',
   },
-  nameCol: {
-    flex: 1,
-    paddingHorizontal: 8,
+  dateYearText: {
+    fontSize: 9.5,
+    color: 'rgba(18, 18, 18, 0.5)',
+    fontWeight: '600',
+    marginTop: 2,
   },
-  expName: {
-    fontSize: 14,
+  expenseDetails: {
+    flex: 1,
+    paddingHorizontal: 12,
+  },
+  expTitleText: {
+    fontSize: 14.5,
     fontWeight: '700',
     color: '#121212',
   },
-  expCat: {
-    fontSize: 11,
-    color: 'rgba(18, 18, 18, 0.5)',
+  expCategoryText: {
+    fontSize: 12,
+    color: 'rgba(18, 18, 18, 0.7)',
     marginTop: 2,
   },
-  amountCol: {
+  expNotesText: {
+    fontSize: 11,
+    color: 'rgba(18, 18, 18, 0.45)',
+    marginTop: 2,
+  },
+  amountMenuGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  amountColumn: {
     alignItems: 'flex-end',
   },
-  expAmount: {
+  totalAmount: {
     fontSize: 13.5,
     fontWeight: '700',
     color: '#121212',
   },
-  deleteBtn: {
-    marginLeft: 10,
-    padding: 4,
+  loggedPill: {
+    fontSize: 9,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    marginTop: 4,
+    letterSpacing: 0.6,
+    color: Colors.deep,
+  },
+  menuDotsBtn: {
+    paddingLeft: 4,
+    paddingVertical: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyCard: {
     backgroundColor: '#ffffff',
-    marginHorizontal: 16,
-    borderRadius: 20,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(18, 18, 18, 0.07)',
     padding: 20,
     alignItems: 'center',
   },
@@ -557,6 +714,62 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
     color: '#ffffff',
+  },
+  menuBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(18, 18, 18, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  menuSheet: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 28,
+  },
+  menuHeaderKicker: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    letterSpacing: 1,
+    color: Colors.deep,
+  },
+  menuHeaderTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#121212',
+    marginTop: 4,
+    marginBottom: 14,
+  },
+  menuOptionBtn: {
+    backgroundColor: '#f7f7f9',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    marginBottom: 8,
+  },
+  menuOptionText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#121212',
+  },
+  menuDeleteBtn: {
+    backgroundColor: '#ffeef4',
+  },
+  menuDeleteText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#dc2626',
+  },
+  menuCancelBtn: {
+    marginTop: 6,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  menuCancelText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: 'rgba(18, 18, 18, 0.55)',
   },
   modalOverlay: {
     flex: 1,

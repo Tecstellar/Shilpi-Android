@@ -912,6 +912,54 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     }
   };
 
+  const handleUpdateExpense = async (
+    expenseId: string,
+    payload: {
+      title: string;
+      category: string;
+      amount: number;
+      expenseDate: string;
+      notes?: string;
+    }
+  ) => {
+    const res = await apiClient.patch(`/expenses/${expenseId}`, {
+      title: payload.title,
+      category: payload.category,
+      amountPaise: Math.max(100, Math.round(payload.amount * 100)),
+      expenseDate: payload.expenseDate,
+      notes: payload.notes || undefined,
+    });
+
+    if (!res.data?.success || !res.data?.data) {
+      throw new Error(res.data?.error?.message || 'Failed to update expense');
+    }
+
+    const e = res.data.data;
+    const shortM = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dtStr = String(e.expenseDate || payload.expenseDate).slice(0, 10);
+    const dtObj = new Date(`${dtStr}T00:00:00Z`);
+    const dNum = isNaN(dtObj.getUTCDate()) ? '' : String(dtObj.getUTCDate()).padStart(2, '0');
+    const mStr = isNaN(dtObj.getUTCMonth()) ? '' : shortM[dtObj.getUTCMonth()] || '';
+
+    const updatedRecord: ExpenseRecord = {
+      id: e.id,
+      title: e.title,
+      category: e.category,
+      categoryLabel: e.categoryLabel || e.category,
+      amount: Math.round(Number(e.amountPaise || 0) / 100),
+      expenseDate: dtStr,
+      dateLabel: dNum && mStr ? `${dNum} ${mStr}` : dtStr,
+      notes: e.notes || '',
+    };
+
+    const next = expenses.map((item) => (item.id === expenseId ? updatedRecord : item));
+    setExpenses(next);
+    recalcMonthExpenses(next);
+    if (beauticianId) {
+      AsyncStorage.setItem(`@shilpi_expenses_${beauticianId}`, JSON.stringify(next)).catch(() => {});
+    }
+  };
+
   // Payments Reminder Sheet
   const handleOpenRemindSheet = () => {
     setActiveSheet({
@@ -1128,6 +1176,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           <ExpensesScreen
             expenses={expenses}
             onAddExpense={handleAddExpense}
+            onUpdateExpense={handleUpdateExpense}
             onDeleteExpense={handleDeleteExpense}
             onGoBack={handleGoBack}
           />
