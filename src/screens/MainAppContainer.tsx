@@ -64,6 +64,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   const [packageGroups, setPackageGroups] = useState<PackageGroup[]>(INITIAL_PKG_GROUPS);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [artistName, setArtistName] = useState('Artist');
+  const [studioName, setStudioName] = useState('Shilpi Studio');
   const [studioLogo, setStudioLogo] = useState<string | undefined>();
 
   // Load storage data on mount & hydrate live studio data from AWS RDS PostgreSQL
@@ -82,6 +83,9 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             setArtistName(parsed.ownerName.trim());
           } else if (parsed.businessName?.trim()) {
             setArtistName(parsed.businessName.trim());
+          }
+          if (parsed.businessName?.trim()) {
+            setStudioName(parsed.businessName.trim());
           }
           if (parsed.logoUri) {
             setStudioLogo(parsed.logoUri);
@@ -118,6 +122,9 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
               setArtistName(b.ownerName.trim());
             } else if (b.businessName?.trim()) {
               setArtistName(b.businessName.trim());
+            }
+            if (b.businessName?.trim()) {
+              setStudioName(b.businessName.trim());
             }
             if (b.profilePhotoUrl) {
               setStudioLogo(b.profilePhotoUrl);
@@ -569,11 +576,22 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   // Close Booking Sheet Trigger
   const handleCloseBooking = (order: Booking) => {
     handleUpdateBookingStatus(order.id, 'Closed');
+    const serviceLabel = order.items.map((i) => i.name).join(' & ') || 'Client Look';
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(order.id);
+    apiClient
+      .post('/gallery', {
+        title: `${order.client} — ${serviceLabel}`,
+        place: order.venue || undefined,
+        bookingId: isUuid ? order.id : undefined,
+        caption: `Completed ${serviceLabel} for ${first(order.client)} with ${studioName} on Shilpi.`,
+      })
+      .catch(() => {});
+
     setActiveSheet({
       kicker: 'WHATSAPP · ORDER CLOSED',
       title: `Thank ${order.client} and ask for review?`,
       message: `Thank you ${first(order.client)}! It was lovely working with you.\n\nIf you liked the look, a photo or a review would mean a lot — I would love to add it to my portfolio.\n\n— ${artistName}, Shilpi`,
-      cta: 'Send Review Request',
+      cta: 'Open My Gallery & Drop Photos',
       logoUri: studioLogo,
       onConfirm: () => {
         setCurrentScreen('gallery');
@@ -734,7 +752,15 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           />
         )}
 
-        {currentScreen === 'gallery' && <GalleryScreen onGoBack={handleGoBack} />}
+        {currentScreen === 'gallery' && (
+          <GalleryScreen
+            beauticianId={beauticianId || undefined}
+            studioName={studioName}
+            artistName={artistName}
+            studioLogo={studioLogo}
+            onGoBack={handleGoBack}
+          />
+        )}
 
         {currentScreen === 'notifications' && (
           <NotificationsScreen

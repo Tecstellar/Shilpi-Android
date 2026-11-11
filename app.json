@@ -27,7 +27,8 @@
         {
           "cameraPermission": "Allow Shilpi to access your camera to scan Web Terminal QR codes and take client portfolio photos."
         }
-      ]
+      ],
+      "expo-sharing"
     ]
   }
 }

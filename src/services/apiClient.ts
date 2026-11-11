@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://172.22.14.80:4000/api/v1';
 const REQUEST_TIMEOUT_MS = 45000;
 
-async function request(method: 'GET' | 'POST' | 'PATCH', endpoint: string, body?: any) {
+async function request(method: 'GET' | 'POST' | 'PATCH' | 'DELETE', endpoint: string, body?: any) {
   const token = await AsyncStorage.getItem('@shilpi_token');
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -62,5 +62,9 @@ export const apiClient = {
 
   patch(endpoint: string, body: any) {
     return request('PATCH', endpoint, body);
+  },
+
+  delete(endpoint: string) {
+    return request('DELETE', endpoint);
   },
 };
