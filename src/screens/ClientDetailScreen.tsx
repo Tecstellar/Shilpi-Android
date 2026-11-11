@@ -223,17 +223,8 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent}>
       {/* 1. Ink Profile Card */}
       <View style={styles.inkProfileCard}>
-        <View style={styles.avatarGradient}>
-          {client.photoUri ? (
-            <Image source={{ uri: client.photoUri }} style={styles.avatarPhoto} />
-          ) : (
-            <Text style={styles.avatarLetter}>{initial}</Text>
-          )}
-        </View>
-
-        <View style={styles.nameContainer}>
-          <View style={styles.nameRow}>
-            <Text style={styles.clientName}>{client.name}</Text>
+        {(client.isVip || !isClientActive) && (
+          <View style={styles.cornerBadgeWrap} pointerEvents="none">
             {client.isVip ? (
               <View style={styles.vipBadge}>
                 <Text style={styles.vipBadgeText}>VIP</Text>
@@ -245,7 +236,37 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
               </View>
             ) : null}
           </View>
-          <Text style={styles.clientPhone}>{client.phone}</Text>
+        )}
+
+        <View style={styles.avatarGradient}>
+          {client.photoUri ? (
+            <Image source={{ uri: client.photoUri }} style={styles.avatarPhoto} />
+          ) : (
+            <Text style={styles.avatarLetter}>{initial}</Text>
+          )}
+        </View>
+
+        <View style={styles.nameContainer}>
+          <Text
+            style={[
+              styles.clientName,
+              client.name.length > 26
+                ? { fontSize: 16 }
+                : client.name.length > 18
+                  ? { fontSize: 19 }
+                  : client.name.length > 12
+                    ? { fontSize: 21 }
+                    : null,
+            ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.5}
+          >
+            {client.name}
+          </Text>
+          <Text style={styles.clientPhone} numberOfLines={1}>
+            {client.phone}
+          </Text>
         </View>
 
         <View style={styles.headerActionsCol}>
@@ -507,24 +528,35 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   inkProfileCard: {
+    position: 'relative',
     backgroundColor: '#121212',
     borderBottomLeftRadius: 26,
     borderBottomRightRadius: 26,
-    paddingHorizontal: 20,
-    paddingTop: 18,
+    paddingHorizontal: 16,
+    paddingTop: 22,
     paddingBottom: 22,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
+  },
+  cornerBadgeWrap: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomLeftRadius: 10,
+    overflow: 'hidden',
   },
   avatarGradient: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: Colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    flexShrink: 0,
   },
   avatarPhoto: {
     width: '100%',
@@ -532,46 +564,40 @@ const styles = StyleSheet.create({
   },
   avatarLetter: {
     color: '#ffffff',
-    fontSize: 26,
+    fontSize: 25,
     fontWeight: '700',
   },
   nameContainer: {
     flex: 1,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
+    minWidth: 0,
   },
   clientName: {
-    fontSize: 24,
+    fontSize: 23,
     fontWeight: '700',
     color: '#ffffff',
     letterSpacing: -0.5,
   },
   vipBadge: {
-    backgroundColor: 'rgba(232, 39, 107, 0.2)',
-    borderWidth: 1,
+    backgroundColor: 'rgba(232, 39, 107, 0.22)',
+    borderBottomWidth: 1,
+    borderLeftWidth: 1,
     borderColor: '#e8276b',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
   },
   vipBadgeText: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '800',
-    letterSpacing: 0.8,
+    letterSpacing: 0.9,
     color: '#ff6ca0',
   },
   inactiveHeaderBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.14)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
   },
   inactiveHeaderBadgeText: {
-    fontSize: 9.5,
+    fontSize: 9,
     fontWeight: '700',
     letterSpacing: 0.7,
     color: 'rgba(255, 255, 255, 0.78)',

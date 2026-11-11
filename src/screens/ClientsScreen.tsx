@@ -162,28 +162,23 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
                 </View>
 
                 <View style={styles.clientInfo}>
-                  <View style={styles.nameRow}>
-                    <Text
-                      style={[
-                        styles.clientName,
-                        c.isActive === false && styles.clientNameInactive,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {c.name}
-                    </Text>
-                    {c.isVip ? (
-                      <View style={styles.vipBadge}>
-                        <Text style={styles.vipBadgeText}>VIP</Text>
-                      </View>
-                    ) : null}
-                    {c.isActive === false ? (
-                      <View style={styles.inactiveBadge}>
-                        <Text style={styles.inactiveBadgeText}>INACTIVE</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                  <Text style={styles.clientMeta}>
+                  <Text
+                    style={[
+                      styles.clientName,
+                      c.name.length > 26
+                        ? { fontSize: 12 }
+                        : c.name.length > 18
+                          ? { fontSize: 13.5 }
+                          : null,
+                      c.isActive === false && styles.clientNameInactive,
+                    ]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.55}
+                  >
+                    {c.name}
+                  </Text>
+                  <Text style={styles.clientMeta} numberOfLines={1}>
                     {c.phone} · {c.bookings} bookings
                   </Text>
                 </View>
@@ -202,6 +197,21 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
                   >
                     <HeartVectorIcon filled={!!c.isVip} />
                   </TouchableOpacity>
+                )}
+
+                {(c.isVip || c.isActive === false) && (
+                  <View style={styles.cornerBadgeWrap} pointerEvents="none">
+                    {c.isVip ? (
+                      <View style={styles.vipBadge}>
+                        <Text style={styles.vipBadgeText}>VIP</Text>
+                      </View>
+                    ) : null}
+                    {c.isActive === false ? (
+                      <View style={styles.inactiveBadge}>
+                        <Text style={styles.inactiveBadgeText}>INACTIVE</Text>
+                      </View>
+                    ) : null}
+                  </View>
                 )}
               </TouchableOpacity>
             );
@@ -315,12 +325,22 @@ const styles = StyleSheet.create({
     paddingBottom: 110,
   },
   clientRow: {
+    position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(18, 18, 18, 0.07)',
+  },
+  cornerBadgeWrap: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomLeftRadius: 8,
+    overflow: 'hidden',
   },
   avatarChip: {
     width: 46,
@@ -347,45 +367,39 @@ const styles = StyleSheet.create({
   },
   clientInfo: {
     flex: 1,
+    minWidth: 0,
     marginLeft: 14,
     marginRight: 8,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
   },
   clientName: {
     fontSize: 15,
     fontWeight: '700',
     color: '#121212',
-    flexShrink: 1,
   },
   clientNameInactive: {
     color: 'rgba(18, 18, 18, 0.5)',
   },
   vipBadge: {
     backgroundColor: '#ffeef4',
-    borderWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.35)',
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: 6,
+    borderBottomWidth: 1,
+    borderLeftWidth: 1,
+    borderColor: 'rgba(232, 39, 107, 0.3)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   vipBadgeText: {
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: '800',
-    letterSpacing: 0.6,
+    letterSpacing: 0.7,
     color: '#e8276b',
   },
   inactiveBadge: {
     backgroundColor: 'rgba(18, 18, 18, 0.08)',
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   inactiveBadgeText: {
-    fontSize: 8.5,
+    fontSize: 8,
     fontWeight: '800',
     letterSpacing: 0.5,
     color: 'rgba(18, 18, 18, 0.55)',
