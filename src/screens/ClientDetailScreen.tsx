@@ -32,11 +32,29 @@ const ChatVectorIcon = ({ color = '#e8276b' }: { color?: string }) => (
   </Svg>
 );
 
+const HeartVectorIcon = ({ filled }: { filled: boolean }) => (
+  <Svg
+    width={19}
+    height={19}
+    viewBox="0 0 24 24"
+    fill={filled ? '#e8276b' : 'none'}
+    stroke={filled ? '#e8276b' : 'rgba(255, 255, 255, 0.6)'}
+    strokeWidth={2}
+  >
+    <Path
+      d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
 interface ClientDetailScreenProps {
   client: Client | null;
   onGoBack: () => void;
   onOpenWhatsAppSheet: (clientName: string, phone: string) => void;
   onNewBookingForClient?: (clientName: string) => void;
+  onToggleVip?: (clientId: number | string) => void;
 }
 
 export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
@@ -44,6 +62,7 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
   onGoBack,
   onOpenWhatsAppSheet,
   onNewBookingForClient,
+  onToggleVip,
 }) => {
   if (!client) {
     return (
@@ -79,9 +98,27 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
         </View>
 
         <View style={styles.nameContainer}>
-          <Text style={styles.clientName}>{client.name}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.clientName}>{client.name}</Text>
+            {client.isVip ? (
+              <View style={styles.vipBadge}>
+                <Text style={styles.vipBadgeText}>VIP</Text>
+              </View>
+            ) : null}
+          </View>
           <Text style={styles.clientPhone}>{client.phone}</Text>
         </View>
+
+        {onToggleVip && (
+          <TouchableOpacity
+            style={[styles.vipHeartBtn, client.isVip && styles.vipHeartBtnActive]}
+            onPress={() => onToggleVip(client.id)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            activeOpacity={0.8}
+          >
+            <HeartVectorIcon filled={!!client.isVip} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* 2. Action Buttons (Call & WhatsApp) */}
@@ -224,11 +261,44 @@ const styles = StyleSheet.create({
   nameContainer: {
     flex: 1,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   clientName: {
     fontSize: 24,
     fontWeight: '700',
     color: '#ffffff',
     letterSpacing: -0.5,
+  },
+  vipBadge: {
+    backgroundColor: 'rgba(232, 39, 107, 0.2)',
+    borderWidth: 1,
+    borderColor: '#e8276b',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+  },
+  vipBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    color: '#ff6ca0',
+  },
+  vipHeartBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vipHeartBtnActive: {
+    backgroundColor: 'rgba(232, 39, 107, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(232, 39, 107, 0.45)',
   },
   clientPhone: {
     fontSize: 13,

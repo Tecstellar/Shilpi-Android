@@ -10,6 +10,7 @@ export interface Client {
   history: { date: string; pkg: string; amount: number }[];
   photoUri?: string;
   notes?: string;
+  isVip?: boolean;
 }
 
 export interface BookingItem {

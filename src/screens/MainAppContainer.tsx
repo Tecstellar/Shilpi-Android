@@ -286,6 +286,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
               history: [],
               notes: c.notes || '',
               photoUri: c.profilePhotoUrl || undefined,
+              isVip: Boolean(c.isVip),
             }));
 
             setClients(dbClients);
@@ -771,6 +772,29 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     });
   };
 
+  // Toggle Client VIP status (heart icon in Clients list or Client Detail header)
+  const handleToggleClientVip = async (clientId: number | string) => {
+    const target = clients.find((c) => String(c.id) === String(clientId));
+    if (!target) return;
+    const nextVip = !target.isVip;
+
+    const updated = clients.map((c) =>
+      String(c.id) === String(clientId) ? { ...c, isVip: nextVip } : c
+    );
+    setClients(updated);
+    if (beauticianId) {
+      AsyncStorage.setItem(`@shilpi_clients_${beauticianId}`, JSON.stringify(updated)).catch(() => {});
+    }
+
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(String(clientId))) {
+      try {
+        await apiClient.patch(`/clients/${clientId}/vip`, { isVip: nextVip });
+      } catch (err) {
+        console.warn('Client VIP toggle sync warning:', err);
+      }
+    }
+  };
+
   // Payments Reminder Sheet
   const handleOpenRemindSheet = () => {
     setActiveSheet({
@@ -883,6 +907,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           <ClientsScreen
             clients={enrichedClients}
             onOpenClient={handleOpenClient}
+            onToggleVip={handleToggleClientVip}
             onStartNewClient={() => setCurrentScreen('newclient')}
           />
         )}
@@ -892,6 +917,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             client={selectedClient}
             onGoBack={handleGoBack}
             onOpenWhatsAppSheet={handleOpenWhatsAppSheet}
+            onToggleVip={handleToggleClientVip}
             onNewBookingForClient={(clientName) => {
               setBookingClientName(clientName);
               setBookingInitialDate(undefined);
