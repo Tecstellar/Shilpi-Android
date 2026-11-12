@@ -10,6 +10,7 @@ import {
   Animated,
   Easing,
   Image,
+  ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
@@ -111,6 +112,14 @@ const SubscriptionIcon = () => (
       strokeLinecap="round"
       strokeLinejoin="round"
     />
+  </Svg>
+);
+
+const WebTerminalIcon = () => (
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2}>
+    <Rect x={2} y={3} width={20} height={14} rx={2} strokeLinecap="round" strokeLinejoin="round" />
+    <Line x1={8} y1={21} x2={16} y2={21} strokeLinecap="round" />
+    <Line x1={12} y1={17} x2={12} y2={21} strokeLinecap="round" />
   </Svg>
 );
 
@@ -344,7 +353,12 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
           },
         ]}
       >
-        <View style={styles.nonScrollableBody}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.nonScrollableBody}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
           {/* Header: Shilpi Logo + Close Button (Positioned right at the top) */}
           <Animated.View
             style={[
@@ -626,7 +640,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
 
             {/* Subscription */}
             <TouchableOpacity
-              style={[styles.menuRow, styles.menuRowLast]}
+              style={styles.menuRow}
               onPress={() => handleCloseWithAction(() => onNavigate('subscription'))}
               activeOpacity={0.65}
             >
@@ -637,6 +651,21 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 <Text style={styles.menuRowText}>Subscription</Text>
               </View>
               <Text style={styles.premiumTextRight}>Premium</Text>
+            </TouchableOpacity>
+
+            {/* Link Web Terminal */}
+            <TouchableOpacity
+              style={[styles.menuRow, styles.menuRowLast]}
+              onPress={() => handleCloseWithAction(() => onNavigate('qr_scanner'))}
+              activeOpacity={0.65}
+            >
+              <View style={styles.rowLeft}>
+                <View style={styles.menuIconBox}>
+                  <WebTerminalIcon />
+                </View>
+                <Text style={styles.menuRowText}>Link Web Terminal</Text>
+              </View>
+              <Text style={styles.premiumTextRight}>Scan QR</Text>
             </TouchableOpacity>
           </Animated.View>
 
@@ -689,7 +718,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
           <Animated.View style={{ opacity: animFooter }}>
             <Text style={styles.versionFooter}>Shilpi v1.0</Text>
           </Animated.View>
-        </View>
+        </ScrollView>
       </Animated.View>
 
       {/* Dimmed Backdrop Dismissal with Smooth Fade */}
@@ -729,7 +758,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
   nonScrollableBody: {
-    flex: 1,
+    flexGrow: 1,
     paddingTop: Platform.OS === 'ios' ? 44 : 26,
     paddingHorizontal: 15,
     paddingBottom: Platform.OS === 'ios' ? 20 : 12,
@@ -946,7 +975,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 9.5,
+    paddingVertical: 8.5,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.04)',
