@@ -1263,13 +1263,54 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     }
   };
 
-  // Payments Reminder Sheet
-  const handleOpenRemindSheet = () => {
+  // Payments Reminder Sheet (built from real unpaid bookings)
+  const handleOpenRemindSheet = (pendingList?: Booking[]) => {
+    const unpaid = (pendingList && pendingList.length > 0 ? pendingList : bookings).filter((b) => {
+      const total = b.items.reduce((s, i) => s + (i.price || 0), 0) + (b.travel || 0);
+      return total - (b.advance || 0) > 0;
+    });
+
+    if (unpaid.length === 0) {
+      setActiveSheet({
+        kicker: 'WHATSAPP · PAYMENT REMINDER',
+        title: 'All balances are settled',
+        message: 'No pending client balances right now.',
+        cta: 'Got It',
+      });
+      return;
+    }
+
+    const lines = unpaid.slice(0, 6).map((b) => {
+      const total = b.items.reduce((s, i) => s + (i.price || 0), 0) + (b.travel || 0);
+      const due = Math.max(0, total - (b.advance || 0));
+      return `• ${first(b.client)} (${b.day} ${b.month}) — ${fmt(due)}`;
+    });
+
+    const firstTarget = unpaid[0];
+    const firstTotal =
+      firstTarget.items.reduce((s, i) => s + (i.price || 0), 0) + (firstTarget.travel || 0);
+    const firstDue = Math.max(0, firstTotal - (firstTarget.advance || 0));
+    const totalPendingAll = unpaid.reduce((sum, b) => {
+      const t = b.items.reduce((s, i) => s + (i.price || 0), 0) + (b.travel || 0);
+      return sum + Math.max(0, t - (b.advance || 0));
+    }, 0);
+
+    const uniqueNamesCount = new Set(unpaid.map((b) => b.client.trim().toLowerCase())).size;
+
+    const previewMsg =
+      unpaid.length === 1
+        ? `Hi ${first(firstTarget.client)}, a gentle reminder — a balance of ${fmt(firstDue)} is pending for your booking on ${firstTarget.dateLong}. You can pay by UPI.\n\nThank you!\n— ${artistName}, ${studioName}`
+        : `Hi ${first(firstTarget.client)}, a gentle reminder — a balance of ${fmt(firstDue)} is pending for your booking on ${firstTarget.dateLong}. You can pay by UPI.\n\nPending summary (${fmt(totalPendingAll)} total):\n${lines.join('\n')}\n\n— ${artistName}, ${studioName}`;
+
     setActiveSheet({
       kicker: 'WHATSAPP · PAYMENT REMINDER',
-      title: 'Send reminder for pending balance?',
-      message: `Hi, a gentle reminder — your pending booking balance is due. You can pay by UPI.\n\nThank you!\n— ${artistName}, Shilpi`,
-      cta: 'Send Reminder',
+      title:
+        uniqueNamesCount === 1
+          ? `Remind ${first(firstTarget.client)} about ${fmt(totalPendingAll)}?`
+          : `Remind ${uniqueNamesCount} clients about ${fmt(totalPendingAll)}?`,
+      message: previewMsg,
+      cta: unpaid.length === 1 ? 'Send Reminder' : `Send ${uniqueNamesCount} Reminders`,
+      logoUri: studioLogo,
     });
   };
 
@@ -1450,6 +1491,8 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
 
         {currentScreen === 'payments' && (
           <PaymentsScreen
+            bookings={bookings}
+            onOpenBooking={(booking) => handleOpenBooking(booking.id)}
             onOpenRemindSheet={handleOpenRemindSheet}
             onGoBack={handleGoBack}
           />
