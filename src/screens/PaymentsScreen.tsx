@@ -1,17 +1,21 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Animated,
+  PanResponder,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Path } from 'react-native-svg';
 import { Colors } from '../theme/colors';
 import { Booking, fmt } from '../data/prototypeData';
 
 interface PaymentsScreenProps {
   bookings?: Booking[];
+  registeredAt?: string;
   onOpenBooking?: (booking: Booking) => void;
   onOpenRemindSheet: (pendingBookings?: Booking[]) => void;
   onGoBack: () => void;
@@ -25,6 +29,16 @@ const MONTH_LONG_ARR = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
+
+function toMonthSerial(year: number, monthIdx: number): number {
+  return year * 12 + monthIdx;
+}
+
+function fromMonthSerial(serial: number): { year: number; monthIdx: number } {
+  const year = Math.floor(serial / 12);
+  const monthIdx = ((serial % 12) + 12) % 12;
+  return { year, monthIdx };
+}
 
 function parseBookingDayLocal(b: Booking, fallbackYear: number): Date {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(b.bookingDate || ''));
@@ -52,6 +66,7 @@ interface CollectionRow {
 
 export const PaymentsScreen: React.FC<PaymentsScreenProps> = ({
   bookings = [],
+  registeredAt,
   onOpenBooking,
   onOpenRemindSheet,
 }) => {
@@ -62,16 +77,99 @@ export const PaymentsScreen: React.FC<PaymentsScreenProps> = ({
   const now = new Date();
   const currentMonthIdx = now.getMonth();
   const currentYear = now.getFullYear();
-  const currentMonthLong = MONTH_LONG_ARR[currentMonthIdx];
-  const todayStart = new Date(currentYear, currentMonthIdx, now.getDate());
+  const currentSerial = toMonthSerial(currentYear, currentMonthIdx);
+  const todayStart = useMemo(
+    () => new Date(currentYear, currentMonthIdx, now.getDate()),
+    [currentYear, currentMonthIdx, now]
+  );
+
+  // Clamp backward month navigation strictly to the beautician's registration month
+  const regDate = useMemo(() => {
+    if (registeredAt) {
+      const parsed = new Date(registeredAt);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+    return new Date(currentYear, currentMonthIdx, 1);
+  }, [registeredAt, currentYear, currentMonthIdx]);
+
+  const minSerial = toMonthSerial(regDate.getFullYear(), regDate.getMonth());
+
+  const furthestBookingSerial = useMemo(() => {
+    let maxS = currentSerial;
+    for (const b of bookings) {
+      const dt = parseBookingDayLocal(b, currentYear);
+      const s = toMonthSerial(dt.getFullYear(), dt.getMonth());
+      if (s > maxS) maxS = s;
+    }
+    return maxS;
+  }, [bookings, currentSerial, currentYear]);
+
+  const maxSerial = Math.max(currentSerial + 12, furthestBookingSerial + 1);
+
+  const [selectedSerial, setSelectedSerial] = useState<number>(() =>
+    Math.max(minSerial, currentSerial)
+  );
+
+  useEffect(() => {
+    setSelectedSerial((prev) => Math.max(minSerial, prev));
+  }, [minSerial]);
+
+  const slideOffset = useRef(new Animated.Value(0)).current;
+
+  const stepMonth = (delta: number) => {
+    setSelectedSerial((prev) => {
+      const next = Math.max(minSerial, Math.min(maxSerial, prev + delta));
+      if (next === prev) return prev;
+      slideOffset.setValue(delta > 0 ? 18 : -18);
+      Animated.spring(slideOffset, {
+        toValue: 0,
+        useNativeDriver: true,
+        speed: 24,
+        bounciness: 4,
+      }).start();
+      return next;
+    });
+  };
+
+  const stepMonthRef = useRef<(delta: number) => void>(() => {});
+  stepMonthRef.current = stepMonth;
+
+  const monthPanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt, gesture) =>
+        Math.abs(gesture.dx) > 16 && Math.abs(gesture.dy) < 18,
+      onPanResponderRelease: (_evt, gesture) => {
+        if (gesture.dx < -32) {
+          stepMonthRef.current(1);
+        } else if (gesture.dx > 32) {
+          stepMonthRef.current(-1);
+        }
+      },
+    })
+  ).current;
+
+  const { year: selectedYear, monthIdx: selectedMonthIdx } = fromMonthSerial(selectedSerial);
+  const selectedMonthLong = MONTH_LONG_ARR[selectedMonthIdx];
+  const canGoPrev = selectedSerial > minSerial;
+  const canGoNext = selectedSerial < maxSerial;
+  const prevMonthShort = canGoPrev
+    ? MONTH_SHORT_ARR[fromMonthSerial(selectedSerial - 1).monthIdx].toUpperCase()
+    : '';
+  const nextMonthShort = canGoNext
+    ? MONTH_SHORT_ARR[fromMonthSerial(selectedSerial + 1).monthIdx].toUpperCase()
+    : '';
+
+  const regBadgeText = `${MONTH_SHORT_ARR[regDate.getMonth()].toUpperCase()} ${regDate.getFullYear()}`;
 
   const scopedBookings = useMemo(() => {
     if (scope === 'All') return bookings;
     return bookings.filter((b) => {
-      const dt = parseBookingDayLocal(b, currentYear);
-      return dt.getFullYear() === currentYear && dt.getMonth() === currentMonthIdx;
+      const dt = parseBookingDayLocal(b, selectedYear);
+      return dt.getFullYear() === selectedYear && dt.getMonth() === selectedMonthIdx;
     });
-  }, [bookings, scope, currentYear, currentMonthIdx]);
+  }, [bookings, scope, selectedYear, selectedMonthIdx]);
 
   const metrics = useMemo(() => {
     let receivedSum = 0;
@@ -80,7 +178,7 @@ export const PaymentsScreen: React.FC<PaymentsScreenProps> = ({
     let totalSum = 0;
 
     const rows: CollectionRow[] = scopedBookings.map((b) => {
-      const bDate = parseBookingDayLocal(b, currentYear);
+      const bDate = parseBookingDayLocal(b, selectedYear);
       const bookingTotal =
         b.items.reduce((s, item) => s + (item.price || 0), 0) + (b.travel || 0);
       const rawAdvance = Math.max(0, b.advance || 0);
@@ -128,8 +226,8 @@ export const PaymentsScreen: React.FC<PaymentsScreenProps> = ({
       const pDiff = priorityOrder[a.status] - priorityOrder[b.status];
       if (pDiff !== 0) return pDiff;
       return (
-        parseBookingDayLocal(b.booking, currentYear).getTime() -
-        parseBookingDayLocal(a.booking, currentYear).getTime()
+        parseBookingDayLocal(b.booking, selectedYear).getTime() -
+        parseBookingDayLocal(a.booking, selectedYear).getTime()
       );
     });
 
@@ -150,7 +248,7 @@ export const PaymentsScreen: React.FC<PaymentsScreenProps> = ({
       upcomingPct,
       rows,
     };
-  }, [scopedBookings, currentYear, todayStart]);
+  }, [scopedBookings, selectedYear, todayStart]);
 
   const filteredRows = useMemo(() => {
     if (statusFilter === 'All') return metrics.rows;
@@ -186,7 +284,7 @@ export const PaymentsScreen: React.FC<PaymentsScreenProps> = ({
 
   const periodKicker =
     scope === 'Monthly'
-      ? `${currentMonthLong.toUpperCase()} ${currentYear}`
+      ? `ACTIVE SINCE ${regBadgeText}`
       : 'ALL TIME STUDIO LEDGER';
 
   return (
@@ -213,13 +311,68 @@ export const PaymentsScreen: React.FC<PaymentsScreenProps> = ({
                 activeOpacity={0.8}
               >
                 <Text style={[styles.scopeTabText, active && styles.scopeTabTextActive]}>
-                  {tab === 'Monthly' ? `${currentMonthLong}` : 'All Time'}
+                  {tab === 'Monthly' ? 'Monthly Slider' : 'All Time'}
                 </Text>
               </TouchableOpacity>
             );
           })}
         </View>
       </View>
+
+      {/* 1b. Prototype Centered Month Slider Pill */}
+      {scope === 'Monthly' && (
+        <View style={styles.monthSliderPill} {...monthPanResponder.panHandlers}>
+          <TouchableOpacity
+            style={[styles.monthArrowBtn, !canGoPrev && styles.monthArrowBtnDisabled]}
+            onPress={() => stepMonth(-1)}
+            disabled={!canGoPrev}
+            accessibilityLabel="Previous month"
+            activeOpacity={0.75}
+          >
+            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M15 18l-6-6 6-6"
+                stroke="#ffffff"
+                strokeWidth={2.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+            {canGoPrev ? <Text style={styles.monthSideLabel}>{prevMonthShort}</Text> : null}
+          </TouchableOpacity>
+
+          <Animated.View
+            style={[styles.monthCenterBox, { transform: [{ translateX: slideOffset }] }]}
+          >
+            <Text style={styles.monthCenterLabel} numberOfLines={1}>
+              {selectedMonthLong.toUpperCase()} {selectedYear}
+            </Text>
+          </Animated.View>
+
+          <TouchableOpacity
+            style={[
+              styles.monthArrowBtn,
+              styles.monthArrowBtnRight,
+              !canGoNext && styles.monthArrowBtnDisabled,
+            ]}
+            onPress={() => stepMonth(1)}
+            disabled={!canGoNext}
+            accessibilityLabel="Next month"
+            activeOpacity={0.75}
+          >
+            {canGoNext ? <Text style={styles.monthSideLabel}>{nextMonthShort}</Text> : null}
+            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M9 18l6-6-6-6"
+                stroke="#ffffff"
+                strokeWidth={2.4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* 2. Top Summary KPI Cards */}
       <View style={styles.summaryRow}>
@@ -326,12 +479,12 @@ export const PaymentsScreen: React.FC<PaymentsScreenProps> = ({
           <View style={styles.emptyBox}>
             <Text style={styles.emptyTitle}>
               {scope === 'Monthly'
-                ? `No bookings recorded in ${currentMonthLong}`
+                ? `No bookings recorded in ${selectedMonthLong} ${selectedYear}`
                 : 'No bookings recorded yet'}
             </Text>
             <Text style={styles.emptySub}>
               {scope === 'Monthly' && bookings.length > 0
-                ? 'Switch to All Time above to review payments from other months.'
+                ? 'Slide left or right above to view another month, or switch to All Time.'
                 : 'Your advances, pending balances, and final settlements will appear here automatically.'}
             </Text>
           </View>
@@ -402,7 +555,7 @@ export const PaymentsScreen: React.FC<PaymentsScreenProps> = ({
         ) : metrics.rows.length > 0 ? (
           <View style={styles.settledBanner}>
             <Text style={styles.settledBannerText}>
-              ALL {scope === 'Monthly' ? currentMonthLong.toUpperCase() : ''} PAYMENTS COLLECTED
+              ALL {scope === 'Monthly' ? selectedMonthLong.toUpperCase() : ''} PAYMENTS COLLECTED
             </Text>
           </View>
         ) : null}
@@ -464,6 +617,58 @@ const styles = StyleSheet.create({
   },
   scopeTabTextActive: {
     color: '#ffffff',
+  },
+  monthSliderPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 6,
+    backgroundColor: '#121212',
+    borderRadius: 999,
+    shadowColor: '#121212',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  monthArrowBtn: {
+    minWidth: 72,
+    minHeight: 48,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 4,
+  },
+  monthArrowBtnRight: {
+    justifyContent: 'flex-end',
+  },
+  monthArrowBtnDisabled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    opacity: 0.25,
+  },
+  monthSideLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    color: 'rgba(255, 255, 255, 0.78)',
+  },
+  monthCenterBox: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  monthCenterLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    color: '#ffffff',
+    textAlign: 'center',
   },
   summaryRow: {
     flexDirection: 'row',

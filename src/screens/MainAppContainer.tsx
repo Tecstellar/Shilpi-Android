@@ -73,6 +73,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   const [artistName, setArtistName] = useState('Artist');
   const [studioName, setStudioName] = useState('Shilpi Studio');
   const [studioLogo, setStudioLogo] = useState<string | undefined>();
+  const [registeredAt, setRegisteredAt] = useState<string | undefined>();
 
   // Load storage data on mount & hydrate live studio data from AWS RDS PostgreSQL
   useEffect(() => {
@@ -97,6 +98,9 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           if (parsed.logoUri) {
             setStudioLogo(parsed.logoUri);
           }
+          if (parsed.createdAt) {
+            setRegisteredAt(parsed.createdAt);
+          }
         }
 
         const storedPackages = await AsyncStorage.getItem('@shilpi_packages');
@@ -110,6 +114,9 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           if (meRes.data?.success && meRes.data?.beautician) {
             const b = meRes.data.beautician;
             resolvedShopId = b.id;
+            if (b.createdAt) {
+              setRegisteredAt(b.createdAt);
+            }
             await AsyncStorage.setItem('@shilpi_beautician_id', b.id);
             await AsyncStorage.setItem(
               '@shilpi_profile',
@@ -123,6 +130,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
                 pincode: b.pincode || '',
                 phone: b.phone || '',
                 logoUri: b.profilePhotoUrl,
+                createdAt: b.createdAt,
               })
             );
             if (b.ownerName?.trim()) {
@@ -1492,6 +1500,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         {currentScreen === 'payments' && (
           <PaymentsScreen
             bookings={bookings}
+            registeredAt={registeredAt}
             onOpenBooking={(booking) => handleOpenBooking(booking.id)}
             onOpenRemindSheet={handleOpenRemindSheet}
             onGoBack={handleGoBack}

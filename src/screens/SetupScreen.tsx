@@ -550,6 +550,7 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
           pincode: regRes.data.beautician.pincode || pincode,
           phone: regRes.data.beautician.phone || phone,
           logoUri: regRes.data.beautician.profilePhotoUrl || logoUri,
+          createdAt: regRes.data.beautician.createdAt,
         })
       );
       await AsyncStorage.setItem('@shilpi_packages', JSON.stringify(packageGroups));

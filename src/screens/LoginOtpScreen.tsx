@@ -86,6 +86,7 @@ export const LoginOtpScreen: React.FC<LoginOtpScreenProps> = ({ phone, onGoBack,
                 pincode: response.data.beautician.pincode || '',
                 phone: response.data.beautician.phone || phone,
                 logoUri: response.data.beautician.profilePhotoUrl,
+                createdAt: response.data.beautician.createdAt,
               })
             );
             await AsyncStorage.setItem('@shilpi_setup_done', 'true');
