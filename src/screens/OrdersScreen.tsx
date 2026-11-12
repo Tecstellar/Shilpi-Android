@@ -89,7 +89,7 @@ export const OrdersScreen: React.FC<OrdersScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* 1. Responsive Filter Tabs + Quick New Booking Action */}
+      {/* 1. Responsive Filter Tabs */}
       <View style={styles.headerControlsBar}>
         <View style={styles.controlsInner}>
           <View style={styles.tabsRow}>
@@ -123,15 +123,6 @@ export const OrdersScreen: React.FC<OrdersScreenProps> = ({
                 </TouchableOpacity>
               );
             })}
-            {onStartNewBooking && (
-              <ScalePressable
-                onPress={onStartNewBooking}
-                style={styles.quickAddBtn}
-                accessibilityLabel="Create new booking"
-              >
-                <PlusVectorIcon color="#ffffff" size={18} />
-              </ScalePressable>
-            )}
           </View>
         </View>
       </View>
@@ -287,15 +278,6 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: '#ffffff',
-  },
-  quickAddBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#121212',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
   },
   listScroll: {
     flex: 1,
