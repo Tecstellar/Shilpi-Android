@@ -1582,6 +1582,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         {currentScreen === 'reports' && (
           <ReportsScreen
             bookings={bookings}
+            expenses={expenses}
             monthExpenses={monthExpenses}
             onGoBack={handleGoBack}
           />
