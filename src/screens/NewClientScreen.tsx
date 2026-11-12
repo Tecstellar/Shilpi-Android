@@ -17,7 +17,12 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as Contacts from 'expo-contacts';
+import {
+  Contact,
+  ContactField,
+  ContactsSortOrder,
+  requestPermissionsAsync as requestContactsPermissionsAsync,
+} from 'expo-contacts';
 import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
 import { Colors } from '../theme/colors';
 import { Client, normalizePhoneKey } from '../data/prototypeData';
@@ -261,7 +266,7 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
   const handleOpenContactsPicker = async () => {
     try {
       setLoadingContacts(true);
-      const { status } = await Contacts.requestPermissionsAsync();
+      const { status } = await requestContactsPermissionsAsync();
       if (status !== 'granted') {
         setLoadingContacts(false);
         Alert.alert(
@@ -271,10 +276,15 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
         return;
       }
 
-      const { data } = await Contacts.getContactsAsync({
-        fields: [Contacts.Fields.Name, Contacts.Fields.PhoneNumbers],
-        sort: Contacts.SortTypes.FirstName,
-      });
+      const contactsData = await Contact.getAllDetails(
+        [
+          ContactField.FULL_NAME,
+          ContactField.GIVEN_NAME,
+          ContactField.FAMILY_NAME,
+          ContactField.PHONES,
+        ],
+        { sortOrder: ContactsSortOrder.GivenName }
+      );
 
       const existingMap = new Map<string, string>();
       for (const c of existingClients) {
@@ -282,26 +292,28 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
         if (key) existingMap.set(key, c.name);
       }
 
-      const mapped: DeviceContactItem[] = (data || []).map((c, idx) => {
-        const displayName =
-          c.name?.trim() ||
-          [c.firstName, c.lastName].filter(Boolean).join(' ').trim() ||
-          'Unnamed Contact';
-        const rawNumber =
-          c.phoneNumbers?.find((p) => p.number && p.number.trim())?.number?.trim() || '';
-        const phoneKey = normalizePhoneKey(rawNumber);
-        const missingPhone = !rawNumber || phoneKey.length < 10;
-        const duplicateName = !missingPhone ? existingMap.get(phoneKey) || null : null;
+      const mapped: DeviceContactItem[] = (contactsData || [])
+        .map((c, idx) => {
+          const displayName =
+            c.fullName?.trim() ||
+            [c.givenName, c.familyName].filter(Boolean).join(' ').trim() ||
+            'Unnamed Contact';
+          const rawNumber =
+            c.phones?.find((p) => p.number && p.number.trim())?.number?.trim() || '';
+          const phoneKey = normalizePhoneKey(rawNumber);
+          const missingPhone = !rawNumber || phoneKey.length < 10;
+          const duplicateName = !missingPhone ? existingMap.get(phoneKey) || null : null;
 
-        return {
-          id: String(c.id || `contact_${idx}`),
-          name: displayName,
-          rawPhone: rawNumber,
-          phoneKey,
-          missingPhone,
-          duplicateName,
-        };
-      });
+          return {
+            id: String(c.id || `contact_${idx}`),
+            name: displayName,
+            rawPhone: rawNumber,
+            phoneKey,
+            missingPhone,
+            duplicateName,
+          };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
 
       setDeviceContacts(mapped);
       setContactSearch('');
