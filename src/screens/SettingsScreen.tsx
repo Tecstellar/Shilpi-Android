@@ -274,14 +274,21 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
       {/* 5. Bottom Shilpi Premium Gradient Banner */}
       <View style={styles.promoBanner}>
-        <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+        <Svg
+          width="100%"
+          height="100%"
+          viewBox="0 0 100 100"
+          preserveAspectRatio="none"
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        >
           <Defs>
             <LinearGradient id="promoGrad" x1="0%" y1="0%" x2="100%" y2="80%">
               <Stop offset="0%" stopColor={colors.accent} />
               <Stop offset="100%" stopColor={colors.deep} />
             </LinearGradient>
           </Defs>
-          <Rect x={0} y={0} width="100%" height="100%" fill="url(#promoGrad)" />
+          <Rect x={0} y={0} width={100} height={100} fill="url(#promoGrad)" />
         </Svg>
 
         <Text style={styles.promoKicker}>SHILPI PREMIUM</Text>
@@ -527,6 +534,7 @@ const createStyles = (colors: ThemeColors) =>
       marginTop: 16,
       paddingVertical: 18,
       paddingHorizontal: 16,
+      backgroundColor: colors.accent,
       overflow: 'hidden',
       position: 'relative',
     },
