@@ -71,6 +71,15 @@ export interface ExpenseRecord {
   notes?: string;
 }
 
+export interface ReminderRecord {
+  id: string;
+  text: string;
+  kind: string;
+  remindAt: string; // ISO datetime
+  isCompleted: boolean;
+  bookingId?: string | null;
+}
+
 export interface NotificationItem {
   id: string;
   glyph: string;

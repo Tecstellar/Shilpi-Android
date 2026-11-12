@@ -8,6 +8,7 @@ import {
   Client,
   Booking,
   ExpenseRecord,
+  ReminderRecord,
   PackageGroup,
   NotificationItem,
   fmt,
@@ -66,6 +67,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
   const [monthExpenses, setMonthExpenses] = useState<number>(0);
+  const [reminders, setReminders] = useState<ReminderRecord[]>([]);
   const [packageGroups, setPackageGroups] = useState<PackageGroup[]>(INITIAL_PKG_GROUPS);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [artistName, setArtistName] = useState('Artist');
@@ -171,11 +173,12 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         if (resolvedShopId) {
           setBeauticianId(resolvedShopId);
 
-          const [storedClients, storedBookings, storedNotifs, storedExpenses] = await Promise.all([
+          const [storedClients, storedBookings, storedNotifs, storedExpenses, storedReminders] = await Promise.all([
             AsyncStorage.getItem(`@shilpi_clients_${resolvedShopId}`),
             AsyncStorage.getItem(`@shilpi_bookings_${resolvedShopId}`),
             AsyncStorage.getItem(`@shilpi_notifs_${resolvedShopId}`),
             AsyncStorage.getItem(`@shilpi_expenses_${resolvedShopId}`),
+            AsyncStorage.getItem(`@shilpi_reminders_${resolvedShopId}`),
           ]);
 
           if (storedClients) {
@@ -199,6 +202,9 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
                 .filter((e) => String(e.expenseDate || '').startsWith(prefix))
                 .reduce((s, e) => s + (e.amount || 0), 0)
             );
+          }
+          if (storedReminders) {
+            setReminders(JSON.parse(storedReminders));
           }
         }
 
@@ -277,14 +283,33 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           }
         };
 
-        // Fetch shop-scoped clients, bookings, expenses & dashboard metrics directly from AWS RDS PostgreSQL
+        // Fetch shop-scoped clients, bookings, expenses, reminders & dashboard metrics directly from AWS RDS PostgreSQL
         try {
-          const [clientsRes, bookingsRes, overviewRes, expensesRes] = await Promise.all([
+          const [clientsRes, bookingsRes, overviewRes, expensesRes, remindersRes] = await Promise.all([
             apiClient.get('/clients'),
             apiClient.get('/bookings').catch(() => null),
             apiClient.get('/dashboard/overview').catch(() => null),
             apiClient.get('/expenses').catch(() => null),
+            apiClient.get('/reminders').catch(() => null),
           ]);
+
+          if (remindersRes?.data?.success && Array.isArray(remindersRes.data.data)) {
+            const dbReminders: ReminderRecord[] = remindersRes.data.data.map((r: any) => ({
+              id: r.id,
+              text: r.text,
+              kind: r.kind || 'General',
+              remindAt: r.remindAt,
+              isCompleted: !!r.isCompleted,
+              bookingId: r.bookingId || null,
+            }));
+            setReminders(dbReminders);
+            if (resolvedShopId) {
+              await AsyncStorage.setItem(
+                `@shilpi_reminders_${resolvedShopId}`,
+                JSON.stringify(dbReminders)
+              );
+            }
+          }
 
           if (overviewRes?.data?.success && overviewRes.data?.data?.metrics) {
             const rawExpPaise = Number(overviewRes.data.data.metrics.totalExpensesPaise || 0);
@@ -1135,6 +1160,109 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     }
   };
 
+  // Studio Reminders CRUD backed by PostgreSQL + local AsyncStorage cache
+  const handleAddReminder = async (payload: {
+    text: string;
+    kind: string;
+    remindAt: string;
+    bookingId?: string | null;
+  }) => {
+    const res = await apiClient.post('/reminders', {
+      text: payload.text,
+      kind: payload.kind,
+      remindAt: payload.remindAt,
+      bookingId: payload.bookingId || null,
+    });
+
+    if (!res.data?.success || !res.data?.data) {
+      throw new Error(res.data?.error?.message || 'Failed to save reminder');
+    }
+
+    const r = res.data.data;
+    const created: ReminderRecord = {
+      id: r.id,
+      text: r.text,
+      kind: r.kind || payload.kind,
+      remindAt: r.remindAt || payload.remindAt,
+      isCompleted: !!r.isCompleted,
+      bookingId: r.bookingId || null,
+    };
+
+    const next = [...reminders, created].sort(
+      (a, b) => new Date(a.remindAt).getTime() - new Date(b.remindAt).getTime()
+    );
+    setReminders(next);
+    if (beauticianId) {
+      AsyncStorage.setItem(`@shilpi_reminders_${beauticianId}`, JSON.stringify(next)).catch(() => {});
+    }
+  };
+
+  const handleToggleReminder = async (reminderId: string) => {
+    const target = reminders.find((r) => r.id === reminderId);
+    if (!target) return;
+    const nextCompleted = !target.isCompleted;
+    const next = reminders.map((r) =>
+      r.id === reminderId ? { ...r, isCompleted: nextCompleted } : r
+    );
+    setReminders(next);
+    if (beauticianId) {
+      AsyncStorage.setItem(`@shilpi_reminders_${beauticianId}`, JSON.stringify(next)).catch(() => {});
+    }
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(reminderId)) {
+      await apiClient.patch(`/reminders/${reminderId}`, { isCompleted: nextCompleted }).catch(() => {});
+    }
+  };
+
+  const handleUpdateReminder = async (
+    reminderId: string,
+    payload: {
+      text: string;
+      kind: string;
+      remindAt: string;
+      bookingId?: string | null;
+    }
+  ) => {
+    const res = await apiClient.patch(`/reminders/${reminderId}`, {
+      text: payload.text,
+      kind: payload.kind,
+      remindAt: payload.remindAt,
+      bookingId: payload.bookingId || null,
+    });
+
+    if (!res.data?.success || !res.data?.data) {
+      throw new Error(res.data?.error?.message || 'Failed to update reminder');
+    }
+
+    const r = res.data.data;
+    const updated: ReminderRecord = {
+      id: r.id,
+      text: r.text,
+      kind: r.kind || payload.kind,
+      remindAt: r.remindAt || payload.remindAt,
+      isCompleted: !!r.isCompleted,
+      bookingId: r.bookingId || null,
+    };
+
+    const next = reminders
+      .map((item) => (item.id === reminderId ? updated : item))
+      .sort((a, b) => new Date(a.remindAt).getTime() - new Date(b.remindAt).getTime());
+    setReminders(next);
+    if (beauticianId) {
+      AsyncStorage.setItem(`@shilpi_reminders_${beauticianId}`, JSON.stringify(next)).catch(() => {});
+    }
+  };
+
+  const handleDeleteReminder = async (reminderId: string) => {
+    const next = reminders.filter((r) => r.id !== reminderId);
+    setReminders(next);
+    if (beauticianId) {
+      AsyncStorage.setItem(`@shilpi_reminders_${beauticianId}`, JSON.stringify(next)).catch(() => {});
+    }
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(reminderId)) {
+      await apiClient.delete(`/reminders/${reminderId}`).catch(() => {});
+    }
+  };
+
   // Payments Reminder Sheet
   const handleOpenRemindSheet = () => {
     setActiveSheet({
@@ -1353,7 +1481,17 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           />
         )}
 
-        {currentScreen === 'reminders' && <RemindersScreen onGoBack={handleGoBack} />}
+        {currentScreen === 'reminders' && (
+          <RemindersScreen
+            reminders={reminders}
+            bookings={bookings}
+            onAddReminder={handleAddReminder}
+            onToggleReminder={handleToggleReminder}
+            onUpdateReminder={handleUpdateReminder}
+            onDeleteReminder={handleDeleteReminder}
+            onGoBack={handleGoBack}
+          />
+        )}
 
         {currentScreen === 'expenses' && (
           <ExpensesScreen
