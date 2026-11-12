@@ -12,10 +12,38 @@ import Svg, { Path, Circle, Line } from 'react-native-svg';
 import { Colors } from '../theme/colors';
 import { Client, fmt } from '../data/prototypeData';
 
-const PlusVectorIcon = ({ color = '#ffffff', size = 18 }: { color?: string; size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5}>
-    <Line x1={12} y1={5} x2={12} y2={19} strokeLinecap="round" />
-    <Line x1={5} y1={12} x2={19} y2={12} strokeLinecap="round" />
+const AddClientVectorIcon = ({ size = 25 }: { size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle
+      cx={11.2}
+      cy={6.8}
+      r={4.1}
+      fill="#fbd0dd"
+      stroke="#e8276b"
+      strokeWidth={2.1}
+    />
+    <Path
+      d="M11.6 13.4 C6.8 13.4 3.4 15.9 3.4 18.6 C3.4 20.1 4.9 20.8 7.8 20.8 L17.4 20.8 L17.4 13.4 Z"
+      fill="#fbd0dd"
+    />
+    <Path
+      d="M11.8 13.4 C6.9 13.4 3.4 15.9 3.4 18.6 C3.4 20.1 4.9 20.8 7.8 20.8 L11.8 20.8"
+      fill="none"
+      stroke="#e8276b"
+      strokeWidth={2.1}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Circle
+      cx={17.2}
+      cy={17.0}
+      r={4.4}
+      fill="#fbd0dd"
+      stroke="#e8276b"
+      strokeWidth={2.1}
+    />
+    <Line x1={17.2} y1={15.1} x2={17.2} y2={18.9} stroke="#e8276b" strokeWidth={2.1} strokeLinecap="round" />
+    <Line x1={15.3} y1={17.0} x2={19.1} y2={17.0} stroke="#e8276b" strokeWidth={2.1} strokeLinecap="round" />
   </Svg>
 );
 
@@ -95,7 +123,7 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
               activeOpacity={0.85}
               accessibilityLabel="Add new client"
             >
-              <PlusVectorIcon color="#ffffff" size={20} />
+              <AddClientVectorIcon size={26} />
             </TouchableOpacity>
           )}
         </View>
@@ -282,17 +310,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(18, 18, 18, 0.06)',
   },
   addPlusBtn: {
-    width: 44,
-    height: 44,
+    width: 46,
+    height: 46,
     borderRadius: 14,
-    backgroundColor: Colors.accent,
+    backgroundColor: '#fff5f8',
+    borderWidth: 1,
+    borderColor: 'rgba(232, 39, 107, 0.24)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.accent,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 2,
   },
   filterRow: {
     flexDirection: 'row',
