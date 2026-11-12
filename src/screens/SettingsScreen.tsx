@@ -6,8 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Image,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -17,97 +19,212 @@ const CheckVectorIcon: React.FC<{ color?: string }> = ({ color = '#ffffff' }) =>
   </Svg>
 );
 
+const ChevronRightIcon: React.FC = () => (
+  <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="rgba(18, 18, 18, 0.4)" strokeWidth={2}>
+    <Path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+export interface SettingsUsageCounts {
+  orders: number;
+  clients: number;
+  packages: number;
+  reminders: number;
+  closes: number;
+}
+
 interface SettingsScreenProps {
+  artistName?: string;
+  studioName?: string;
+  studioLogo?: string;
+  studioPhone?: string;
+  studioCity?: string;
+  studioRole?: string;
+  isPremium?: boolean;
+  usage?: SettingsUsageCounts;
   onGoToSubscription: () => void;
   onLogout: () => void;
   onGoBack: () => void;
 }
 
-const SETTINGS_ROWS = [
-  { label: 'My Profile', value: 'Shilpa R.' },
-  { label: 'Business Profile', value: 'Shilpi Makeovers' },
-  { label: 'WhatsApp Settings', value: '+91 98765 43210' },
-  { label: 'Notification Settings', value: 'On' },
-  { label: 'WhatsApp Message Templates', value: '4 saved' },
-  { label: 'App Permissions', value: 'Photos, Contacts' },
-  { label: 'Subscription', value: 'Premium · ₹499 / mo', isSub: true },
-  { label: 'Support & Help', value: 'WhatsApp Desk' },
-  { label: 'Privacy & Terms', value: '' },
+const LIMITS: { key: keyof SettingsUsageCounts; label: string; max: number }[] = [
+  { key: 'orders', label: 'Order creation', max: 20 },
+  { key: 'clients', label: 'Client creation', max: 20 },
+  { key: 'packages', label: 'Packages', max: 5 },
+  { key: 'reminders', label: 'Reminders', max: 10 },
+  { key: 'closes', label: 'Closed orders with photos', max: 10 },
 ];
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
+  artistName = 'Artist',
+  studioName = 'Shilpi Studio',
+  studioLogo,
+  studioPhone = '',
+  studioCity = '',
+  studioRole = 'Bridal Makeup Artist',
+  isPremium = false,
+  usage = { orders: 0, clients: 0, packages: 0, reminders: 0, closes: 0 },
   onGoToSubscription,
   onLogout,
 }) => {
+  const insets = useSafeAreaInsets();
   const { themeName, colors, themes, setTheme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  const initialLetter = (artistName.trim().charAt(0) || 'S').toUpperCase();
+  const subtitleLine = studioCity.trim()
+    ? `${studioRole} · ${studioCity.trim()}`
+    : studioRole;
+
+  const usageRows = useMemo(() => {
+    let atLimitCount = 0;
+    const rows = LIMITS.map((item) => {
+      const used = usage[item.key] || 0;
+      const full = used >= item.max;
+      if (full) atLimitCount++;
+      const pct = isPremium
+        ? 100
+        : Math.min(Math.round((used / item.max) * 100), 100);
+      return {
+        label: item.label,
+        value: isPremium ? 'Unlimited' : `${used} / ${item.max}`,
+        pct,
+        textColor: isPremium
+          ? '#121212'
+          : full
+          ? colors.accent
+          : 'rgba(18, 18, 18, 0.55)',
+        barColor: isPremium
+          ? '#121212'
+          : full
+          ? colors.accent
+          : 'rgba(18, 18, 18, 0.35)',
+      };
+    });
+    return { rows, atLimitCount };
+  }, [usage, isPremium, colors.accent]);
+
+  const settingsRows = useMemo(
+    () => [
+      { label: 'My Profile', value: artistName, color: '#121212', action: 'info' },
+      { label: 'Business Profile', value: studioName, color: '#121212', action: 'info' },
+      {
+        label: 'WhatsApp Settings',
+        value: studioPhone || '+91 98765 43210',
+        color: '#121212',
+        action: 'info',
+      },
+      { label: 'Notification Settings', value: 'On', color: '#121212', action: 'info' },
+      { label: 'WhatsApp Message Templates', value: '4 saved', color: '#121212', action: 'info' },
+      { label: 'App Permissions', value: 'Photos, Contacts', color: '#121212', action: 'info' },
+      {
+        label: 'Subscription',
+        value: isPremium ? 'Premium · ₹499 / month' : 'Free plan · Upgrade',
+        color: '#121212',
+        action: 'sub',
+      },
+      { label: 'Support', value: '', color: '#121212', action: 'info' },
+      { label: 'Help', value: '', color: '#121212', action: 'info' },
+      { label: 'Privacy', value: '', color: '#121212', action: 'info' },
+      { label: 'Terms', value: '', color: '#121212', action: 'info' },
+      { label: 'Logout', value: '', color: colors.deep, action: 'logout' },
+    ],
+    [artistName, studioName, studioPhone, isPremium, colors.deep]
+  );
+
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[
+        styles.scrollContent,
+        { paddingBottom: Math.max(insets.bottom, 24) + 96 },
+      ]}
+    >
       {/* 1. Artist Profile Header */}
       <View style={styles.inkProfileCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarLetter}>S</Text>
+        <View style={styles.avatarWrap}>
+          {studioLogo ? (
+            <Image source={{ uri: studioLogo }} style={styles.avatarImage} />
+          ) : (
+            <>
+              <Svg width={56} height={56} style={StyleSheet.absoluteFill}>
+                <Defs>
+                  <LinearGradient id="avatarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <Stop offset="0%" stopColor={colors.accent} />
+                    <Stop offset="100%" stopColor={colors.deep} />
+                  </LinearGradient>
+                </Defs>
+                <Rect x={0} y={0} width={56} height={56} rx={28} fill="url(#avatarGrad)" />
+              </Svg>
+              <Text style={styles.avatarLetter}>{initialLetter}</Text>
+            </>
+          )}
         </View>
         <View style={styles.profileDetails}>
-          <Text style={styles.artistName}>Shilpa R.</Text>
-          <Text style={styles.artistSub}>Bridal Makeup Artist · Coimbatore</Text>
+          <Text style={styles.artistName} numberOfLines={1}>
+            {artistName}
+          </Text>
+          <Text style={styles.artistSub} numberOfLines={1}>
+            {subtitleLine}
+          </Text>
         </View>
       </View>
 
-      {/* 2. Subscription Status Banner */}
-      <TouchableOpacity
-        style={styles.planBanner}
-        onPress={onGoToSubscription}
-        activeOpacity={0.8}
-      >
-        <View style={styles.planBannerLeft}>
-          <Text style={styles.planBannerTitle}>SHILPI PREMIUM</Text>
-          <Text style={styles.planBannerSub}>Unlimited Bookings, Clients & WhatsApp</Text>
-        </View>
-        <Text style={styles.planBadge}>ACTIVE</Text>
-      </TouchableOpacity>
+      {/* 2. Your Plan & Usage Limits Card */}
+      <View style={styles.planHeaderRow}>
+        <Text style={styles.planHeaderTitle}>
+          YOUR PLAN · {isPremium ? 'PREMIUM' : 'FREE PLAN'}
+        </Text>
+        <Text style={styles.planHeaderHint}>
+          {isPremium ? 'UNLIMITED' : `${usageRows.atLimitCount} OF 5 LIMITS REACHED`}
+        </Text>
+      </View>
 
-      {/* 3. Settings List Rows */}
-      <View style={styles.settingsCard}>
-        {SETTINGS_ROWS.map((row, idx) => (
-          <TouchableOpacity
-            key={idx}
-            style={styles.settingRow}
-            onPress={() => {
-              if (row.isSub) onGoToSubscription();
-              else Alert.alert(row.label, `Configuration for ${row.label}`);
-            }}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.rowLabel}>{row.label}</Text>
-            <View style={styles.rowRight}>
-              {row.value ? <Text style={styles.rowValue}>{row.value}</Text> : null}
-              <Text style={styles.chevron}>›</Text>
+      <View style={styles.usageCardWrap}>
+        <View style={styles.usageCard}>
+          {usageRows.rows.map((u, idx) => (
+            <View key={idx}>
+              <View style={styles.usageRowTop}>
+                <Text style={styles.usageLabel}>{u.label}</Text>
+                <Text style={[styles.usageValue, { color: u.textColor }]}>{u.value}</Text>
+              </View>
+              <View style={styles.usageTrack}>
+                <View
+                  style={[
+                    styles.usageFill,
+                    { width: `${u.pct}%`, backgroundColor: u.barColor },
+                  ]}
+                />
+              </View>
             </View>
-          </TouchableOpacity>
-        ))}
+          ))}
+
+          {!isPremium && (
+            <TouchableOpacity
+              style={styles.upgradeInlineBtn}
+              onPress={onGoToSubscription}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.upgradeInlineBtnText}>UPGRADE FOR UNLIMITED</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
-      {/* 4. Prototype App Theme Selector */}
+      {/* 3. Prototype App Theme Selector */}
       <View style={styles.themeSectionHeader}>
-        <Text style={styles.sectionTitle}>APP THEME</Text>
+        <Text style={styles.themeSectionTitle}>APP THEME</Text>
       </View>
 
-      <View style={styles.themesCard}>
-        {themes.map((th, idx) => {
+      <View style={styles.themesList}>
+        {themes.map((th) => {
           const isSelected = themeName === th.name;
-          const isLast = idx === themes.length - 1;
           return (
             <TouchableOpacity
               key={th.name}
-              style={[
-                styles.themeRow,
-                isSelected && styles.themeRowActive,
-                isLast && styles.themeRowLast,
-              ]}
+              style={[styles.themeRow, isSelected && styles.themeRowActive]}
               onPress={() => setTheme(th.name)}
-              activeOpacity={0.75}
+              activeOpacity={0.78}
             >
               <View style={styles.swatchGroup}>
                 <View style={[styles.swatchBar, { backgroundColor: th.accent }]} />
@@ -126,14 +243,59 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         })}
       </View>
 
-      {/* 5. Logout Button */}
-      <View style={styles.logoutContainer}>
-        <TouchableOpacity style={styles.logoutBtn} onPress={onLogout} activeOpacity={0.8}>
-          <Text style={styles.logoutBtnText}>LOGOUT OF STUDIO ACCOUNT</Text>
-        </TouchableOpacity>
+      {/* 4. Prototype Settings List Rows */}
+      <View style={styles.rowsSpacer} />
+      <View style={styles.settingsList}>
+        {settingsRows.map((row, idx) => (
+          <TouchableOpacity
+            key={idx}
+            style={styles.settingRow}
+            onPress={() => {
+              if (row.action === 'sub') {
+                onGoToSubscription();
+              } else if (row.action === 'logout') {
+                onLogout();
+              } else {
+                Alert.alert(row.label, row.value ? `${row.label}: ${row.value}` : `${row.label} settings`);
+              }
+            }}
+            activeOpacity={0.75}
+          >
+            <Text style={[styles.rowLabel, { color: row.color }]}>{row.label}</Text>
+            {row.value ? (
+              <Text style={styles.rowValue} numberOfLines={1}>
+                {row.value}
+              </Text>
+            ) : null}
+            <ChevronRightIcon />
+          </TouchableOpacity>
+        ))}
       </View>
 
-      <View style={{ height: 100 }} />
+      {/* 5. Bottom Shilpi Premium Gradient Banner */}
+      <View style={styles.promoBanner}>
+        <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+          <Defs>
+            <LinearGradient id="promoGrad" x1="0%" y1="0%" x2="100%" y2="80%">
+              <Stop offset="0%" stopColor={colors.accent} />
+              <Stop offset="100%" stopColor={colors.deep} />
+            </LinearGradient>
+          </Defs>
+          <Rect x={0} y={0} width="100%" height="100%" fill="url(#promoGrad)" />
+        </Svg>
+
+        <Text style={styles.promoKicker}>SHILPI PREMIUM</Text>
+        <Text style={styles.promoHeadline}>
+          Unlimited bookings, gallery & reports from ₹399 / month
+        </Text>
+        <TouchableOpacity
+          style={styles.promoBtn}
+          onPress={onGoToSubscription}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.promoBtnText}>UPGRADE</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 };
@@ -151,20 +313,25 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: '#121212',
       borderBottomLeftRadius: 26,
       borderBottomRightRadius: 26,
-      paddingHorizontal: 20,
+      paddingHorizontal: 16,
       paddingTop: 18,
-      paddingBottom: 22,
+      paddingBottom: 18,
       flexDirection: 'row',
       alignItems: 'center',
       gap: 14,
     },
-    avatar: {
+    avatarWrap: {
       width: 56,
       height: 56,
       borderRadius: 28,
-      backgroundColor: colors.accent,
+      overflow: 'hidden',
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    avatarImage: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
     },
     avatarLetter: {
       fontSize: 22,
@@ -184,109 +351,99 @@ const createStyles = (colors: ThemeColors) =>
       color: 'rgba(255, 255, 255, 0.65)',
       marginTop: 2,
     },
-    planBanner: {
-      backgroundColor: colors.tint2,
-      marginHorizontal: 16,
-      marginTop: 14,
-      borderRadius: 18,
-      padding: 14,
+    planHeaderRow: {
+      paddingHorizontal: 16,
+      paddingTop: 16,
+      paddingBottom: 8,
       flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      borderWidth: 1,
-      borderColor: colors.palePinkBorder,
+      alignItems: 'baseline',
+      gap: 8,
     },
-    planBannerLeft: {
+    planHeaderTitle: {
       flex: 1,
+      fontSize: 10,
+      letterSpacing: 1.2,
+      fontWeight: '700',
+      color: '#121212',
     },
-    planBannerTitle: {
+    planHeaderHint: {
+      fontSize: 10,
+      letterSpacing: 1,
+      fontWeight: '700',
+      color: colors.deep,
+    },
+    usageCardWrap: {
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+    },
+    usageCard: {
+      backgroundColor: '#ffffff',
+      borderRadius: 20,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      gap: 12,
+      shadowColor: '#121212',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 3,
+      elevation: 1,
+    },
+    usageRowTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    usageLabel: {
+      fontSize: 12.5,
+      color: '#121212',
+      fontWeight: '500',
+    },
+    usageValue: {
+      fontSize: 12.5,
+      fontWeight: '700',
+    },
+    usageTrack: {
+      height: 6,
+      borderRadius: 999,
+      overflow: 'hidden',
+      backgroundColor: 'rgba(18, 18, 18, 0.1)',
+      marginTop: 6,
+    },
+    usageFill: {
+      height: 6,
+      borderRadius: 999,
+    },
+    upgradeInlineBtn: {
+      backgroundColor: colors.accent,
+      minHeight: 46,
+      paddingVertical: 13,
+      paddingHorizontal: 14,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 2,
+    },
+    upgradeInlineBtnText: {
       fontSize: 11,
       fontWeight: '700',
       letterSpacing: 1,
-      color: colors.deep,
-    },
-    planBannerSub: {
-      fontSize: 12,
-      color: 'rgba(18, 18, 18, 0.7)',
-      marginTop: 2,
-    },
-    planBadge: {
-      fontSize: 10,
-      fontWeight: '700',
-      color: colors.accent,
-      backgroundColor: '#ffffff',
-      paddingVertical: 4,
-      paddingHorizontal: 8,
-      borderRadius: 8,
-    },
-    settingsCard: {
-      backgroundColor: '#ffffff',
-      marginHorizontal: 16,
-      marginTop: 14,
-      borderRadius: 20,
-      paddingHorizontal: 16,
-      shadowColor: '#121212',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 3,
-      elevation: 1,
-    },
-    settingRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      minHeight: 48,
-      paddingVertical: 14,
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(18, 18, 18, 0.06)',
-    },
-    rowLabel: {
-      fontSize: 14,
-      color: '#121212',
-      fontWeight: '600',
-    },
-    rowRight: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    rowValue: {
-      fontSize: 12.5,
-      color: 'rgba(18, 18, 18, 0.55)',
-    },
-    chevron: {
-      fontSize: 18,
-      color: 'rgba(18, 18, 18, 0.35)',
-      lineHeight: 18,
+      color: '#ffffff',
     },
     themeSectionHeader: {
-      marginHorizontal: 16,
-      marginTop: 18,
+      marginTop: 8,
       paddingHorizontal: 16,
-      paddingTop: 12,
+      paddingTop: 14,
       paddingBottom: 8,
       backgroundColor: colors.tint,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
     },
-    sectionTitle: {
+    themeSectionTitle: {
       fontSize: 10,
       letterSpacing: 1.2,
-      textTransform: 'uppercase',
       fontWeight: '700',
       color: '#121212',
     },
-    themesCard: {
+    themesList: {
       backgroundColor: '#ffffff',
-      marginHorizontal: 16,
-      borderBottomLeftRadius: 20,
-      borderBottomRightRadius: 20,
-      overflow: 'hidden',
-      shadowColor: '#121212',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.05,
-      shadowRadius: 3,
-      elevation: 1,
     },
     themeRow: {
       flexDirection: 'row',
@@ -301,9 +458,6 @@ const createStyles = (colors: ThemeColors) =>
     },
     themeRowActive: {
       backgroundColor: colors.tint,
-    },
-    themeRowLast: {
-      borderBottomWidth: 0,
     },
     swatchGroup: {
       flexDirection: 'row',
@@ -343,24 +497,68 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: '#121212',
       borderColor: '#121212',
     },
-    logoutContainer: {
-      paddingHorizontal: 16,
-      paddingTop: 24,
+    rowsSpacer: {
+      height: 14,
     },
-    logoutBtn: {
-      backgroundColor: '#ffffff',
-      borderWidth: 1.5,
-      borderColor: colors.accent2,
+    settingsList: {
+      backgroundColor: '#f4f4f6',
+    },
+    settingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
       minHeight: 48,
       paddingVertical: 14,
-      borderRadius: 16,
+      paddingHorizontal: 16,
+      gap: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(18, 18, 18, 0.07)',
+    },
+    rowLabel: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    rowValue: {
+      fontSize: 11.5,
+      color: 'rgba(18, 18, 18, 0.5)',
+      maxWidth: 150,
+    },
+    promoBanner: {
+      marginTop: 16,
+      paddingVertical: 18,
+      paddingHorizontal: 16,
+      overflow: 'hidden',
+      position: 'relative',
+    },
+    promoKicker: {
+      fontSize: 10,
+      letterSpacing: 1.2,
+      fontWeight: '700',
+      color: '#ffffff',
+    },
+    promoHeadline: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: '#ffffff',
+      marginTop: 4,
+      lineHeight: 28,
+      letterSpacing: -0.4,
+    },
+    promoBtn: {
+      backgroundColor: '#121212',
+      borderBottomLeftRadius: 26,
+      borderBottomRightRadius: 26,
+      marginTop: 14,
+      minHeight: 48,
+      paddingVertical: 13,
+      paddingHorizontal: 14,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    logoutBtnText: {
+    promoBtnText: {
       fontSize: 11,
       fontWeight: '700',
-      letterSpacing: 1,
-      color: colors.accent2,
+      letterSpacing: 1.1,
+      color: '#ffffff',
     },
   });

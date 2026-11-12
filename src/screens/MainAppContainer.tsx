@@ -76,6 +76,9 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   const [artistName, setArtistName] = useState('Artist');
   const [studioName, setStudioName] = useState('Shilpi Studio');
   const [studioLogo, setStudioLogo] = useState<string | undefined>();
+  const [studioPhone, setStudioPhone] = useState<string>('');
+  const [studioCity, setStudioCity] = useState<string>('');
+  const [studioRole, setStudioRole] = useState<string>('Bridal Makeup Artist');
   const [registeredAt, setRegisteredAt] = useState<string | undefined>();
 
   // Load storage data on mount & hydrate live studio data from AWS RDS PostgreSQL
@@ -100,6 +103,15 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           }
           if (parsed.logoUri) {
             setStudioLogo(parsed.logoUri);
+          }
+          if (parsed.phone) {
+            setStudioPhone(parsed.phone);
+          }
+          if (parsed.city) {
+            setStudioCity(parsed.city);
+          }
+          if (Array.isArray(parsed.businessTypes) && parsed.businessTypes.length > 0) {
+            setStudioRole(parsed.businessTypes[0]);
           }
           if (parsed.createdAt) {
             setRegisteredAt(parsed.createdAt);
@@ -143,6 +155,15 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             }
             if (b.businessName?.trim()) {
               setStudioName(b.businessName.trim());
+            }
+            if (b.phone) {
+              setStudioPhone(b.phone);
+            }
+            if (b.city) {
+              setStudioCity(b.city);
+            }
+            if (Array.isArray(b.businessTypes) && b.businessTypes.length > 0) {
+              setStudioRole(b.businessTypes[0]);
             }
             if (b.profilePhotoUrl) {
               setStudioLogo(b.profilePhotoUrl);
@@ -1572,6 +1593,19 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
 
         {currentScreen === 'settings' && (
           <SettingsScreen
+            artistName={artistName}
+            studioName={studioName}
+            studioLogo={studioLogo}
+            studioPhone={studioPhone}
+            studioCity={studioCity}
+            studioRole={studioRole}
+            usage={{
+              orders: bookings.length,
+              clients: enrichedClients.length,
+              packages: packageGroups.reduce((s, g) => s + g.items.length, 0),
+              reminders: reminders.length,
+              closes: bookings.filter((b) => b.status === 'Closed').length,
+            }}
             onGoToSubscription={() => setCurrentScreen('subscription')}
             onLogout={onLogout}
             onGoBack={handleGoBack}
