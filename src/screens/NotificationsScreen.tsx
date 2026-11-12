@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { NotificationItem } from '../data/prototypeData';
 
 const NotificationVectorIcon: React.FC<{ glyph: string; color?: string }> = ({ glyph, color = '#ffffff' }) => {
@@ -61,6 +62,8 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({
   onNavigate,
   onGoBack,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [readMap, setReadMap] = useState<Record<string, boolean>>({
     n4: true,
     n5: true,
@@ -131,7 +134,8 @@ export const NotificationsScreen: React.FC<NotificationsScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4f4f6',
@@ -157,7 +161,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1,
-    color: Colors.deep,
+    color: colors.deep,
   },
   notificationsList: {
     paddingHorizontal: 16,
@@ -178,23 +182,23 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   notifCardUnread: {
-    backgroundColor: Colors.tint2,
+    backgroundColor: colors.tint2,
   },
   glyphChip: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     alignItems: 'center',
     justifyContent: 'center',
   },
   glyphChipUnread: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
   glyphText: {
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.deep,
+    color: colors.deep,
   },
   glyphTextUnread: {
     color: '#ffffff',
@@ -226,6 +230,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
 });

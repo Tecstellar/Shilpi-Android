@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle, Polyline } from 'react-native-svg';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { Booking, fmt } from '../data/prototypeData';
 
 const ScalePressable: React.FC<{
@@ -54,12 +55,16 @@ const ScalePressable: React.FC<{
   );
 };
 
-const MapPinIcon = ({ color = Colors.deep, size = 16 }: { color?: string; size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2}>
+const MapPinIcon = ({ color, size = 16  }: { color?: string; size?: number }) => {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.deep;
+  return (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={resolvedColor} strokeWidth={2.2}>
     <Path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" strokeLinecap="round" strokeLinejoin="round" />
     <Circle cx="12" cy="10" r="3" />
   </Svg>
-);
+  );
+};
 
 const MessageIcon = ({ color = '#ffffff', size = 16 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2}>
@@ -98,6 +103,8 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
   onCloseBooking,
   onMarkFullyPaid,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { width, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isCompact = width < 380 || fontScale > 1.15;
@@ -124,7 +131,7 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
         <Text style={{ fontSize: 16, fontWeight: '700', color: '#121212', marginBottom: 12 }}>Booking not found</Text>
         <TouchableOpacity
           onPress={onGoBack}
-          style={{ backgroundColor: Colors.accent, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 14 }}
+          style={{ backgroundColor: colors.accent, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 14 }}
         >
           <Text style={{ color: '#ffffff', fontWeight: '700' }}>Back to Orders</Text>
         </TouchableOpacity>
@@ -312,7 +319,7 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
         >
           <View style={styles.mapStripLeft}>
             <View style={styles.mapPinBadge}>
-              <MapPinIcon color={Colors.deep} size={16} />
+              <MapPinIcon color={colors.deep} size={16} />
             </View>
             <View style={styles.mapStripTextWrap}>
               <Text style={styles.mapStripPrimary} numberOfLines={1}>
@@ -420,7 +427,8 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4f4f6',
@@ -456,8 +464,8 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: Colors.accent,
-    backgroundColor: '#ffeef4',
+    borderColor: colors.accent,
+    backgroundColor: colors.tint2,
   },
   headerLogoImage: {
     width: '100%',
@@ -467,7 +475,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: Colors.deep,
+    color: colors.deep,
     fontWeight: '700',
   },
   clientTitle: {
@@ -490,7 +498,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   statusBadge: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
@@ -518,8 +526,8 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontWeight: '700',
     letterSpacing: 0.8,
-    color: Colors.deep,
-    backgroundColor: '#ffeef4',
+    color: colors.deep,
+    backgroundColor: colors.tint2,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -557,8 +565,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.3)',
-    backgroundColor: '#ffeef4',
+    borderColor: colors.palePinkBorder,
+    backgroundColor: colors.tint2,
     marginRight: 10,
   },
   billLogoImage: {
@@ -623,7 +631,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   balanceDue: {
-    color: Colors.deep,
+    color: colors.deep,
   },
   balancePaid: {
     color: '#16a34a',
@@ -672,8 +680,8 @@ const styles = StyleSheet.create({
     minHeight: 58,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.18)',
-    backgroundColor: Colors.tint,
+    borderColor: colors.palePinkBorder,
+    backgroundColor: colors.tint,
     paddingHorizontal: 12,
     paddingVertical: 12,
     flexDirection: 'row',
@@ -713,7 +721,7 @@ const styles = StyleSheet.create({
   mapStripSub: {
     fontSize: 12,
     fontWeight: '500',
-    color: Colors.deep,
+    color: colors.deep,
     marginTop: 1,
   },
   openMapsBtn: {
@@ -743,9 +751,9 @@ const styles = StyleSheet.create({
   },
   notesCalloutCard: {
     borderWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.18)',
+    borderColor: colors.palePinkBorder,
     borderRadius: 16,
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     paddingHorizontal: 14,
     paddingVertical: 13,
   },
@@ -761,7 +769,7 @@ const styles = StyleSheet.create({
   },
   whatsAppBtn: {
     minHeight: 52,
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 16,
@@ -769,7 +777,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    shadowColor: Colors.accent,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.22,
     shadowRadius: 6,

@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from 'react-native';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { apiClient } from '../services/apiClient';
 
 interface DashboardMetrics {
@@ -28,6 +29,8 @@ interface DashboardScreenProps {
 }
 
 export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onOpenQrScanner, onNewBooking }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
@@ -60,7 +63,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onOpenQrScanne
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -68,7 +71,7 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onOpenQrScanne
   return (
     <ScrollView
       style={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
       {/* Top Header Bar */}
       <View style={styles.header}>
@@ -146,15 +149,16 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ onOpenQrScanne
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     paddingHorizontal: 20,
   },
   centerContainer: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -168,31 +172,31 @@ const styles = StyleSheet.create({
   brandTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     letterSpacing: 1,
   },
   headerSubtitle: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   linkTerminalBtn: {
     borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surfaceElevated,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceElevated,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
   },
   linkTerminalText: {
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     fontSize: 13,
     fontWeight: '600',
   },
   heroCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
@@ -201,18 +205,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontWeight: '600',
   },
   heroValue: {
     fontSize: 34,
     fontWeight: '700',
-    color: Colors.primary,
+    color: colors.primary,
     marginTop: 6,
   },
   heroDivider: {
     height: 1,
-    backgroundColor: Colors.border,
+    backgroundColor: colors.border,
     marginVertical: 16,
   },
   ledgerRow: {
@@ -224,19 +228,19 @@ const styles = StyleSheet.create({
   },
   subMetricLabel: {
     fontSize: 11,
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   subMetricValue: {
     fontSize: 15,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginTop: 4,
   },
   actionRow: {
     marginBottom: 24,
   },
   primaryActionBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
@@ -255,16 +259,16 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   sectionBadge: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   appointmentCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -278,7 +282,7 @@ const styles = StyleSheet.create({
   clientName: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   statusTag: {
     paddingHorizontal: 8,
@@ -294,25 +298,25 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 11,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   appointmentDetails: {
     gap: 4,
   },
   detailText: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   duesText: {
     fontSize: 13,
     fontWeight: '600',
-    color: Colors.warning,
+    color: colors.warning,
     marginTop: 4,
   },
   emptyCard: {
-    backgroundColor: Colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 28,
     alignItems: 'center',
@@ -320,11 +324,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   emptySubtitle: {
     fontSize: 13,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     marginTop: 6,
     textAlign: 'center',
   },

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 export type TabType = 'home' | 'clients' | 'orders' | 'earnings';
 
@@ -19,8 +21,8 @@ interface BottomTabBarProps {
 }
 
 // 1. Home Outline Icon
-const HomeIcon: React.FC<{ isActive: boolean }> = ({ isActive }) => {
-  const color = isActive ? '#e8276b' : '#8e8e93';
+const HomeIcon: React.FC<{ isActive: boolean; accentColor: string }> = ({ isActive, accentColor }) => {
+  const color = isActive ? accentColor : '#8e8e93';
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
       <Path
@@ -42,8 +44,8 @@ const HomeIcon: React.FC<{ isActive: boolean }> = ({ isActive }) => {
 };
 
 // 2. Clients User Silhouette Icon
-const ClientsIcon: React.FC<{ isActive: boolean }> = ({ isActive }) => {
-  const color = isActive ? '#e8276b' : '#8e8e93';
+const ClientsIcon: React.FC<{ isActive: boolean; accentColor: string }> = ({ isActive, accentColor }) => {
+  const color = isActive ? accentColor : '#8e8e93';
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
       <Circle
@@ -64,14 +66,23 @@ const ClientsIcon: React.FC<{ isActive: boolean }> = ({ isActive }) => {
   );
 };
 
-// 3. Orders Document Icon with Signature Pink Badge Dot
-const OrdersIcon: React.FC<{ isActive: boolean; hasBadge?: boolean }> = ({
+// 3. Orders Document Icon with Theme Accent Badge Dot
+const OrdersIcon: React.FC<{
+  isActive: boolean;
+  accentColor: string;
+  hasBadge?: boolean;
+  iconContainerStyle: any;
+  badgeDotStyle: any;
+}> = ({
   isActive,
+  accentColor,
   hasBadge = true,
+  iconContainerStyle,
+  badgeDotStyle,
 }) => {
-  const color = isActive ? '#e8276b' : '#8e8e93';
+  const color = isActive ? accentColor : '#8e8e93';
   return (
-    <View style={styles.iconContainer}>
+    <View style={iconContainerStyle}>
       <Svg width={21} height={21} viewBox="0 0 24 24" fill="none">
         <Rect
           x={4.5}
@@ -86,14 +97,14 @@ const OrdersIcon: React.FC<{ isActive: boolean; hasBadge?: boolean }> = ({
         <Line x1={8} y1={12} x2={16} y2={12} stroke={color} strokeWidth={2} strokeLinecap="round" />
         <Line x1={8} y1={16} x2={13} y2={16} stroke={color} strokeWidth={2} strokeLinecap="round" />
       </Svg>
-      {hasBadge && <View style={styles.badgeDot} />}
+      {hasBadge && <View style={badgeDotStyle} />}
     </View>
   );
 };
 
 // 4. Earnings Vertical 3-Bar Chart Icon
-const EarningsIcon: React.FC<{ isActive: boolean }> = ({ isActive }) => {
-  const color = isActive ? '#e8276b' : '#8e8e93';
+const EarningsIcon: React.FC<{ isActive: boolean; accentColor: string }> = ({ isActive, accentColor }) => {
+  const color = isActive ? accentColor : '#8e8e93';
   return (
     <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
       <Line x1={6} y1={20} x2={6} y2={14} stroke={color} strokeWidth={2.4} strokeLinecap="round" />
@@ -116,6 +127,8 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
   onSelectTab,
   onPressNewBooking,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const W = windowWidth || 390;
@@ -156,7 +169,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
           activeOpacity={0.75}
         >
           {activeTab === 'home' && <View style={styles.activeIndicator} />}
-          <HomeIcon isActive={activeTab === 'home'} />
+          <HomeIcon isActive={activeTab === 'home'} accentColor={colors.accent} />
           <Text
             style={[styles.tabLabel, activeTab === 'home' ? styles.activeLabel : styles.inactiveLabel]}
             numberOfLines={1}
@@ -172,7 +185,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
           activeOpacity={0.75}
         >
           {activeTab === 'clients' && <View style={styles.activeIndicator} />}
-          <ClientsIcon isActive={activeTab === 'clients'} />
+          <ClientsIcon isActive={activeTab === 'clients'} accentColor={colors.accent} />
           <Text
             style={[styles.tabLabel, activeTab === 'clients' ? styles.activeLabel : styles.inactiveLabel]}
             numberOfLines={1}
@@ -191,7 +204,13 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
           activeOpacity={0.75}
         >
           {activeTab === 'orders' && <View style={styles.activeIndicator} />}
-          <OrdersIcon isActive={activeTab === 'orders'} hasBadge={true} />
+          <OrdersIcon
+            isActive={activeTab === 'orders'}
+            accentColor={colors.accent}
+            hasBadge={true}
+            iconContainerStyle={styles.iconContainer}
+            badgeDotStyle={styles.badgeDot}
+          />
           <Text
             style={[styles.tabLabel, activeTab === 'orders' ? styles.activeLabel : styles.inactiveLabel]}
             numberOfLines={1}
@@ -207,7 +226,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
           activeOpacity={0.75}
         >
           {activeTab === 'earnings' && <View style={styles.activeIndicator} />}
-          <EarningsIcon isActive={activeTab === 'earnings'} />
+          <EarningsIcon isActive={activeTab === 'earnings'} accentColor={colors.accent} />
           <Text
             style={[styles.tabLabel, activeTab === 'earnings' ? styles.activeLabel : styles.inactiveLabel]}
             numberOfLines={1}
@@ -229,7 +248,8 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   navBarContainer: {
     position: 'absolute',
     left: 0,
@@ -264,7 +284,7 @@ const styles = StyleSheet.create({
     top: 0,
     width: 32,
     height: 3.5,
-    backgroundColor: '#e8276b',
+    backgroundColor: colors.accent,
     borderBottomLeftRadius: 3,
     borderBottomRightRadius: 3,
   },
@@ -281,7 +301,7 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 3.5,
-    backgroundColor: '#e8276b',
+    backgroundColor: colors.accent,
   },
   tabLabel: {
     fontSize: 11,
@@ -289,7 +309,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   activeLabel: {
-    color: '#e8276b',
+    color: colors.accent,
     fontWeight: '700',
   },
   inactiveLabel: {
@@ -302,12 +322,12 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#e8276b',
+    backgroundColor: colors.accent,
     borderWidth: 4.5,
     borderColor: '#f5f4f2', // Light contour ring matching screen cards
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#e8276b',
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.45,
     shadowRadius: 10,

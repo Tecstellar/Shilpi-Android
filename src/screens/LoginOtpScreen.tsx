@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,8 @@ import {
   ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { apiClient } from '../services/apiClient';
 
 interface LoginOtpScreenProps {
@@ -21,6 +22,8 @@ interface LoginOtpScreenProps {
 }
 
 export const LoginOtpScreen: React.FC<LoginOtpScreenProps> = ({ phone, onGoBack, onVerified }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   // Empty by default so user sees initial state before typing
   const [otp, setOtp] = useState('');
   const [timer, setTimer] = useState(30);
@@ -230,7 +233,8 @@ export const LoginOtpScreen: React.FC<LoginOtpScreenProps> = ({ phone, onGoBack,
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4f4f6',
@@ -261,7 +265,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: Colors.deep,
+    color: colors.deep,
     fontWeight: '700',
   },
   headline: {
@@ -274,13 +278,13 @@ const styles = StyleSheet.create({
   },
   phoneHighlight: {
     fontWeight: '700',
-    color: Colors.accent,
+    color: colors.accent,
   },
   demoNoticeBadge: {
     marginTop: 12,
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     borderWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.25)',
+    borderColor: colors.palePinkBorder,
     borderRadius: 10,
     paddingVertical: 7,
     paddingHorizontal: 12,
@@ -289,7 +293,7 @@ const styles = StyleSheet.create({
   demoNoticeText: {
     fontSize: 11.5,
     fontWeight: '700',
-    color: Colors.deep,
+    color: colors.deep,
   },
   otpBoxesRow: {
     flexDirection: 'row',
@@ -315,16 +319,16 @@ const styles = StyleSheet.create({
   },
   // Active focused box waiting for next digit
   otpBoxActive: {
-    borderColor: Colors.accent,
-    backgroundColor: Colors.tint2,
+    borderColor: colors.accent,
+    backgroundColor: colors.tint2,
     borderWidth: 2,
   },
   // After typing: Box turns Pink with White text!
   otpBoxFilled: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
     borderWidth: 2,
-    shadowColor: Colors.accent,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -345,7 +349,7 @@ const styles = StyleSheet.create({
     height: 1,
   },
   errorText: {
-    color: Colors.deep,
+    color: colors.deep,
     fontSize: 12,
     marginTop: 10,
     fontWeight: '600',
@@ -361,7 +365,7 @@ const styles = StyleSheet.create({
     color: 'rgba(18, 18, 18, 0.6)',
   },
   resendAction: {
-    color: Colors.deep,
+    color: colors.deep,
     fontWeight: '700',
     fontSize: 11,
     letterSpacing: 1,
@@ -376,8 +380,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   verifyBtnActive: {
-    backgroundColor: Colors.accent, // Pink color from design system
-    shadowColor: Colors.accent,
+    backgroundColor: colors.accent, // Pink color from design system
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

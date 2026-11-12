@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,17 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path } from 'react-native-svg';
 import { apiClient } from '../services/apiClient';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
-const CheckVectorIcon = () => (
-  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={3}>
+const CheckVectorIcon = () => {
+  const { colors } = useTheme();
+  return (
+  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={3}>
     <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
-);
+  );
+};
 
 interface OnboardingWizardScreenProps {
   phone: string;
@@ -50,6 +55,8 @@ const INITIAL_PACKAGES: ServiceItem[] = [
 ];
 
 export const OnboardingWizardScreen: React.FC<OnboardingWizardScreenProps> = ({ phone, onCompleted }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
 
   // Step 1: Business Type
@@ -362,7 +369,8 @@ export const OnboardingWizardScreen: React.FC<OnboardingWizardScreenProps> = ({ 
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4f4f6',

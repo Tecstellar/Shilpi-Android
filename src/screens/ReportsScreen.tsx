@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { Booking, fmt } from '../data/prototypeData';
 
 interface ReportsScreenProps {
@@ -23,6 +24,8 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
   monthExpenses = 0,
   onGoBack,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [view, setView] = useState<'Monthly' | 'Annual'>('Monthly');
 
   const now = new Date();
@@ -141,7 +144,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
             <Text style={styles.legendLabel}>Sales</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendSquare, { backgroundColor: Colors.accent }]} />
+            <View style={[styles.legendSquare, { backgroundColor: colors.accent }]} />
             <Text style={styles.legendLabel}>Profit</Text>
           </View>
         </View>
@@ -166,7 +169,8 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4f4f6',
@@ -188,7 +192,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabBtnActive: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
   tabText: {
     fontSize: 10.5,
@@ -209,7 +213,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: Colors.deep,
+    color: colors.deep,
     fontWeight: '700',
   },
   profitText: {
@@ -281,7 +285,7 @@ const styles = StyleSheet.create({
   },
   profitBar: {
     width: 10,
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     borderTopLeftRadius: 3,
     borderTopRightRadius: 3,
   },

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { apiClient } from '../services/apiClient';
 
 interface QrScannerScreenProps {
@@ -10,12 +11,14 @@ interface QrScannerScreenProps {
 }
 
 export const QrScannerScreen: React.FC<QrScannerScreenProps> = ({ onSuccess, onCancel }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [authorizing, setAuthorizing] = useState(false);
 
   if (!permission) {
-    return <View style={styles.center}><ActivityIndicator color={Colors.primary} /></View>;
+    return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;
   }
 
   if (!permission.granted) {
@@ -84,7 +87,7 @@ export const QrScannerScreen: React.FC<QrScannerScreenProps> = ({ onSuccess, onC
 
       <View style={styles.footer}>
         {authorizing ? (
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         ) : (
           <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
             <Text style={styles.cancelBtnText}>Cancel</Text>
@@ -95,16 +98,17 @@ export const QrScannerScreen: React.FC<QrScannerScreenProps> = ({ onSuccess, onC
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     justifyContent: 'space-between',
     padding: 24,
   },
   center: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -116,12 +120,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -139,7 +143,7 @@ const styles = StyleSheet.create({
     left: 40,
     right: 40,
     bottom: 40,
-    borderColor: Colors.primary,
+    borderColor: colors.primary,
     borderWidth: 2,
     borderRadius: 12,
   },
@@ -148,7 +152,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionBtn: {
-    backgroundColor: Colors.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -163,11 +167,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   cancelBtnText: {
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontSize: 15,
   },
   permissionText: {
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     textAlign: 'center',
     fontSize: 15,
   },

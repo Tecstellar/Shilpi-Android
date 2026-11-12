@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,8 @@ import {
   TextInput,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { PackageGroup, fmt } from '../data/prototypeData';
 
 const EditPencilVectorIcon = () => (
@@ -29,6 +30,8 @@ export const PackagesScreen: React.FC<PackagesScreenProps> = ({
   onAddPackage,
   onGoBack,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState('Makeup');
   const [serviceName, setServiceName] = useState('');
@@ -149,7 +152,8 @@ export const PackagesScreen: React.FC<PackagesScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4f4f6',
@@ -217,7 +221,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   addPackageBtn: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 14,
     borderRadius: 16,
     alignItems: 'center',
@@ -230,7 +234,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   addFormCard: {
-    backgroundColor: Colors.tint2,
+    backgroundColor: colors.tint2,
     marginHorizontal: 16,
     marginTop: 20,
     borderRadius: 20,
@@ -243,7 +247,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     fontWeight: '700',
-    color: Colors.deep,
+    color: colors.deep,
     marginBottom: 12,
   },
   field: {
@@ -266,7 +270,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   groupSelectorPillActive: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
   groupSelectorText: {
     fontSize: 11,
@@ -305,7 +309,7 @@ const styles = StyleSheet.create({
   },
   saveServiceBtn: {
     flex: 2,
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 12,
     borderRadius: 14,
     alignItems: 'center',

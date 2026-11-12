@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
   Easing,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import {
   Booking,
   QUOTES,
@@ -39,6 +40,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   onMarkFullyPaid,
   artistName: propArtistName,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   // 1. Animated Quote vertical transition
   const [quoteIndex, setQuoteIndex] = useState(0);
   const translateY = useRef(new Animated.Value(0)).current;
@@ -253,7 +256,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
               : '#16a34a'
             : isDarkBg
             ? '#ff4d8d'
-            : Colors.accent;
+            : colors.accent;
           return <View key={b.id || idx} style={[styles.dot, { backgroundColor: dotColor }]} />;
         })}
         {dayBookings.length > 4 && (
@@ -570,7 +573,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* Calendar Color Legend */}
       <View style={styles.legendStripRow}>
         <View style={styles.legendChip}>
-          <View style={[styles.dot, { backgroundColor: Colors.accent }]} />
+          <View style={[styles.dot, { backgroundColor: colors.accent }]} />
           <Text style={styles.legendChipText}>Upcoming</Text>
         </View>
         <View style={styles.legendChip}>
@@ -780,7 +783,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4f4f6',
@@ -803,7 +807,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: Colors.deep,
+    color: colors.deep,
     fontWeight: '700',
   },
   artistName: {
@@ -850,7 +854,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     minHeight: 44,
     borderRadius: 2,
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
   quoteContainer: {
     flex: 1,
@@ -926,10 +930,10 @@ const styles = StyleSheet.create({
   },
   statCardPink: {
     width: '31.5%',
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     padding: 12,
     borderRadius: 18,
-    shadowColor: Colors.accent,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -937,7 +941,7 @@ const styles = StyleSheet.create({
   },
   statCardPeach: {
     width: '31.5%',
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     padding: 12,
     borderRadius: 18,
     shadowColor: '#000000',
@@ -994,7 +998,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
     fontWeight: '700',
-    color: Colors.deep,
+    color: colors.deep,
   },
   bookingListCard: {
     backgroundColor: '#ffffff',
@@ -1063,7 +1067,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   balanceDueText: {
-    color: Colors.deep,
+    color: colors.deep,
   },
   paidText: {
     color: 'rgba(18, 18, 18, 0.45)',
@@ -1074,7 +1078,7 @@ const styles = StyleSheet.create({
   weekDateTag: {
     fontSize: 9.5,
     fontWeight: '700',
-    color: Colors.deep,
+    color: colors.deep,
     textTransform: 'uppercase',
     marginBottom: 1,
   },
@@ -1089,7 +1093,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   miniStatusUpcoming: {
-    backgroundColor: 'rgba(232, 39, 107, 0.12)',
+    backgroundColor: colors.palePinkBorder,
   },
   miniStatusDone: {
     backgroundColor: 'rgba(22, 163, 74, 0.14)',
@@ -1100,7 +1104,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   miniStatusTextUpcoming: {
-    color: Colors.deep,
+    color: colors.deep,
   },
   miniStatusTextDone: {
     color: '#15803d',
@@ -1139,12 +1143,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1,
-    color: Colors.deep,
+    color: colors.deep,
     textTransform: 'uppercase',
   },
   calendarChevron: {
     fontSize: 10,
-    color: Colors.accent,
+    color: colors.accent,
   },
   chevronRotated: {
     transform: [{ rotate: '180deg' }],
@@ -1167,9 +1171,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stripCellToday: {
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     borderWidth: 1,
-    borderColor: Colors.accent,
+    borderColor: colors.accent,
   },
   stripCellSelected: {
     backgroundColor: '#121212',
@@ -1183,7 +1187,7 @@ const styles = StyleSheet.create({
     color: 'rgba(18, 18, 18, 0.55)',
   },
   stripDowToday: {
-    color: Colors.deep,
+    color: colors.deep,
   },
   stripDowSelected: {
     color: 'rgba(255, 255, 255, 0.72)',
@@ -1197,7 +1201,7 @@ const styles = StyleSheet.create({
     color: '#121212',
   },
   stripNumToday: {
-    color: Colors.deep,
+    color: colors.deep,
   },
   stripNumSelected: {
     color: '#ffffff',
@@ -1221,7 +1225,7 @@ const styles = StyleSheet.create({
     lineHeight: 8,
   },
   dotPink: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
   dotWhite: {
     backgroundColor: '#ffffff',
@@ -1294,9 +1298,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#121212',
   },
   monthCellToday: {
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     borderWidth: 1,
-    borderColor: Colors.accent,
+    borderColor: colors.accent,
   },
   monthCellNum: {
     fontSize: 13,
@@ -1307,7 +1311,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   textPink: {
-    color: Colors.accent,
+    color: colors.accent,
   },
   stripDetailBox: {
     marginHorizontal: 16,
@@ -1341,17 +1345,17 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1.1,
-    color: Colors.deep,
+    color: colors.deep,
     textTransform: 'uppercase',
   },
   addBookingSmallBtn: {
     paddingVertical: 3,
     paddingHorizontal: 8,
     borderRadius: 6,
-    backgroundColor: 'rgba(232, 39, 107, 0.1)',
+    backgroundColor: colors.palePinkBorder,
   },
   addBookingSmallText: {
-    color: Colors.accent,
+    color: colors.accent,
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -1391,13 +1395,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   quickActionSecondaryBtn: {
-    backgroundColor: 'rgba(232, 39, 107, 0.1)',
+    backgroundColor: colors.palePinkBorder,
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 8,
   },
   quickActionSecondaryText: {
-    color: Colors.deep,
+    color: colors.deep,
     fontSize: 9.5,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -1444,7 +1448,7 @@ const styles = StyleSheet.create({
   selectedDayAmount: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.accent,
+    color: colors.accent,
   },
   emptyDayActionRow: {
     flexDirection: 'row',
@@ -1459,11 +1463,11 @@ const styles = StyleSheet.create({
     color: 'rgba(18, 18, 18, 0.65)',
   },
   bookItBtn: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 10,
-    shadowColor: Colors.accent,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,

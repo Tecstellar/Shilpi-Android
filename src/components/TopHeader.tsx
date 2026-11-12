@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, Image, Text } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 interface TopHeaderProps {
   screen: string;
@@ -19,6 +21,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onGoBack,
   onOpenNotifications,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const isRoot =
     screen === 'home' ||
     screen === 'clients' ||
@@ -102,7 +106,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   headerBlack: {
     height: 56,
     backgroundColor: '#000000',
@@ -183,7 +188,7 @@ const styles = StyleSheet.create({
     width: 9,
     height: 9,
     borderRadius: 4.5,
-    backgroundColor: '#e8276b',
+    backgroundColor: colors.accent,
     borderWidth: 1.5,
     borderColor: '#000000',
   },

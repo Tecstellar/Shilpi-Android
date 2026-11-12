@@ -9,6 +9,7 @@ import { LoginOtpScreen } from './src/screens/LoginOtpScreen';
 import { SetupScreen } from './src/screens/SetupScreen';
 import { MainAppContainer } from './src/screens/MainAppContainer';
 import { QrScannerScreen } from './src/screens/QrScannerScreen';
+import { ThemeProvider } from './src/theme/ThemeContext';
 
 type ScreenState = 'splash' | 'login_phone' | 'login_otp' | 'setup' | 'dashboard' | 'qr_scanner';
 
@@ -27,15 +28,18 @@ export default function App() {
   // 1. Full-bleed edge-to-edge view for Splash video
   if (screen === 'splash') {
     return (
-      <View style={styles.splashContainer}>
-        <StatusBar hidden />
-        <SplashScreen onFinish={() => setScreen('login_phone')} />
-      </View>
+      <ThemeProvider>
+        <View style={styles.splashContainer}>
+          <StatusBar hidden />
+          <SplashScreen onFinish={() => setScreen('login_phone')} />
+        </View>
+      </ThemeProvider>
     );
   }
 
   return (
-    <SafeAreaProvider>
+    <ThemeProvider>
+      <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
         <StatusBar style="light" />
 
@@ -101,6 +105,7 @@ export default function App() {
       )}
       </SafeAreaView>
     </SafeAreaProvider>
+    </ThemeProvider>
   );
 }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,11 @@ import {
   Alert,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
-const CheckVectorIcon = () => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={3}>
+const CheckVectorIcon: React.FC<{ color?: string }> = ({ color = '#ffffff' }) => (
+  <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={3}>
     <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
@@ -34,19 +35,12 @@ const SETTINGS_ROWS = [
   { label: 'Privacy & Terms', value: '' },
 ];
 
-const THEMES = [
-  { name: 'Signature', color: '#e8276b', desc: 'Brand pink & saffron' },
-  { name: 'Mehendi', color: '#1f7a4d', desc: 'Deep henna green' },
-  { name: 'Kumkum', color: '#d62828', desc: 'Vermilion red' },
-  { name: 'Indigo', color: '#3b3fb6', desc: 'Cool indigo blush' },
-];
-
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onGoToSubscription,
   onLogout,
-  onGoBack,
 }) => {
-  const [selectedTheme, setSelectedTheme] = useState('Signature');
+  const { themeName, colors, themes, setTheme } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent}>
@@ -95,31 +89,38 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         ))}
       </View>
 
-      {/* 4. Theme Selector */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>STUDIO THEME</Text>
+      {/* 4. Prototype App Theme Selector */}
+      <View style={styles.themeSectionHeader}>
+        <Text style={styles.sectionTitle}>APP THEME</Text>
       </View>
 
       <View style={styles.themesCard}>
-        {THEMES.map((th) => {
-          const isSelected = selectedTheme === th.name;
+        {themes.map((th, idx) => {
+          const isSelected = themeName === th.name;
+          const isLast = idx === themes.length - 1;
           return (
             <TouchableOpacity
               key={th.name}
-              style={[styles.themeRow, isSelected && styles.themeRowActive]}
-              onPress={() => setSelectedTheme(th.name)}
-              activeOpacity={0.7}
+              style={[
+                styles.themeRow,
+                isSelected && styles.themeRowActive,
+                isLast && styles.themeRowLast,
+              ]}
+              onPress={() => setTheme(th.name)}
+              activeOpacity={0.75}
             >
-              <View style={[styles.themeDot, { backgroundColor: th.color }]} />
-              <View style={styles.themeInfo}>
-                <Text style={styles.themeName}>{th.name}</Text>
-                <Text style={styles.themeDesc}>{th.desc}</Text>
+              <View style={styles.swatchGroup}>
+                <View style={[styles.swatchBar, { backgroundColor: th.accent }]} />
+                <View style={[styles.swatchBar, { backgroundColor: th.accent2 }]} />
+                <View style={[styles.swatchBar, { backgroundColor: th.tint }]} />
               </View>
-              {isSelected && (
-                <View style={{ marginLeft: 8 }}>
-                  <CheckVectorIcon />
-                </View>
-              )}
+              <View style={styles.themeInfo}>
+                <Text style={styles.themeName}>{th.label}</Text>
+                <Text style={styles.themeDesc}>{th.hint}</Text>
+              </View>
+              <View style={[styles.checkBox, isSelected && styles.checkBoxActive]}>
+                {isSelected ? <CheckVectorIcon color="#ffffff" /> : null}
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -137,198 +138,229 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#f4f4f6',
-  },
-  scrollContent: {
-    paddingBottom: 24,
-  },
-  inkProfileCard: {
-    backgroundColor: '#121212',
-    borderBottomLeftRadius: 26,
-    borderBottomRightRadius: 26,
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 22,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarLetter: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  profileDetails: {
-    flex: 1,
-  },
-  artistName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  artistSub: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.65)',
-    marginTop: 2,
-  },
-  planBanner: {
-    backgroundColor: Colors.tint2,
-    marginHorizontal: 16,
-    marginTop: 14,
-    borderRadius: 18,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.2)',
-  },
-  planBannerLeft: {
-    flex: 1,
-  },
-  planBannerTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    color: Colors.deep,
-  },
-  planBannerSub: {
-    fontSize: 12,
-    color: 'rgba(18, 18, 18, 0.7)',
-    marginTop: 2,
-  },
-  planBadge: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.accent,
-    backgroundColor: '#ffffff',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-  },
-  settingsCard: {
-    backgroundColor: '#ffffff',
-    marginHorizontal: 16,
-    marginTop: 14,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  settingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(18, 18, 18, 0.06)',
-  },
-  rowLabel: {
-    fontSize: 14,
-    color: '#121212',
-    fontWeight: '600',
-  },
-  rowRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  rowValue: {
-    fontSize: 12.5,
-    color: 'rgba(18, 18, 18, 0.55)',
-  },
-  chevron: {
-    fontSize: 18,
-    color: 'rgba(18, 18, 18, 0.35)',
-    lineHeight: 18,
-  },
-  sectionHeader: {
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    fontWeight: '700',
-    color: '#121212',
-  },
-  themesCard: {
-    backgroundColor: '#ffffff',
-    marginHorizontal: 16,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  themeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(18, 18, 18, 0.06)',
-  },
-  themeRowActive: {
-    backgroundColor: Colors.tint,
-  },
-  themeDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    marginRight: 12,
-  },
-  themeInfo: {
-    flex: 1,
-  },
-  themeName: {
-    fontSize: 13.5,
-    fontWeight: '700',
-    color: '#121212',
-  },
-  themeDesc: {
-    fontSize: 11,
-    color: 'rgba(18, 18, 18, 0.5)',
-    marginTop: 1,
-  },
-  themeCheck: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.accent,
-  },
-  logoutContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
-  },
-  logoutBtn: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1.5,
-    borderColor: Colors.accent2,
-    paddingVertical: 14,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  logoutBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    color: Colors.accent2,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: '#f4f4f6',
+    },
+    scrollContent: {
+      paddingBottom: 24,
+    },
+    inkProfileCard: {
+      backgroundColor: '#121212',
+      borderBottomLeftRadius: 26,
+      borderBottomRightRadius: 26,
+      paddingHorizontal: 20,
+      paddingTop: 18,
+      paddingBottom: 22,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+    },
+    avatar: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarLetter: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: '#ffffff',
+    },
+    profileDetails: {
+      flex: 1,
+    },
+    artistName: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: '#ffffff',
+    },
+    artistSub: {
+      fontSize: 12,
+      color: 'rgba(255, 255, 255, 0.65)',
+      marginTop: 2,
+    },
+    planBanner: {
+      backgroundColor: colors.tint2,
+      marginHorizontal: 16,
+      marginTop: 14,
+      borderRadius: 18,
+      padding: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderWidth: 1,
+      borderColor: colors.palePinkBorder,
+    },
+    planBannerLeft: {
+      flex: 1,
+    },
+    planBannerTitle: {
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1,
+      color: colors.deep,
+    },
+    planBannerSub: {
+      fontSize: 12,
+      color: 'rgba(18, 18, 18, 0.7)',
+      marginTop: 2,
+    },
+    planBadge: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: colors.accent,
+      backgroundColor: '#ffffff',
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      borderRadius: 8,
+    },
+    settingsCard: {
+      backgroundColor: '#ffffff',
+      marginHorizontal: 16,
+      marginTop: 14,
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      shadowColor: '#121212',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
+      elevation: 1,
+    },
+    settingRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      minHeight: 48,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(18, 18, 18, 0.06)',
+    },
+    rowLabel: {
+      fontSize: 14,
+      color: '#121212',
+      fontWeight: '600',
+    },
+    rowRight: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    rowValue: {
+      fontSize: 12.5,
+      color: 'rgba(18, 18, 18, 0.55)',
+    },
+    chevron: {
+      fontSize: 18,
+      color: 'rgba(18, 18, 18, 0.35)',
+      lineHeight: 18,
+    },
+    themeSectionHeader: {
+      marginHorizontal: 16,
+      marginTop: 18,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: 8,
+      backgroundColor: colors.tint,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+    },
+    sectionTitle: {
+      fontSize: 10,
+      letterSpacing: 1.2,
+      textTransform: 'uppercase',
+      fontWeight: '700',
+      color: '#121212',
+    },
+    themesCard: {
+      backgroundColor: '#ffffff',
+      marginHorizontal: 16,
+      borderBottomLeftRadius: 20,
+      borderBottomRightRadius: 20,
+      overflow: 'hidden',
+      shadowColor: '#121212',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
+      elevation: 1,
+    },
+    themeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 58,
+      paddingVertical: 13,
+      paddingHorizontal: 16,
+      gap: 12,
+      backgroundColor: '#ffffff',
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(18, 18, 18, 0.07)',
+    },
+    themeRowActive: {
+      backgroundColor: colors.tint,
+    },
+    themeRowLast: {
+      borderBottomWidth: 0,
+    },
+    swatchGroup: {
+      flexDirection: 'row',
+      gap: 2,
+    },
+    swatchBar: {
+      width: 18,
+      height: 32,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: 'rgba(18, 18, 18, 0.08)',
+    },
+    themeInfo: {
+      flex: 1,
+    },
+    themeName: {
+      fontSize: 14.5,
+      fontWeight: '700',
+      color: '#121212',
+    },
+    themeDesc: {
+      fontSize: 11.5,
+      color: 'rgba(18, 18, 18, 0.55)',
+      marginTop: 2,
+    },
+    checkBox: {
+      width: 22,
+      height: 22,
+      borderRadius: 4,
+      borderWidth: 2,
+      borderColor: 'rgba(18, 18, 18, 0.35)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'transparent',
+    },
+    checkBoxActive: {
+      backgroundColor: '#121212',
+      borderColor: '#121212',
+    },
+    logoutContainer: {
+      paddingHorizontal: 16,
+      paddingTop: 24,
+    },
+    logoutBtn: {
+      backgroundColor: '#ffffff',
+      borderWidth: 1.5,
+      borderColor: colors.accent2,
+      minHeight: 48,
+      paddingVertical: 14,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    logoutBtnText: {
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1,
+      color: colors.accent2,
+    },
+  });

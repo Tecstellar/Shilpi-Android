@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { Booking, fmt } from '../data/prototypeData';
 
 interface PaymentsScreenProps {
@@ -70,6 +71,8 @@ export const PaymentsScreen: React.FC<PaymentsScreenProps> = ({
   onOpenBooking,
   onOpenRemindSheet,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const [scope, setScope] = useState<'Monthly' | 'All'>('Monthly');
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('All');
@@ -416,7 +419,7 @@ export const PaymentsScreen: React.FC<PaymentsScreenProps> = ({
                 <View
                   style={[
                     styles.barSegment,
-                    { width: `${metrics.pendingPct}%`, backgroundColor: Colors.accent },
+                    { width: `${metrics.pendingPct}%`, backgroundColor: colors.accent },
                   ]}
                 />
               )}
@@ -424,7 +427,7 @@ export const PaymentsScreen: React.FC<PaymentsScreenProps> = ({
                 <View
                   style={[
                     styles.barSegment,
-                    { width: `${metrics.upcomingPct}%`, backgroundColor: Colors.accent2 },
+                    { width: `${metrics.upcomingPct}%`, backgroundColor: colors.accent2 },
                   ]}
                 />
               )}
@@ -435,10 +438,10 @@ export const PaymentsScreen: React.FC<PaymentsScreenProps> = ({
         </View>
         <View style={styles.legendRow}>
           <Text style={styles.legendText}>■ Received {metrics.receivedPct}%</Text>
-          <Text style={[styles.legendText, { color: Colors.accent }]}>
+          <Text style={[styles.legendText, { color: colors.accent }]}>
             ■ Pending {metrics.pendingPct}%
           </Text>
-          <Text style={[styles.legendText, { color: Colors.accent2 }]}>
+          <Text style={[styles.legendText, { color: colors.accent2 }]}>
             ■ Upcoming {metrics.upcomingPct}%
           </Text>
         </View>
@@ -564,7 +567,8 @@ export const PaymentsScreen: React.FC<PaymentsScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4f4f6',
@@ -584,7 +588,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: Colors.accentLt,
+    color: colors.accentLt,
     fontWeight: '700',
   },
   title: {
@@ -608,7 +612,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scopeTabBtnActive: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
   scopeTabText: {
     fontSize: 12,
@@ -688,9 +692,9 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   pendingCard: {
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     borderWidth: 1,
-    borderColor: Colors.accent,
+    borderColor: colors.accent,
   },
   summaryLabel: {
     fontSize: 9.5,
@@ -707,13 +711,13 @@ const styles = StyleSheet.create({
   pendingLabel: {
     fontSize: 9.5,
     letterSpacing: 0.8,
-    color: Colors.deep,
+    color: colors.deep,
     fontWeight: '700',
   },
   pendingValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: Colors.accent,
+    color: colors.accent,
     marginTop: 4,
   },
   barCard: {
@@ -873,7 +877,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   statusTagPending: {
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
   },
   statusTagUpcoming: {
     backgroundColor: '#ffffff',
@@ -886,14 +890,14 @@ const styles = StyleSheet.create({
     color: 'rgba(18, 18, 18, 0.65)',
   },
   statusTagTextPending: {
-    color: Colors.accent,
+    color: colors.accent,
   },
   ctaContainer: {
     paddingHorizontal: 16,
     paddingTop: 18,
   },
   remindBtn: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     minHeight: 48,
     paddingVertical: 14,
     paddingHorizontal: 16,

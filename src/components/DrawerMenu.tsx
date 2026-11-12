@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,8 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
 import { fmt } from '../data/prototypeData';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.84, 335);
@@ -56,8 +58,8 @@ const PackagesIcon = () => (
   </Svg>
 );
 
-const PaymentsIcon = () => (
-  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2}>
+const PaymentsIcon: React.FC<{ color: string }> = ({ color }) => (
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
     <Rect x={2} y={5} width={20} height={14} rx={2} strokeLinecap="round" strokeLinejoin="round" />
     <Line x1={2} y1={10} x2={22} y2={10} strokeLinecap="round" />
   </Svg>
@@ -105,8 +107,8 @@ const ReportsIcon = () => (
   </Svg>
 );
 
-const SubscriptionIcon = () => (
-  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2}>
+const SubscriptionIcon: React.FC<{ color: string }> = ({ color }) => (
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
     <Path
       d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
       strokeLinecap="round"
@@ -115,8 +117,8 @@ const SubscriptionIcon = () => (
   </Svg>
 );
 
-const WebTerminalIcon = () => (
-  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2}>
+const WebTerminalIcon: React.FC<{ color: string }> = ({ color }) => (
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
     <Rect x={2} y={3} width={20} height={14} rx={2} strokeLinecap="round" strokeLinejoin="round" />
     <Line x1={8} y1={21} x2={16} y2={21} strokeLinecap="round" />
     <Line x1={12} y1={17} x2={12} y2={21} strokeLinecap="round" />
@@ -209,6 +211,8 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
   unreadNotificationsCount = 0,
   todayBookingsCount = 0,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [isVisible, setIsVisible] = useState(isOpen);
 
   // GSAP-style physics controllers
@@ -447,7 +451,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 )}
 
                 <View style={styles.premiumBadge}>
-                  <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2.4} style={{ marginRight: 3 }}>
+                  <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={2.4} style={{ marginRight: 3 }}>
                     <Path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z" strokeLinecap="round" strokeLinejoin="round" />
                   </Svg>
                   <Text style={styles.premiumText}>PREMIUM</Text>
@@ -529,7 +533,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
               onPress={() => handleCloseWithAction(() => onNavigate('payments'))}
             >
               <View style={styles.iconCircleDark}>
-                <PaymentsIcon />
+                <PaymentsIcon color={colors.accent} />
               </View>
               <View>
                 <Text style={styles.cardTitleWhite}>Payments</Text>
@@ -646,7 +650,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
             >
               <View style={styles.rowLeft}>
                 <View style={styles.menuIconBox}>
-                  <SubscriptionIcon />
+                  <SubscriptionIcon color={colors.accent} />
                 </View>
                 <Text style={styles.menuRowText}>Subscription</Text>
               </View>
@@ -661,7 +665,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
             >
               <View style={styles.rowLeft}>
                 <View style={styles.menuIconBox}>
-                  <WebTerminalIcon />
+                  <WebTerminalIcon color={colors.accent} />
                 </View>
                 <Text style={styles.menuRowText}>Link Web Terminal</Text>
               </View>
@@ -729,7 +733,8 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   overlay: {
     position: 'absolute',
     top: 0,
@@ -793,7 +798,7 @@ const styles = StyleSheet.create({
   },
   pinkDivider: {
     height: 2,
-    backgroundColor: '#e8276b',
+    backgroundColor: colors.accent,
     borderRadius: 1,
     width: '100%',
   },
@@ -817,7 +822,7 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 21,
     borderWidth: 1.8,
-    borderColor: '#e8276b',
+    borderColor: colors.accent,
     backgroundColor: '#1a1016',
     alignItems: 'center',
     justifyContent: 'center',
@@ -854,9 +859,9 @@ const styles = StyleSheet.create({
   premiumBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(232, 39, 107, 0.12)',
+    backgroundColor: `${colors.accent}20`,
     borderWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.28)',
+    borderColor: colors.palePinkBorder,
     paddingHorizontal: 6,
     paddingVertical: 1.5,
     borderRadius: 999,
@@ -868,7 +873,7 @@ const styles = StyleSheet.create({
     marginRight: 2.5,
   },
   premiumText: {
-    color: '#e8276b',
+    color: colors.accent,
     fontSize: 8.5,
     fontWeight: '700',
     letterSpacing: 0.8,
@@ -905,7 +910,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   metricValuePink: {
-    color: '#e8276b',
+    color: colors.accent,
     fontSize: 13.5,
     fontWeight: '700',
     letterSpacing: -0.2,
@@ -930,8 +935,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   gridCardPink: {
-    backgroundColor: '#e8276b',
-    borderColor: '#e8276b',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   iconCircleTranslucent: {
     width: 27,
@@ -956,7 +961,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1,
   },
   cardSubPink: {
-    color: '#e8276b',
+    color: colors.accent,
     fontSize: 9.5,
     fontWeight: '600',
     marginTop: 1,
@@ -1001,7 +1006,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
   badgePinkPill: {
-    backgroundColor: '#e8276b',
+    backgroundColor: colors.accent,
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 999,
@@ -1022,7 +1027,7 @@ const styles = StyleSheet.create({
     fontWeight: '300',
   },
   premiumTextRight: {
-    color: '#e8276b',
+    color: colors.accent,
     fontSize: 11.5,
     fontWeight: '700',
   },

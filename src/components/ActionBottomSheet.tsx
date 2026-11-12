@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 export interface ActionSheetData {
   kicker: string;
@@ -27,6 +28,8 @@ interface ActionBottomSheetProps {
 }
 
 export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({ sheet, onClose }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { width, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isCompact = width < 380 || fontScale > 1.15;
@@ -98,7 +101,8 @@ export const ActionBottomSheet: React.FC<ActionBottomSheetProps> = ({ sheet, onC
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   overlay: {
     position: 'absolute',
     top: 0,
@@ -147,8 +151,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: 'rgba(232, 39, 107, 0.35)',
-    backgroundColor: '#ffeef4',
+    borderColor: colors.palePinkBorder,
+    backgroundColor: colors.tint2,
   },
   brandLogoImage: {
     width: '100%',
@@ -158,7 +162,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: Colors.deep,
+    color: colors.deep,
     fontWeight: '700',
     marginBottom: 4,
   },
@@ -174,7 +178,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   messageBox: {
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
@@ -215,7 +219,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     flex: 2,
     minHeight: 48,
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 16,

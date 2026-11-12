@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,14 +7,18 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { PLANS, fmt } from '../data/prototypeData';
 
-const CheckVectorIcon = () => (
-  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={3}>
+const CheckVectorIcon = () => {
+  const { colors } = useTheme();
+  return (
+  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={3}>
     <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
-);
+  );
+};
 
 interface SubscriptionScreenProps {
   onPayByUpi: (planMonths: number, total: number) => void;
@@ -34,6 +38,8 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({
   onPayByUpi,
   onGoBack,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [selectedPlanMonths, setSelectedPlanMonths] = useState(12);
 
   const currentPlan = PLANS.find((p) => p.months === selectedPlanMonths) || PLANS[2];
@@ -163,7 +169,8 @@ export const SubscriptionScreen: React.FC<SubscriptionScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4f4f6',
@@ -183,7 +190,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: Colors.accent2,
+    color: colors.accent2,
     fontWeight: '700',
   },
   priceRow: {
@@ -195,7 +202,7 @@ const styles = StyleSheet.create({
   priceBig: {
     fontSize: 40,
     fontWeight: '700',
-    color: Colors.accent,
+    color: colors.accent,
   },
   pricePerMonth: {
     fontSize: 15,
@@ -257,7 +264,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   badgeDefault: {
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
   },
   badgeText: {
     fontSize: 9.5,
@@ -267,7 +274,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   badgeTextDefault: {
-    color: Colors.deep,
+    color: colors.deep,
   },
   planPricingRow: {
     flexDirection: 'row',
@@ -318,12 +325,12 @@ const styles = StyleSheet.create({
   saveLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: Colors.deep,
+    color: colors.deep,
   },
   saveValue: {
     fontSize: 13.5,
     fontWeight: '700',
-    color: Colors.deep,
+    color: colors.deep,
   },
   featuresCard: {
     backgroundColor: '#ffffff',
@@ -363,7 +370,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   payBtn: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 14,
     borderRadius: 16,
     alignItems: 'center',

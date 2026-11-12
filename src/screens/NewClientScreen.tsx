@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -24,7 +24,8 @@ import {
   requestPermissionsAsync as requestContactsPermissionsAsync,
 } from 'expo-contacts';
 import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { Client, normalizePhoneKey } from '../data/prototypeData';
 
 interface NewClientScreenProps {
@@ -43,49 +44,64 @@ interface DeviceContactItem {
   duplicateName: string | null;
 }
 
-const ContactsBookIcon = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2}>
+const ContactsBookIcon = () => {
+  const { colors } = useTheme();
+  return (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={2}>
     <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
     <Circle cx={9} cy={7} r={4} strokeLinecap="round" strokeLinejoin="round" />
     <Path d="M23 21v-2a4 4 0 0 0-3-3.87" strokeLinecap="round" strokeLinejoin="round" />
     <Path d="M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
-);
+  );
+};
 
 // ----------------- Bespoke Luxury SVG Icons ----------------- //
 
-const UserIcon = () => (
-  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2}>
+const UserIcon = () => {
+  const { colors } = useTheme();
+  return (
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={2}>
     <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
     <Circle cx={12} cy={7} r={4} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
-);
+  );
+};
 
-const PhoneIcon = () => (
-  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2}>
+const PhoneIcon = () => {
+  const { colors } = useTheme();
+  return (
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={2}>
     <Path
       d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
   </Svg>
-);
+  );
+};
 
-const NotesIcon = () => (
-  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2}>
+const NotesIcon = () => {
+  const { colors } = useTheme();
+  return (
+  <Svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={2}>
     <Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinecap="round" strokeLinejoin="round" />
     <Path d="M14 2v6h6" strokeLinecap="round" strokeLinejoin="round" />
     <Line x1={16} y1={13} x2={8} y2={13} strokeLinecap="round" />
     <Line x1={16} y1={17} x2={8} y2={17} strokeLinecap="round" />
   </Svg>
-);
+  );
+};
 
-const CameraIcon = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={2}>
+const CameraIcon = () => {
+  const { colors } = useTheme();
+  return (
+  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={2}>
     <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round" />
     <Circle cx={12} cy={13} r={4} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
-);
+  );
+};
 
 const CheckIcon = () => (
   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth={2.4}>
@@ -159,6 +175,8 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
   onImportContacts,
   onGoBack,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
@@ -468,7 +486,7 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
         >
           <View style={styles.importIconBadge}>
             {loadingContacts ? (
-              <ActivityIndicator size="small" color={Colors.accent} />
+              <ActivityIndicator size="small" color={colors.accent} />
             ) : (
               <ContactsBookIcon />
             )}
@@ -821,7 +839,8 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4f4f7',
@@ -841,7 +860,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: '#e8276b',
+    color: colors.accent,
     fontWeight: '700',
   },
   title: {
@@ -863,7 +882,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.25)',
+    borderColor: colors.palePinkBorder,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -874,7 +893,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -892,7 +911,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   importActionPill: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 999,
@@ -936,7 +955,7 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 10.5,
     fontWeight: '600',
-    color: '#e8276b',
+    color: colors.accent,
   },
   fieldRow: {
     flexDirection: 'row',
@@ -944,7 +963,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   fieldRowError: {
-    backgroundColor: 'rgba(232, 39, 107, 0.04)',
+    backgroundColor: colors.palePinkBorder,
     borderRadius: 10,
     paddingHorizontal: 6,
   },
@@ -952,7 +971,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 9,
-    backgroundColor: 'rgba(232, 39, 107, 0.08)',
+    backgroundColor: colors.palePinkBorder,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -1027,8 +1046,8 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: '#e8276b',
-    backgroundColor: 'rgba(232, 39, 107, 0.05)',
+    borderColor: colors.accent,
+    backgroundColor: colors.palePinkBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1037,7 +1056,7 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: '#e8276b',
+    borderColor: colors.accent,
   },
   photoTextCol: {
     flex: 1,
@@ -1118,14 +1137,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   saveAndBookBtn: {
-    backgroundColor: '#e8276b',
+    backgroundColor: colors.accent,
     borderRadius: 15,
     paddingVertical: 13,
     paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#e8276b',
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.35,
     shadowRadius: 8,
@@ -1157,7 +1176,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1,
-    color: '#e8276b',
+    color: colors.accent,
   },
   contactsModalTitle: {
     fontSize: 20,
@@ -1185,7 +1204,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(18, 18, 18, 0.07)',
   },
   contactsSearchInput: {
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -1229,8 +1248,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   contactCheckBoxActive: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   contactCheckBoxDisabled: {
     borderColor: 'rgba(18, 18, 18, 0.14)',
@@ -1261,7 +1280,7 @@ const styles = StyleSheet.create({
     color: '#92400e',
   },
   contactDupPill: {
-    backgroundColor: '#ffeef4',
+    backgroundColor: colors.tint2,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -1270,7 +1289,7 @@ const styles = StyleSheet.create({
   contactDupText: {
     fontSize: 9.5,
     fontWeight: '700',
-    color: Colors.deep,
+    color: colors.deep,
   },
   contactsFooterBar: {
     backgroundColor: '#121216',
@@ -1287,7 +1306,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   contactsImportConfirmBtn: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     paddingHorizontal: 18,
     paddingVertical: 12,
     borderRadius: 14,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,8 @@ import {
   Platform,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { Client, fmt, first, normalizePhoneKey } from '../data/prototypeData';
 
 const PhoneVectorIcon = ({ color = '#121212' }: { color?: string }) => (
@@ -27,23 +28,29 @@ const PhoneVectorIcon = ({ color = '#121212' }: { color?: string }) => (
   </Svg>
 );
 
-const ChatVectorIcon = ({ color = '#e8276b' }: { color?: string }) => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
+const ChatVectorIcon = ({ color  }: { color?: string }) => {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.accent;
+  return (
+  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={resolvedColor} strokeWidth={2}>
     <Path
       d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
   </Svg>
-);
+  );
+};
 
-const HeartVectorIcon = ({ filled }: { filled: boolean }) => (
+const HeartVectorIcon = ({ filled }: { filled: boolean }) => {
+  const { colors } = useTheme();
+  return (
   <Svg
     width={19}
     height={19}
     viewBox="0 0 24 24"
-    fill={filled ? '#e8276b' : 'none'}
-    stroke={filled ? '#e8276b' : 'rgba(255, 255, 255, 0.6)'}
+    fill={filled ? colors.accent : 'none'}
+    stroke={filled ? colors.accent : 'rgba(255, 255, 255, 0.6)'}
     strokeWidth={2}
   >
     <Path
@@ -52,7 +59,8 @@ const HeartVectorIcon = ({ filled }: { filled: boolean }) => (
       strokeLinejoin="round"
     />
   </Svg>
-);
+  );
+};
 
 const MoreDotsVerticalIcon = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="#ffffff">
@@ -104,6 +112,8 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
   onUpdateClient,
   onToggleActive,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editName, setEditName] = useState('');
@@ -126,7 +136,7 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
         <Text style={{ fontSize: 16, fontWeight: '700', color: '#121212', marginBottom: 12 }}>Client not found</Text>
         <TouchableOpacity
           onPress={onGoBack}
-          style={{ backgroundColor: Colors.accent, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 14 }}
+          style={{ backgroundColor: colors.accent, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 14 }}
         >
           <Text style={{ color: '#ffffff', fontWeight: '700' }}>Back to Clients</Text>
         </TouchableOpacity>
@@ -311,7 +321,7 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
           activeOpacity={0.8}
         >
           <View style={styles.actionIconWrap}>
-            <ChatVectorIcon color="#e8276b" />
+            <ChatVectorIcon color={colors.accent} />
           </View>
           <Text style={styles.actionBtnTextPink}>WHATSAPP</Text>
         </TouchableOpacity>
@@ -519,7 +529,8 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4f4f6',
@@ -552,7 +563,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -578,10 +589,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   vipBadge: {
-    backgroundColor: 'rgba(232, 39, 107, 0.22)',
+    backgroundColor: colors.palePinkBorder,
     borderBottomWidth: 1,
     borderLeftWidth: 1,
-    borderColor: '#e8276b',
+    borderColor: colors.accent,
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
@@ -616,9 +627,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   vipHeartBtnActive: {
-    backgroundColor: 'rgba(232, 39, 107, 0.16)',
+    backgroundColor: colors.palePinkBorder,
     borderWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.45)',
+    borderColor: colors.palePinkBorder,
   },
   moreDotsBtn: {
     width: 36,
@@ -658,7 +669,7 @@ const styles = StyleSheet.create({
   },
   actionBtnPink: {
     flex: 1,
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -666,7 +677,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     gap: 8,
     borderWidth: 1,
-    borderColor: Colors.accent,
+    borderColor: colors.accent,
   },
   actionIconWrap: {
     marginRight: 6,
@@ -684,7 +695,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1,
-    color: Colors.deep,
+    color: colors.deep,
   },
   metricsRow: {
     flexDirection: 'row',
@@ -730,7 +741,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
     fontWeight: '700',
-    color: Colors.accent,
+    color: colors.accent,
     marginBottom: 6,
   },
   notesText: {
@@ -797,7 +808,7 @@ const styles = StyleSheet.create({
   historyPaidLabel: {
     fontSize: 9,
     fontWeight: '700',
-    color: Colors.accent,
+    color: colors.accent,
     marginTop: 2,
   },
   historyEmptyRow: {
@@ -815,12 +826,12 @@ const styles = StyleSheet.create({
     paddingTop: 18,
   },
   newBookingCtaBtn: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     borderRadius: 16,
     paddingVertical: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.accent,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -898,7 +909,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1,
-    color: Colors.accent,
+    color: colors.accent,
   },
   editTitle: {
     fontSize: 20,
@@ -916,7 +927,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   editInput: {
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 11,
@@ -952,7 +963,7 @@ const styles = StyleSheet.create({
     flex: 1.4,
     paddingVertical: 13,
     borderRadius: 14,
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },

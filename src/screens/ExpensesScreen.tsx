@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import {
   Platform,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { ExpenseRecord, fmt } from '../data/prototypeData';
 
 const MoreVerticalIcon = () => (
@@ -66,6 +67,8 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
   onUpdateExpense,
   onDeleteExpense,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonthIdx = now.getMonth();
@@ -222,7 +225,7 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
                       styles.barFill,
                       {
                         width: `${pct}%` as any,
-                        backgroundColor: isTop ? Colors.accent : Colors.accent2,
+                        backgroundColor: isTop ? colors.accent : colors.accent2,
                       },
                     ]}
                   />
@@ -518,7 +521,8 @@ export const ExpensesScreen: React.FC<ExpensesScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4f4f6',
@@ -538,7 +542,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: Colors.deep,
+    color: colors.deep,
     fontWeight: '700',
   },
   totalValue: {
@@ -670,7 +674,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginTop: 4,
     letterSpacing: 0.6,
-    color: Colors.deep,
+    color: colors.deep,
   },
   menuDotsBtn: {
     paddingLeft: 4,
@@ -703,7 +707,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   logBtn: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 14,
     borderRadius: 16,
     alignItems: 'center',
@@ -732,7 +736,7 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontWeight: '700',
     letterSpacing: 1,
-    color: Colors.deep,
+    color: colors.deep,
   },
   menuHeaderTitle: {
     fontSize: 16,
@@ -754,7 +758,7 @@ const styles = StyleSheet.create({
     color: '#121212',
   },
   menuDeleteBtn: {
-    backgroundColor: '#ffeef4',
+    backgroundColor: colors.tint2,
   },
   menuDeleteText: {
     fontSize: 14,
@@ -793,7 +797,7 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontWeight: '700',
     letterSpacing: 1,
-    color: Colors.deep,
+    color: colors.deep,
   },
   modalTitle: {
     fontSize: 20,
@@ -844,8 +848,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   catChipActive: {
-    backgroundColor: '#ffeef4',
-    borderColor: Colors.accent,
+    backgroundColor: colors.tint2,
+    borderColor: colors.accent,
   },
   catChipText: {
     fontSize: 12,
@@ -853,7 +857,7 @@ const styles = StyleSheet.create({
     color: 'rgba(18, 18, 18, 0.7)',
   },
   catChipTextActive: {
-    color: Colors.deep,
+    color: colors.deep,
     fontWeight: '700',
   },
   dateQuickRow: {
@@ -899,7 +903,7 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     flex: 2,
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,8 @@ import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import Svg, { Circle, Line, Path, Polygon, Rect } from 'react-native-svg';
 import { apiClient } from '../services/apiClient';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 const CheckVectorIcon = () => (
   <Svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth={3}>
@@ -46,7 +48,8 @@ const BUSINESS_TYPE_OPTIONS = [
 ] as const;
 
 const BusinessTypeVectorIcon: React.FC<{ type: string; active: boolean }> = ({ type, active }) => {
-  const color = active ? '#ffffff' : '#e8276b';
+  const { colors } = useTheme();
+  const color = active ? '#ffffff' : colors.accent;
   switch (type) {
     case 'Makeup Artist':
       return (
@@ -157,31 +160,36 @@ const INITIAL_PKG_GROUPS: PackageGroup[] = [
 ];
 
 // Premium Vector GPS Radar Target Icon (No emoji/lollipop)
-const GpsRadarIcon: React.FC<{ isLocating?: boolean }> = () => (
+const GpsRadarIcon: React.FC<{ isLocating?: boolean }> = () => {
+  const { colors } = useTheme();
+  return (
   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
     {/* Target outer radar circle */}
     <Circle
       cx={12}
       cy={12}
       r={8}
-      stroke="#e8276b"
+      stroke={colors.accent}
       strokeWidth={2}
       strokeLinecap="round"
     />
     {/* Precision crosshair axes */}
-    <Line x1={12} y1={2} x2={12} y2={6} stroke="#e8276b" strokeWidth={2.2} strokeLinecap="round" />
-    <Line x1={12} y1={18} x2={12} y2={22} stroke="#e8276b" strokeWidth={2.2} strokeLinecap="round" />
-    <Line x1={2} y1={12} x2={6} y2={12} stroke="#e8276b" strokeWidth={2.2} strokeLinecap="round" />
-    <Line x1={18} y1={12} x2={22} y2={12} stroke="#e8276b" strokeWidth={2.2} strokeLinecap="round" />
+    <Line x1={12} y1={2} x2={12} y2={6} stroke={colors.accent} strokeWidth={2.2} strokeLinecap="round" />
+    <Line x1={12} y1={18} x2={12} y2={22} stroke={colors.accent} strokeWidth={2.2} strokeLinecap="round" />
+    <Line x1={2} y1={12} x2={6} y2={12} stroke={colors.accent} strokeWidth={2.2} strokeLinecap="round" />
+    <Line x1={18} y1={12} x2={22} y2={12} stroke={colors.accent} strokeWidth={2.2} strokeLinecap="round" />
     {/* Concentric core beacon dot */}
-    <Circle cx={12} cy={12} r={3} fill="#e8276b" />
+    <Circle cx={12} cy={12} r={3} fill={colors.accent} />
   </Svg>
-);
+  );
+};
 
 export const SetupScreen: React.FC<SetupScreenProps> = ({
   phone = '+919876543210',
   onCompleted,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const scrollViewRef = useRef<any>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
@@ -1196,7 +1204,8 @@ export const SetupScreen: React.FC<SetupScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f4f4f6',
@@ -1253,7 +1262,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: '#e8276b',
+    color: colors.accent,
     fontWeight: '700',
   },
   pctText: {
@@ -1277,9 +1286,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: 'rgba(232, 39, 107, 0.16)',
+    backgroundColor: colors.palePinkBorder,
     borderWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.4)',
+    borderColor: colors.palePinkBorder,
   },
   verifiedPhoneText: {
     fontSize: 11.5,
@@ -1289,7 +1298,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: 8,
-    backgroundColor: '#e8276b',
+    backgroundColor: colors.accent,
     borderRadius: 999,
   },
   headerTitle: {
@@ -1327,9 +1336,9 @@ const styles = StyleSheet.create({
   gpsBadgeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffeef4',
+    backgroundColor: colors.tint2,
     borderWidth: 1.2,
-    borderColor: '#e8276b',
+    borderColor: colors.accent,
     borderRadius: 999,
     paddingHorizontal: 11,
     paddingVertical: 4,
@@ -1337,20 +1346,20 @@ const styles = StyleSheet.create({
   },
   gpsBadgeBtnActive: {
     backgroundColor: '#ffe2ec',
-    borderColor: '#e8276b',
+    borderColor: colors.accent,
   },
   gpsBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#e8276b',
+    color: colors.accent,
     letterSpacing: 0.9,
   },
   // Pure Pale Pink Background with subtle Pink Border
   inputField: {
-    backgroundColor: '#ffeef4',
+    backgroundColor: colors.tint2,
     borderRadius: 14,
     borderWidth: 1.2,
-    borderColor: 'rgba(232, 39, 107, 0.25)',
+    borderColor: colors.palePinkBorder,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
@@ -1384,7 +1393,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1.2,
-    color: '#e8276b',
+    color: colors.accent,
     textTransform: 'uppercase',
   },
   logoHintSub: {
@@ -1402,15 +1411,15 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: '#e8276b',
-    backgroundColor: '#ffeef4',
+    borderColor: colors.accent,
+    backgroundColor: colors.tint2,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   logoDottedBoxFilled: {
     borderStyle: 'solid',
-    borderColor: '#e8276b',
+    borderColor: colors.accent,
   },
   uploadedLogoImage: {
     width: '100%',
@@ -1419,7 +1428,7 @@ const styles = StyleSheet.create({
   },
   plusIconText: {
     fontSize: 22,
-    color: '#e8276b',
+    color: colors.accent,
     fontWeight: '600',
     lineHeight: 24,
   },
@@ -1438,7 +1447,7 @@ const styles = StyleSheet.create({
   removeLogoText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#e8276b',
+    color: colors.accent,
     textDecorationLine: 'underline',
   },
   helperNote: {
@@ -1454,18 +1463,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   groupHeader: {
-    backgroundColor: '#ffeef4',
+    backgroundColor: colors.tint2,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.15)',
+    borderColor: colors.palePinkBorder,
   },
   groupHeaderText: {
     fontSize: 10,
     letterSpacing: 1.2,
     fontWeight: '700',
-    color: '#e8276b',
+    color: colors.accent,
   },
   serviceRow: {
     backgroundColor: '#ffffff',
@@ -1484,9 +1493,9 @@ const styles = StyleSheet.create({
     color: '#121212',
   },
   priceChip: {
-    backgroundColor: '#ffeef4',
+    backgroundColor: colors.tint2,
     borderWidth: 1.2,
-    borderColor: 'rgba(232, 39, 107, 0.25)',
+    borderColor: colors.palePinkBorder,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -1522,7 +1531,7 @@ const styles = StyleSheet.create({
   addServiceBtn: {
     backgroundColor: '#ffffff',
     borderWidth: 1.2,
-    borderColor: 'rgba(232, 39, 107, 0.3)',
+    borderColor: colors.palePinkBorder,
     borderRadius: 16,
     paddingVertical: 13,
     alignItems: 'center',
@@ -1531,7 +1540,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1.1,
     fontWeight: '700',
-    color: '#e8276b',
+    color: colors.accent,
   },
   packagesNote: {
     fontSize: 11.5,
@@ -1540,10 +1549,10 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   addFormCard: {
-    backgroundColor: '#ffeef4',
+    backgroundColor: colors.tint2,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.2)',
+    borderColor: colors.palePinkBorder,
     padding: 16,
     marginTop: 10,
     marginBottom: 10,
@@ -1552,7 +1561,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.2,
     fontWeight: '700',
-    color: '#e8276b',
+    color: colors.accent,
     marginBottom: 10,
   },
   addFormInput: {
@@ -1612,7 +1621,7 @@ const styles = StyleSheet.create({
   },
   confirmAddBtn: {
     flex: 2,
-    backgroundColor: '#e8276b',
+    backgroundColor: colors.accent,
     borderRadius: 14,
     paddingVertical: 12,
     alignItems: 'center',
@@ -1685,8 +1694,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(18, 18, 18, 0.07)',
   },
   tourCardSeen: {
-    backgroundColor: '#ffeef4',
-    borderColor: 'rgba(232, 39, 107, 0.25)',
+    backgroundColor: colors.tint2,
+    borderColor: colors.palePinkBorder,
   },
   tourTextCol: {
     flex: 1,
@@ -1708,7 +1717,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.28)',
+    borderColor: colors.palePinkBorder,
   },
   welcomeTopRow: {
     flexDirection: 'row',
@@ -1720,13 +1729,13 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1.4,
-    color: '#e8276b',
+    color: colors.accent,
     textTransform: 'uppercase',
   },
   selectedCountPill: {
-    backgroundColor: 'rgba(232, 39, 107, 0.16)',
+    backgroundColor: colors.palePinkBorder,
     borderWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.4)',
+    borderColor: colors.palePinkBorder,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 999,
@@ -1767,8 +1776,8 @@ const styles = StyleSheet.create({
   },
   businessCardActive: {
     backgroundColor: '#121212',
-    borderColor: '#e8276b',
-    shadowColor: '#e8276b',
+    borderColor: colors.accent,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.18,
     shadowRadius: 8,
@@ -1784,12 +1793,12 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 11,
-    backgroundColor: '#ffeef4',
+    backgroundColor: colors.tint2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   businessIconCircleActive: {
-    backgroundColor: '#e8276b',
+    backgroundColor: colors.accent,
   },
   businessRadio: {
     width: 19,
@@ -1801,8 +1810,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   businessRadioActive: {
-    backgroundColor: '#e8276b',
-    borderColor: '#e8276b',
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   businessCardTitle: {
     fontSize: 13.5,
@@ -1834,7 +1843,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   primaryBtn: {
-    backgroundColor: '#e8276b',
+    backgroundColor: colors.accent,
     borderRadius: 16,
     paddingVertical: 15,
     alignItems: 'center',

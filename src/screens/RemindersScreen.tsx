@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { Booking, ReminderRecord, first } from '../data/prototypeData';
 
 const SHORT_MONTHS = [
@@ -62,12 +63,16 @@ const MoreVerticalIcon = () => (
   </Svg>
 );
 
-const ClockIcon = ({ color = Colors.accent, size = 16 }: { color?: string; size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.1}>
+const ClockIcon = ({ color, size = 16  }: { color?: string; size?: number }) => {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.accent;
+  return (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={resolvedColor} strokeWidth={2.1}>
     <Circle cx={12} cy={12} r={9} />
     <Path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
-);
+  );
+};
 
 const ChevronIcon = ({
   dir = 'right',
@@ -166,6 +171,8 @@ export const RemindersScreen: React.FC<RemindersScreenProps> = ({
   onUpdateReminder,
   onDeleteReminder,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ReminderRecord | null>(null);
@@ -955,10 +962,11 @@ export const RemindersScreen: React.FC<RemindersScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: Colors.bg,
+    backgroundColor: colors.bg,
   },
   scrollContent: {
     paddingBottom: 24,
@@ -979,11 +987,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.ink,
+    color: colors.ink,
   },
   emptySub: {
     fontSize: 12.5,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 6,
     lineHeight: 18,
@@ -999,10 +1007,10 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 18,
   },
   groupHeaderToday: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
   groupHeaderDefault: {
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
   },
   groupLabel: {
     fontSize: 10,
@@ -1013,7 +1021,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   textInk: {
-    color: Colors.ink,
+    color: colors.ink,
   },
   groupCard: {
     backgroundColor: '#ffffff',
@@ -1055,8 +1063,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   checkBoxDone: {
-    backgroundColor: Colors.ink,
-    borderColor: Colors.ink,
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
   },
   reminderDetails: {
     flex: 1,
@@ -1064,7 +1072,7 @@ const styles = StyleSheet.create({
   reminderText: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.ink,
+    color: colors.ink,
     lineHeight: 20,
   },
   reminderTextDone: {
@@ -1088,7 +1096,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   addReminderBtn: {
-    backgroundColor: Colors.ink,
+    backgroundColor: colors.ink,
     minHeight: 48,
     paddingVertical: 14,
     borderRadius: 16,
@@ -1116,7 +1124,7 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.ink,
+    color: colors.ink,
     marginBottom: 4,
     paddingHorizontal: 4,
   },
@@ -1130,10 +1138,10 @@ const styles = StyleSheet.create({
   menuOptionText: {
     fontSize: 14,
     fontWeight: '700',
-    color: Colors.ink,
+    color: colors.ink,
   },
   menuDeleteBtn: {
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
   },
   menuDeleteText: {
     fontSize: 14,
@@ -1182,12 +1190,12 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontWeight: '700',
     letterSpacing: 1,
-    color: Colors.deep,
+    color: colors.deep,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.ink,
+    color: colors.ink,
     marginTop: 2,
   },
   closeChip: {
@@ -1200,7 +1208,7 @@ const styles = StyleSheet.create({
   closeChipText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.ink,
+    color: colors.ink,
   },
   fieldLabel: {
     fontSize: 10,
@@ -1218,7 +1226,7 @@ const styles = StyleSheet.create({
   datePreviewText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.deep,
+    color: colors.deep,
     marginTop: 14,
     marginBottom: 6,
   },
@@ -1228,9 +1236,9 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   templateChip: {
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     borderWidth: 1,
-    borderColor: Colors.palePinkBorder,
+    borderColor: colors.palePinkBorder,
     borderRadius: 999,
     minHeight: 44,
     paddingHorizontal: 14,
@@ -1239,18 +1247,18 @@ const styles = StyleSheet.create({
   templateChipText: {
     fontSize: 12.5,
     fontWeight: '600',
-    color: Colors.deep,
+    color: colors.deep,
   },
   input: {
-    backgroundColor: Colors.palePink,
+    backgroundColor: colors.palePink,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     minHeight: 48,
     fontSize: 14,
-    color: Colors.ink,
+    color: colors.ink,
     borderWidth: 1,
-    borderColor: Colors.palePinkBorder,
+    borderColor: colors.palePinkBorder,
   },
   chipsWrap: {
     flexDirection: 'row',
@@ -1267,8 +1275,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   catChipActive: {
-    backgroundColor: Colors.tint,
-    borderColor: Colors.accent,
+    backgroundColor: colors.tint,
+    borderColor: colors.accent,
   },
   catChipText: {
     fontSize: 12.5,
@@ -1276,7 +1284,7 @@ const styles = StyleSheet.create({
     color: 'rgba(18, 18, 18, 0.72)',
   },
   catChipTextActive: {
-    color: Colors.deep,
+    color: colors.deep,
     fontWeight: '700',
   },
   dateChip: {
@@ -1287,7 +1295,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f4f6',
   },
   dateChipActive: {
-    backgroundColor: Colors.ink,
+    backgroundColor: colors.ink,
   },
   dateChipText: {
     fontSize: 12.5,
@@ -1301,9 +1309,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.palePink,
+    backgroundColor: colors.palePink,
     borderWidth: 1,
-    borderColor: Colors.palePinkBorder,
+    borderColor: colors.palePinkBorder,
     borderRadius: 14,
     minHeight: 52,
     paddingHorizontal: 12,
@@ -1324,7 +1332,7 @@ const styles = StyleSheet.create({
   timeTriggerValue: {
     fontSize: 15,
     fontWeight: '700',
-    color: Colors.ink,
+    color: colors.ink,
   },
   timeChangeCue: {
     flexDirection: 'row',
@@ -1334,7 +1342,7 @@ const styles = StyleSheet.create({
   timeChangeText: {
     fontSize: 12.5,
     fontWeight: '700',
-    color: Colors.deep,
+    color: colors.deep,
   },
   presetPill: {
     minHeight: 44,
@@ -1344,12 +1352,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   presetPillActive: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
   presetText: {
     fontSize: 12.5,
     fontWeight: '600',
-    color: Colors.ink,
+    color: colors.ink,
   },
   presetTextActive: {
     color: '#ffffff',
@@ -1401,21 +1409,21 @@ const styles = StyleSheet.create({
     width: '100%',
     minHeight: 44,
     borderRadius: 12,
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     borderWidth: 1,
-    borderColor: Colors.accent,
+    borderColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dialActiveVal: {
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.deep,
+    color: colors.deep,
   },
   dialColon: {
     fontSize: 20,
     fontWeight: '700',
-    color: Colors.ink,
+    color: colors.ink,
     marginTop: 16,
   },
   periodStack: {
@@ -1432,13 +1440,13 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(18, 18, 18, 0.08)',
   },
   periodBtnActive: {
-    backgroundColor: Colors.ink,
-    borderColor: Colors.ink,
+    backgroundColor: colors.ink,
+    borderColor: colors.ink,
   },
   periodBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.ink,
+    color: colors.ink,
   },
   periodBtnTextActive: {
     color: '#ffffff',
@@ -1461,11 +1469,11 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: '700',
     letterSpacing: 0.8,
-    color: Colors.ink,
+    color: colors.ink,
   },
   saveBtn: {
     flex: 2,
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     minHeight: 48,
     borderRadius: 14,
     alignItems: 'center',

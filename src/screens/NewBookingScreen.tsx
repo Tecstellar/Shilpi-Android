@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle, Polyline, Line } from 'react-native-svg';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import {
   Client,
   PackageGroup,
@@ -55,11 +56,14 @@ const ScalePressable: React.FC<{
   );
 };
 
-const CheckVectorIcon = () => (
-  <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={3}>
+const CheckVectorIcon = () => {
+  const { colors } = useTheme();
+  return (
+  <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={3}>
     <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
-);
+  );
+};
 
 const ClockVectorIcon = ({ color = '#121212', size = 18 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.1}>
@@ -92,12 +96,15 @@ const ChevronVectorIcon = ({
   );
 };
 
-const PlusSmallVectorIcon = () => (
-  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={Colors.deep} strokeWidth={2.5}>
+const PlusSmallVectorIcon = () => {
+  const { colors } = useTheme();
+  return (
+  <Svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={colors.deep} strokeWidth={2.5}>
     <Line x1={12} y1={5} x2={12} y2={19} strokeLinecap="round" />
     <Line x1={5} y1={12} x2={19} y2={12} strokeLinecap="round" />
   </Svg>
-);
+  );
+};
 
 const MONTH_SHORT = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -139,6 +146,8 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
   onSaveBooking,
   onStartNewClient,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { width, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isCompact = width < 380 || fontScale > 1.15;
@@ -513,7 +522,7 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
           >
             <View style={styles.timePickerLeft}>
               <View style={styles.timeClockBadge}>
-                <ClockVectorIcon color={Colors.accent} size={17} />
+                <ClockVectorIcon color={colors.accent} size={17} />
               </View>
               <Text style={styles.timePickerValue} numberOfLines={1}>
                 {time}
@@ -841,7 +850,8 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   flex1: {
     flex: 1,
   },
@@ -890,7 +900,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   clientChipActive: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
   clientChipText: {
     fontSize: 12.5,
@@ -901,7 +911,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   newClientChip: {
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     minHeight: 34,
     paddingVertical: 6,
     paddingHorizontal: 13,
@@ -913,7 +923,7 @@ const styles = StyleSheet.create({
   newClientText: {
     fontSize: 12.5,
     fontWeight: '700',
-    color: Colors.deep,
+    color: colors.deep,
   },
   emptyClientHint: {
     fontSize: 11.5,
@@ -966,10 +976,10 @@ const styles = StyleSheet.create({
   },
   monthCellToday: {
     borderWidth: 1.5,
-    borderColor: Colors.accent,
+    borderColor: colors.accent,
   },
   monthCellSelected: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
   monthCellNum: {
     fontSize: 13.5,
@@ -983,7 +993,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   textPink: {
-    color: Colors.accent,
+    color: colors.accent,
   },
   dotsRow: {
     flexDirection: 'row',
@@ -997,7 +1007,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   dotPink: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
   dotWhite: {
     backgroundColor: '#ffffff',
@@ -1025,7 +1035,7 @@ const styles = StyleSheet.create({
   },
   busyBanner: {
     marginTop: 12,
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 12,
@@ -1033,7 +1043,7 @@ const styles = StyleSheet.create({
   busyBannerTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.deep,
+    color: colors.deep,
     marginBottom: 4,
   },
   busyBannerSub: {
@@ -1065,7 +1075,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: '#ffeef4',
+    backgroundColor: colors.tint2,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -1147,9 +1157,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   presetPillActive: {
-    backgroundColor: '#ffeef4',
+    backgroundColor: colors.tint2,
     borderWidth: 1,
-    borderColor: Colors.accent,
+    borderColor: colors.accent,
   },
   presetText: {
     fontSize: 11,
@@ -1157,7 +1167,7 @@ const styles = StyleSheet.create({
     color: 'rgba(18, 18, 18, 0.72)',
   },
   presetTextActive: {
-    color: Colors.deep,
+    color: colors.deep,
     fontWeight: '700',
   },
   dialColumnsRow: {
@@ -1204,7 +1214,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.35)',
+    borderColor: colors.palePinkBorder,
     paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1241,7 +1251,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   periodBtnActive: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
   periodBtnText: {
     fontSize: 13,
@@ -1259,7 +1269,7 @@ const styles = StyleSheet.create({
   },
   fineStepBtn: {
     flex: 1,
-    backgroundColor: '#ffeef4',
+    backgroundColor: colors.tint2,
     paddingVertical: 6,
     borderRadius: 10,
     alignItems: 'center',
@@ -1267,7 +1277,7 @@ const styles = StyleSheet.create({
   fineStepText: {
     fontSize: 10,
     fontWeight: '700',
-    color: Colors.deep,
+    color: colors.deep,
   },
   modalFooterRow: {
     flexDirection: 'row',
@@ -1294,7 +1304,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingVertical: 13,
     borderRadius: 14,
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1311,7 +1321,7 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontWeight: '700',
     letterSpacing: 1,
-    color: Colors.deep,
+    color: colors.deep,
     marginBottom: 6,
   },
   pkgToggleRow: {
@@ -1325,7 +1335,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   pkgToggleRowActive: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
   checkbox: {
     width: 20,
@@ -1378,7 +1388,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   textInput: {
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -1423,7 +1433,7 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     minHeight: 48,
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 13,
     paddingHorizontal: 20,
     borderRadius: 14,

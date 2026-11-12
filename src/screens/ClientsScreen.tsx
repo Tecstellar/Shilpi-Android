@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,17 +9,20 @@ import {
   Image,
 } from 'react-native';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { Client, fmt } from '../data/prototypeData';
 
-const AddClientVectorIcon = ({ size = 25 }: { size?: number }) => (
+const AddClientVectorIcon = ({ size = 25 }: { size?: number }) => {
+  const { colors } = useTheme();
+  return (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Circle
       cx={11.2}
       cy={6.8}
       r={4.1}
       fill="#fbd0dd"
-      stroke="#e8276b"
+      stroke={colors.accent}
       strokeWidth={2.1}
     />
     <Path
@@ -29,7 +32,7 @@ const AddClientVectorIcon = ({ size = 25 }: { size?: number }) => (
     <Path
       d="M11.8 13.4 C6.9 13.4 3.4 15.9 3.4 18.6 C3.4 20.1 4.9 20.8 7.8 20.8 L11.8 20.8"
       fill="none"
-      stroke="#e8276b"
+      stroke={colors.accent}
       strokeWidth={2.1}
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -39,30 +42,36 @@ const AddClientVectorIcon = ({ size = 25 }: { size?: number }) => (
       cy={17.0}
       r={4.4}
       fill="#fbd0dd"
-      stroke="#e8276b"
+      stroke={colors.accent}
       strokeWidth={2.1}
     />
-    <Line x1={17.2} y1={15.1} x2={17.2} y2={18.9} stroke="#e8276b" strokeWidth={2.1} strokeLinecap="round" />
-    <Line x1={15.3} y1={17.0} x2={19.1} y2={17.0} stroke="#e8276b" strokeWidth={2.1} strokeLinecap="round" />
+    <Line x1={17.2} y1={15.1} x2={17.2} y2={18.9} stroke={colors.accent} strokeWidth={2.1} strokeLinecap="round" />
+    <Line x1={15.3} y1={17.0} x2={19.1} y2={17.0} stroke={colors.accent} strokeWidth={2.1} strokeLinecap="round" />
   </Svg>
-);
+  );
+};
 
-const UsersEmptyVectorIcon = () => (
-  <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke="#e8276b" strokeWidth={1.8}>
+const UsersEmptyVectorIcon = () => {
+  const { colors } = useTheme();
+  return (
+  <Svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={1.8}>
     <Path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
     <Circle cx={9} cy={7} r={4} strokeLinecap="round" strokeLinejoin="round" />
     <Path d="M23 21v-2a4 4 0 0 0-3-3.87" strokeLinecap="round" strokeLinejoin="round" />
     <Path d="M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
-);
+  );
+};
 
-const HeartVectorIcon = ({ filled }: { filled: boolean }) => (
+const HeartVectorIcon = ({ filled }: { filled: boolean }) => {
+  const { colors } = useTheme();
+  return (
   <Svg
     width={19}
     height={19}
     viewBox="0 0 24 24"
-    fill={filled ? '#e8276b' : 'none'}
-    stroke={filled ? '#e8276b' : 'rgba(18, 18, 18, 0.35)'}
+    fill={filled ? colors.accent : 'none'}
+    stroke={filled ? colors.accent : 'rgba(18, 18, 18, 0.35)'}
     strokeWidth={2}
   >
     <Path
@@ -71,7 +80,8 @@ const HeartVectorIcon = ({ filled }: { filled: boolean }) => (
       strokeLinejoin="round"
     />
   </Svg>
-);
+  );
+};
 
 interface ClientsScreenProps {
   clients: Client[];
@@ -86,6 +96,8 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
   onToggleVip,
   onStartNewClient,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'active' | 'vip' | 'inactive'>('active');
 
@@ -281,7 +293,8 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f4f4f6',
@@ -300,7 +313,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -315,7 +328,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: '#fff5f8',
     borderWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.24)',
+    borderColor: colors.palePinkBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -380,7 +393,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   avatarAccent: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
   },
   avatarInk: {
     backgroundColor: '#121212',
@@ -405,10 +418,10 @@ const styles = StyleSheet.create({
     color: 'rgba(18, 18, 18, 0.5)',
   },
   vipBadge: {
-    backgroundColor: '#ffeef4',
+    backgroundColor: colors.tint2,
     borderBottomWidth: 1,
     borderLeftWidth: 1,
-    borderColor: 'rgba(232, 39, 107, 0.3)',
+    borderColor: colors.palePinkBorder,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
@@ -416,7 +429,7 @@ const styles = StyleSheet.create({
     fontSize: 8.5,
     fontWeight: '800',
     letterSpacing: 0.7,
-    color: '#e8276b',
+    color: colors.accent,
   },
   inactiveBadge: {
     backgroundColor: 'rgba(18, 18, 18, 0.08)',
@@ -439,7 +452,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   heartBtnActive: {
-    backgroundColor: '#ffeef4',
+    backgroundColor: colors.tint2,
   },
   clientMeta: {
     fontSize: 12,
@@ -471,7 +484,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#ffeef4',
+    backgroundColor: colors.tint2,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -494,12 +507,12 @@ const styles = StyleSheet.create({
     maxWidth: 280,
   },
   emptyBtn: {
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 12,
     paddingHorizontal: 22,
     borderRadius: 14,
     marginTop: 20,
-    shadowColor: Colors.accent,
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 5,

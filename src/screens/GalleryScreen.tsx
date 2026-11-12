@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -20,13 +20,17 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
 import Svg, { Path, Circle, Line } from 'react-native-svg';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { apiClient } from '../services/apiClient';
 
 // ----------------- Bespoke SVG Icons ----------------- //
 
-const CameraVectorIcon = ({ color = Colors.deep, size = 22 }: { color?: string; size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.9}>
+const CameraVectorIcon = ({ color, size = 22  }: { color?: string; size?: number }) => {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.deep;
+  return (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={resolvedColor} strokeWidth={1.9}>
     <Path
       d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"
       strokeLinecap="round"
@@ -34,7 +38,8 @@ const CameraVectorIcon = ({ color = Colors.deep, size = 22 }: { color?: string; 
     />
     <Circle cx={12} cy={13} r={4} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
-);
+  );
+};
 
 const PlusIcon = ({ color = '#ffffff', size = 14 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5}>
@@ -43,15 +48,19 @@ const PlusIcon = ({ color = '#ffffff', size = 14 }: { color?: string; size?: num
   </Svg>
 );
 
-const StreakFlameIcon = ({ color = '#e8276b', size = 16 }: { color?: string; size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.1}>
+const StreakFlameIcon = ({ color, size = 16  }: { color?: string; size?: number }) => {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.accent;
+  return (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={resolvedColor} strokeWidth={2.1}>
     <Path
       d="M12 2c.5 3.5-2 5.5-2 8.5 0 1.4 1 2.5 2.5 2.5 1.8 0 2.5-1.5 2.5-3.2 2 1.5 3.5 4 3.5 6.7a6.5 6.5 0 1 1-13 0c0-3.8 2.8-7.4 6.5-14.5z"
       strokeLinecap="round"
       strokeLinejoin="round"
     />
   </Svg>
-);
+  );
+};
 
 const SharePostIcon = ({ color = '#ffffff', size = 14 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2}>
@@ -63,8 +72,11 @@ const SharePostIcon = ({ color = '#ffffff', size = 14 }: { color?: string; size?
   </Svg>
 );
 
-const InstagramGlyphIcon = ({ color = Colors.accent, size = 13 }: { color?: string; size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.1}>
+const InstagramGlyphIcon = ({ color, size = 13  }: { color?: string; size?: number }) => {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.accent;
+  return (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={resolvedColor} strokeWidth={2.1}>
     <Path
       d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5z"
       strokeLinecap="round"
@@ -73,7 +85,8 @@ const InstagramGlyphIcon = ({ color = Colors.accent, size = 13 }: { color?: stri
     <Circle cx={12} cy={12} r={4} strokeLinecap="round" strokeLinejoin="round" />
     <Circle cx={17.5} cy={6.5} r={1} fill={color} />
   </Svg>
-);
+  );
+};
 
 const EditPencilIcon = ({ color = 'rgba(18,18,18,0.55)', size = 14 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
@@ -177,6 +190,8 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   artistName = 'Artist',
   studioLogo,
 }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { width: screenWidth } = useWindowDimensions();
   const cardInnerWidth = Math.max(260, screenWidth - 64);
   const primaryGridHeight = Math.round(Math.min(280, Math.max(195, cardInnerWidth * 0.66)));
@@ -584,7 +599,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         <View style={styles.streakCard}>
           <View style={styles.streakTopRow}>
             <View style={styles.streakTierPill}>
-              <StreakFlameIcon color="#e8276b" size={14} />
+              <StreakFlameIcon color={colors.accent} size={14} />
               <Text style={styles.streakTierText}>SHILPI STREAK · {streaks.tierName.toUpperCase()}</Text>
             </View>
             <Text style={styles.streakTargetText}>
@@ -604,7 +619,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
             </View>
             <View style={styles.streakStatDivider} />
             <View style={styles.streakStatBox}>
-              <Text style={[styles.streakStatNum, { color: '#e8276b' }]}>{streaks.weeklyStreak} wk</Text>
+              <Text style={[styles.streakStatNum, { color: colors.accent }]}>{streaks.weeklyStreak} wk</Text>
               <Text style={styles.streakStatLabel}>Active Streak</Text>
             </View>
           </View>
@@ -617,13 +632,13 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
         {/* 3. Loading or Empty State */}
         {isLoading && looks.length === 0 ? (
           <View style={styles.emptyCard}>
-            <ActivityIndicator color={Colors.accent} />
+            <ActivityIndicator color={colors.accent} />
             <Text style={styles.emptySub}>Loading your studio portfolio...</Text>
           </View>
         ) : looks.length === 0 ? (
           <View style={styles.emptyCard}>
             <View style={styles.emptyIconCircle}>
-              <CameraVectorIcon color={Colors.accent} size={28} />
+              <CameraVectorIcon color={colors.accent} size={28} />
             </View>
             <Text style={styles.emptyTitle}>No Portfolio Looks Yet</Text>
             <Text style={styles.emptySub}>
@@ -728,7 +743,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                       ) : (
                         <>
                           <Text style={styles.smallSlotText}>Detail 1</Text>
-                          <PlusIcon color={Colors.deep} size={13} />
+                          <PlusIcon color={colors.deep} size={13} />
                         </>
                       )}
                     </TouchableOpacity>
@@ -748,7 +763,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                       ) : (
                         <>
                           <Text style={styles.smallSlotText}>Detail 2</Text>
-                          <PlusIcon color={Colors.deep} size={13} />
+                          <PlusIcon color={colors.deep} size={13} />
                         </>
                       )}
                     </TouchableOpacity>
@@ -809,7 +824,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                           );
                         }}
                       >
-                        <PlusIcon color={Colors.accent} size={14} />
+                        <PlusIcon color={colors.accent} size={14} />
                         <Text style={styles.addExtraText}>Add Photo ({photoCount}/5)</Text>
                       </TouchableOpacity>
                     )}
@@ -853,7 +868,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                       onPress={() => handleOpenShareModal(post)}
                       activeOpacity={0.8}
                     >
-                      <InstagramGlyphIcon color={Colors.accent} size={12} />
+                      <InstagramGlyphIcon color={colors.accent} size={12} />
                       <Text style={styles.instaBadgeText} numberOfLines={1}>
                         {post.postedToInstagram ? 'POSTED TO INSTAGRAM' : 'TAG'}
                         {post.instagramHandle ? ` · ${post.instagramHandle}` : ''}
@@ -1076,7 +1091,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                         </Text>
                         {streaks.completedOrders > 0 && (
                           <View style={styles.posterStreakPill}>
-                            <StreakFlameIcon color="#e8276b" size={10} />
+                            <StreakFlameIcon color={colors.accent} size={10} />
                             <Text style={styles.posterStreakText}>
                               {streaks.completedOrders} Orders · {streaks.tierName}
                             </Text>
@@ -1200,7 +1215,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                 if (target) handleOpenShareModal(target);
               }}
             >
-              <InstagramGlyphIcon color={Colors.accent} size={16} />
+              <InstagramGlyphIcon color={colors.accent} size={16} />
               <Text style={styles.menuSheetRowText}>Share / Edit Instagram Tag</Text>
             </TouchableOpacity>
 
@@ -1229,7 +1244,8 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4f4f6',
@@ -1255,7 +1271,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: Colors.deep,
+    color: colors.deep,
     fontWeight: '700',
   },
   title: {
@@ -1268,7 +1284,7 @@ const styles = StyleSheet.create({
   newLookBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     paddingHorizontal: 13,
     paddingVertical: 9,
     borderRadius: 12,
@@ -1296,7 +1312,7 @@ const styles = StyleSheet.create({
   streakTierPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(232, 39, 107, 0.14)',
+    backgroundColor: colors.palePinkBorder,
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 999,
@@ -1348,7 +1364,7 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 4,
-    backgroundColor: '#e8276b',
+    backgroundColor: colors.accent,
   },
   emptyCard: {
     backgroundColor: '#ffffff',
@@ -1362,7 +1378,7 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 29,
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
@@ -1448,8 +1464,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(18,18,18,0.1)',
   },
   postedTogglePillActive: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   postedToggleText: {
     fontSize: 11,
@@ -1511,7 +1527,7 @@ const styles = StyleSheet.create({
   },
   largeSlot: {
     flex: 1.5,
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1552,7 +1568,7 @@ const styles = StyleSheet.create({
   slotPlaceholder: {
     fontSize: 12.5,
     fontWeight: '700',
-    color: Colors.deep,
+    color: colors.deep,
   },
   slotSubHint: {
     fontSize: 10.5,
@@ -1568,7 +1584,7 @@ const styles = StyleSheet.create({
   },
   smallSlot: {
     flex: 1,
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1578,7 +1594,7 @@ const styles = StyleSheet.create({
   },
   smallSlotText: {
     fontSize: 10.5,
-    color: Colors.deep,
+    color: colors.deep,
     fontWeight: '700',
   },
   extraStripRow: {
@@ -1593,7 +1609,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: Colors.tint,
+    backgroundColor: colors.tint,
   },
   addExtraTile: {
     flex: 1,
@@ -1601,8 +1617,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: Colors.accent,
-    backgroundColor: 'rgba(232, 39, 107, 0.05)',
+    borderColor: colors.accent,
+    backgroundColor: colors.palePinkBorder,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1610,7 +1626,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   addExtraText: {
-    color: Colors.accent,
+    color: colors.accent,
     fontSize: 11.5,
     fontWeight: '700',
   },
@@ -1639,7 +1655,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 11,
     paddingHorizontal: 14,
     borderRadius: 12,
@@ -1657,7 +1673,7 @@ const styles = StyleSheet.create({
   instaBadgePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.tint2,
+    backgroundColor: colors.tint2,
     paddingVertical: 7,
     paddingHorizontal: 11,
     borderRadius: 10,
@@ -1668,7 +1684,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.6,
-    color: Colors.accent,
+    color: colors.accent,
   },
   modalBackdrop: {
     flex: 1,
@@ -1710,7 +1726,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1.1,
-    color: Colors.accent,
+    color: colors.accent,
   },
   modalTitle: {
     fontSize: 20,
@@ -1776,7 +1792,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 14,
     borderWidth: 1.5,
-    borderColor: '#e8276b',
+    borderColor: colors.accent,
   },
   posterBrandBar: {
     flexDirection: 'row',
@@ -1796,7 +1812,7 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 17,
     borderWidth: 1.5,
-    borderColor: '#e8276b',
+    borderColor: colors.accent,
     backgroundColor: '#1f161b',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1861,7 +1877,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 8,
     left: 8,
-    backgroundColor: 'rgba(232, 39, 107, 0.9)',
+    backgroundColor: colors.palePinkBorder,
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 6,
@@ -1903,7 +1919,7 @@ const styles = StyleSheet.create({
   posterStreakPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(232, 39, 107, 0.16)',
+    backgroundColor: colors.palePinkBorder,
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 999,
@@ -1940,7 +1956,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 14,
     borderRadius: 14,
     marginTop: 16,

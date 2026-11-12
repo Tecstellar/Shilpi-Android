@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,8 @@ import {
   Alert,
 } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
-import { Colors } from '../theme/colors';
+import { ThemeColors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 import { apiClient } from '../services/apiClient';
 
 // Premium Vector Icons replacing emojis
@@ -32,23 +33,28 @@ const CheckMarkVectorIcon: React.FC = () => (
   </Svg>
 );
 
-const SmsBubbleIcon: React.FC = () => (
+const SmsBubbleIcon: React.FC = () => {
+  const { colors } = useTheme();
+  return (
   <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
     <Path
       d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
-      stroke="#e8276b"
+      stroke={colors.accent}
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
-      fill="rgba(232, 39, 107, 0.12)"
+      fill={colors.palePinkBorder}
     />
-    <Circle cx={8.5} cy={11.5} r={1.2} fill="#e8276b" />
-    <Circle cx={12} cy={11.5} r={1.2} fill="#e8276b" />
-    <Circle cx={15.5} cy={11.5} r={1.2} fill="#e8276b" />
+    <Circle cx={8.5} cy={11.5} r={1.2} fill={colors.accent} />
+    <Circle cx={12} cy={11.5} r={1.2} fill={colors.accent} />
+    <Circle cx={15.5} cy={11.5} r={1.2} fill={colors.accent} />
   </Svg>
-);
+  );
+};
 
-const SecurityLockIcon: React.FC = () => (
+const SecurityLockIcon: React.FC = () => {
+  const { colors } = useTheme();
+  return (
   <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
     <Rect
       x={3.5}
@@ -56,28 +62,31 @@ const SecurityLockIcon: React.FC = () => (
       width={17}
       height={11}
       rx={2.5}
-      stroke="#e8276b"
+      stroke={colors.accent}
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
-      fill="rgba(232, 39, 107, 0.12)"
+      fill={colors.palePinkBorder}
     />
     <Path
       d="M7 11V7a5 5 0 0 1 10 0v4"
-      stroke="#e8276b"
+      stroke={colors.accent}
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
     />
-    <Circle cx={12} cy={16} r={1.5} fill="#e8276b" />
+    <Circle cx={12} cy={16} r={1.5} fill={colors.accent} />
   </Svg>
-);
+  );
+};
 
 interface LoginPhoneScreenProps {
   onOtpSent: (phone: string) => void;
 }
 
 export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent }) => {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [agreed, setAgreed] = useState(false); // Default unkept/unchecked as requested
   const [loading, setLoading] = useState(false);
@@ -177,7 +186,7 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
                 keyboardType="number-pad"
                 placeholder="9876543210"
                 placeholderTextColor="rgba(18, 18, 18, 0.4)"
-                selectionColor={Colors.accent}
+                selectionColor={colors.accent}
                 value={phoneNumber}
                 onChangeText={(val) => {
                   const digits = val.replace(/\D/g, '').slice(0, 10);
@@ -267,7 +276,8 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f4f4f6',
@@ -307,7 +317,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: Colors.deep,
+    color: colors.deep,
     fontWeight: '700',
   },
   headline: {
@@ -323,8 +333,8 @@ const styles = StyleSheet.create({
     marginTop: 18,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: Colors.accent, // Pink colored shape from prototype
-    backgroundColor: Colors.tint2, // Soft pink surface tint from prototype
+    borderColor: colors.accent, // Pink colored shape from prototype
+    backgroundColor: colors.tint2, // Soft pink surface tint from prototype
     overflow: 'hidden',
   },
   countryPrefix: {
@@ -344,7 +354,7 @@ const styles = StyleSheet.create({
   verticalDivider: {
     width: 1.5,
     height: 24,
-    backgroundColor: 'rgba(232, 39, 107, 0.35)',
+    backgroundColor: colors.palePinkBorder,
     marginLeft: 6,
   },
   textInput: {
@@ -357,7 +367,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   errorText: {
-    color: Colors.deep,
+    color: colors.deep,
     fontSize: 12,
     marginTop: 8,
     marginLeft: 2,
@@ -381,8 +391,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   checkboxAgreed: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
   },
   checkmark: {
     color: '#ffffff',
@@ -398,7 +408,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   linkText: {
-    color: Colors.accent,
+    color: colors.accent,
     fontWeight: '700',
     textDecorationLine: 'underline',
   },
@@ -410,8 +420,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   sendBtnActive: {
-    backgroundColor: Colors.accent, // Pink color from design system
-    shadowColor: Colors.accent,
+    backgroundColor: colors.accent, // Pink color from design system
+    shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -454,9 +464,9 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 12,
-    backgroundColor: '#ffeef4',
+    backgroundColor: colors.tint2,
     borderWidth: 1.2,
-    borderColor: 'rgba(232, 39, 107, 0.25)',
+    borderColor: colors.palePinkBorder,
     justifyContent: 'center',
     alignItems: 'center',
   },
