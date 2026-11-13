@@ -161,21 +161,6 @@ const CloseIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: nu
   </Svg>
 );
 
-// Premium Vector Icon (Luxury Faceted Diamond Star / Sparkle - No Pencils!)
-const PremiumSparkleIcon = ({ color = '#D4AF37', size = 16 }: { color?: string; size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"
-      fill={color}
-    />
-    <Path
-      d="M19 2L19.7 4.3L22 5L19.7 5.7L19 8L18.3 5.7L16 5L18.3 4.3L19 2Z"
-      fill={color}
-      opacity={0.88}
-    />
-  </Svg>
-);
-
 // Camera Icon for Avatar Photo Edit Badge (No Pencils!)
 const CameraIcon = ({ color = '#ffffff', size = 11 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
@@ -672,20 +657,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </Text>
           </TouchableOpacity>
 
-          {/* Premium Icon Button for editing profile */}
-          <TouchableOpacity
-            style={styles.heroPremiumEditBtn}
-            onPress={() => {
-              try {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              } catch {}
-              setEditArtistModalOpen(true);
-            }}
-            activeOpacity={0.75}
-            accessibilityLabel="Edit Profile"
-          >
-            <PremiumSparkleIcon color="#D4AF37" size={17} />
-          </TouchableOpacity>
         </View>
 
         <View style={styles.heroBottomBar}>
@@ -731,10 +702,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 {curArtistName} · {curStudioRole}
               </Text>
             </View>
-            <View style={styles.editActionBadge}>
-              <PremiumSparkleIcon color={colors.deep} size={14} />
-              <ChevronRightIcon />
-            </View>
+            <ChevronRightIcon />
           </TouchableOpacity>
 
           {/* Edit Business Profile Row */}
@@ -757,10 +725,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 {curStudioName}{curStudioCity ? ` · ${curStudioCity}` : ''}
               </Text>
             </View>
-            <View style={styles.editActionBadge}>
-              <PremiumSparkleIcon color={colors.deep} size={14} />
-              <ChevronRightIcon />
-            </View>
+            <ChevronRightIcon />
           </TouchableOpacity>
 
           {/* Edit WhatsApp Contact Row */}
@@ -783,10 +748,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 {curStudioPhone || 'Setup WhatsApp number'}
               </Text>
             </View>
-            <View style={styles.editActionBadge}>
-              <PremiumSparkleIcon color={colors.deep} size={14} />
-              <ChevronRightIcon />
-            </View>
+            <ChevronRightIcon />
           </TouchableOpacity>
 
           {/* Subscription */}
@@ -954,10 +916,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               <Text style={styles.rowTitle}>WhatsApp Message Templates</Text>
               <Text style={styles.rowSubtitle}>{templates.length} client message templates</Text>
             </View>
-            <View style={styles.editActionBadge}>
-              <PremiumSparkleIcon color={colors.deep} size={14} />
-              <ChevronRightIcon />
-            </View>
+            <ChevronRightIcon />
           </TouchableOpacity>
 
           {/* Notification Settings */}
@@ -1869,21 +1828,6 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 12,
       fontWeight: '600',
       color: 'rgba(255, 255, 255, 0.75)',
-    },
-    heroPremiumEditBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 19,
-      backgroundColor: 'rgba(212, 175, 55, 0.16)',
-      borderWidth: 1.2,
-      borderColor: 'rgba(212, 175, 55, 0.45)',
-      alignItems: 'center',
-      justifyContent: 'center',
-      shadowColor: '#D4AF37',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 4,
-      elevation: 3,
     },
     heroVerifiedRow: {
       flexDirection: 'row',
