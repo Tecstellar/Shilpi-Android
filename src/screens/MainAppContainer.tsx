@@ -1632,6 +1632,9 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             bookings={bookings}
             expenses={expenses}
             monthExpenses={monthExpenses}
+            registeredAt={registeredAt}
+            studioName={studioName}
+            artistName={artistName}
             onGoBack={handleGoBack}
           />
         )}
