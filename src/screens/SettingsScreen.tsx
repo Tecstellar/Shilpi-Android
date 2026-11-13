@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop, Circle, Line, Polyline } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
@@ -230,12 +231,24 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   // Logout Confirmation Handler
   const handleConfirmLogout = () => {
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    } catch {}
     Alert.alert(
       'Log Out',
       'Are you sure you want to log out of your Shilpi Studio account?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Log Out', style: 'destructive', onPress: onLogout },
+        {
+          text: 'Log Out',
+          style: 'destructive',
+          onPress: () => {
+            try {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            } catch {}
+            onLogout();
+          },
+        },
       ]
     );
   };
@@ -251,6 +264,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       Alert.alert('Confirmation Required', 'Please type "DELETE" to confirm permanent account deletion.');
       return;
     }
+
+    try {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    } catch {}
 
     Alert.alert(
       'Final Confirmation',
@@ -304,6 +321,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
               setIsDeleting(false);
               setDeleteModalOpen(false);
+
+              try {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              } catch {}
 
               Alert.alert(
                 'Account Deleted',
@@ -527,7 +548,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   <TouchableOpacity
                     key={th.name}
                     style={[styles.themeOptionRow, isSelected && styles.themeOptionRowActive]}
-                    onPress={() => setTheme(th.name)}
+                    onPress={() => {
+                      try {
+                        Haptics.selectionAsync();
+                      } catch {}
+                      setTheme(th.name);
+                    }}
                     activeOpacity={0.75}
                   >
                     <View style={styles.swatchMiniGroup}>
@@ -669,6 +695,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <TouchableOpacity
             style={[styles.groupRow, styles.groupRowLast, styles.dangerRow]}
             onPress={() => {
+              try {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              } catch {}
               setSelectedReason('');
               setFeedbackText('');
               setConfirmText('');
@@ -797,7 +826,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                           <TouchableOpacity
                             key={reason}
                             style={[styles.reasonOptionPill, isChosen && styles.reasonOptionPillActive]}
-                            onPress={() => setSelectedReason(reason)}
+                            onPress={() => {
+                              try {
+                                Haptics.selectionAsync();
+                              } catch {}
+                              setSelectedReason(reason);
+                            }}
                             activeOpacity={0.7}
                             disabled={isDeleting}
                           >

@@ -16,6 +16,7 @@ import {
 import Svg, { Path, Rect, Circle, Line, Polyline } from 'react-native-svg';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
@@ -197,6 +198,9 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
   const slideOffset = useRef(new Animated.Value(0)).current;
 
   const stepMonth = (delta: number) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
     setSelectedSerial((prev) => {
       const next = Math.max(minSerial, Math.min(maxSerial, prev + delta));
       if (next === prev) return prev;
@@ -511,7 +515,12 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
       <View style={styles.topTabsContainer}>
         <TouchableOpacity
           style={[styles.topTabBtn, topTab === 'Monthly' && styles.topTabBtnActive]}
-          onPress={() => setTopTab('Monthly')}
+          onPress={() => {
+            try {
+              Haptics.selectionAsync();
+            } catch {}
+            setTopTab('Monthly');
+          }}
           activeOpacity={0.8}
         >
           <Text style={[styles.topTabText, topTab === 'Monthly' && styles.topTabTextActive]}>
@@ -521,7 +530,12 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
 
         <TouchableOpacity
           style={[styles.topTabBtn, topTab === 'Summary' && styles.topTabBtnActive]}
-          onPress={() => setTopTab('Summary')}
+          onPress={() => {
+            try {
+              Haptics.selectionAsync();
+            } catch {}
+            setTopTab('Summary');
+          }}
           activeOpacity={0.8}
         >
           <Text style={[styles.topTabText, topTab === 'Summary' && styles.topTabTextActive]}>
@@ -572,7 +586,12 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
           <View style={styles.subSliderTabs}>
             <TouchableOpacity
               style={[styles.subSliderPill, monthlySubTab === 'Overview' && styles.subSliderPillActive]}
-              onPress={() => setMonthlySubTab('Overview')}
+              onPress={() => {
+                try {
+                  Haptics.selectionAsync();
+                } catch {}
+                setMonthlySubTab('Overview');
+              }}
               activeOpacity={0.8}
             >
               <Text style={[styles.subSliderText, monthlySubTab === 'Overview' && styles.subSliderTextActive]}>
@@ -582,7 +601,12 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
 
             <TouchableOpacity
               style={[styles.subSliderPill, monthlySubTab === 'DayWise' && styles.subSliderPillActive]}
-              onPress={() => setMonthlySubTab('DayWise')}
+              onPress={() => {
+                try {
+                  Haptics.selectionAsync();
+                } catch {}
+                setMonthlySubTab('DayWise');
+              }}
               activeOpacity={0.8}
             >
               <Text style={[styles.subSliderText, monthlySubTab === 'DayWise' && styles.subSliderTextActive]}>
@@ -938,7 +962,12 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
           {/* A. Only ONE container that contains 2026 with arrow on right, NO 'collapse' word */}
           <TouchableOpacity
             style={styles.yearContainerCard}
-            onPress={() => setSummaryYearExpanded(!summaryYearExpanded)}
+            onPress={() => {
+              try {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              } catch {}
+              setSummaryYearExpanded(!summaryYearExpanded);
+            }}
             activeOpacity={0.8}
           >
             <View style={styles.yearCardLeft}>
@@ -970,7 +999,12 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                   <View key={m.monthName} style={styles.summaryMonthCard}>
                     <TouchableOpacity
                       style={styles.summaryMonthHeader}
-                      onPress={() => setExpandedSummaryMonth(isMonthOpen ? null : m.monthIdx)}
+                      onPress={() => {
+                        try {
+                          Haptics.selectionAsync();
+                        } catch {}
+                        setExpandedSummaryMonth(isMonthOpen ? null : m.monthIdx);
+                      }}
                       activeOpacity={0.7}
                     >
                       <View style={{ flex: 1 }}>
