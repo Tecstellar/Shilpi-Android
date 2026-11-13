@@ -14,7 +14,13 @@ import {
   Platform,
   ActivityIndicator,
   Switch,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import Svg, { Defs, LinearGradient, Path, Rect, Stop, Circle, Line, Polyline } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
@@ -190,6 +196,23 @@ const BarChart2Icon = ({ color = '#121212', size = 16 }: { color?: string; size?
   </Svg>
 );
 
+const FileTextIcon = ({ color = '#1e293b', size = 16 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <Polyline points="14 2 14 8 20 8" />
+    <Line x1="16" y1="13" x2="8" y2="13" />
+    <Line x1="16" y1="17" x2="8" y2="17" />
+    <Polyline points="10 9 9 9 8 9" />
+  </Svg>
+);
+
+const ShieldCheckIcon = ({ color = '#1e293b', size = 16 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <Path d="M9 12l2 2 4-4" />
+  </Svg>
+);
+
 // ---------------------------------------------------------------------------
 // Quotas & Default Templates
 // ---------------------------------------------------------------------------
@@ -359,6 +382,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [editWhatsAppModalOpen, setEditWhatsAppModalOpen] = useState(false);
   const [editTemplatesModalOpen, setEditTemplatesModalOpen] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Expandable Account Actions & Legal Modals
+  const [accountActionsOpen, setAccountActionsOpen] = useState(false);
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
+  const [termsModalOpen, setTermsModalOpen] = useState(false);
 
   // Delete Account Modal State
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -672,62 +700,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </View>
       </View>
 
-      {/* 2. GROUP 1: STUDIO & PROFILE (Unified Profile, Business, WhatsApp, 3-Tier Plan & Click-to-View Quotas) */}
+      {/* 2. GROUP 1: WHATSAPP & SUBSCRIPTION */}
       <View style={styles.groupContainer}>
-        <View style={styles.groupSectionHeaderRow}>
-          <Text style={styles.groupSectionTitle}>STUDIO &amp; PROFILE</Text>
-          <Text style={styles.groupSectionHint}>
-            {isPremium ? 'PRO MEMBER' : 'FREE TIER'}
-          </Text>
-        </View>
-
+        <Text style={styles.groupSectionTitle}>WHATSAPP &amp; SUBSCRIPTION</Text>
         <View style={styles.groupCard}>
-          {/* Edit Artist Profile Row */}
-          <TouchableOpacity
-            style={styles.groupRow}
-            onPress={() => {
-              try {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              } catch {}
-              setEditArtistModalOpen(true);
-            }}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
-              <UserIcon color="#1e293b" size={17} />
-            </View>
-            <View style={styles.rowMainCol}>
-              <Text style={styles.rowTitle}>Artist Profile</Text>
-              <Text style={styles.rowSubtitle} numberOfLines={1}>
-                {curArtistName} · {curStudioRole}
-              </Text>
-            </View>
-            <ChevronRightIcon />
-          </TouchableOpacity>
-
-          {/* Edit Business Profile Row */}
-          <TouchableOpacity
-            style={styles.groupRow}
-            onPress={() => {
-              try {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              } catch {}
-              setEditBusinessModalOpen(true);
-            }}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
-              <BuildingIcon color="#1e293b" size={17} />
-            </View>
-            <View style={styles.rowMainCol}>
-              <Text style={styles.rowTitle}>Business Profile</Text>
-              <Text style={styles.rowSubtitle} numberOfLines={1}>
-                {curStudioName}{curStudioCity ? ` · ${curStudioCity}` : ''}
-              </Text>
-            </View>
-            <ChevronRightIcon />
-          </TouchableOpacity>
-
           {/* Edit WhatsApp Contact Row */}
           <TouchableOpacity
             style={styles.groupRow}
@@ -739,13 +715,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             }}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconPill, { backgroundColor: '#ecfdf5' }]}>
-              <PhoneIcon color="#059669" size={17} />
+            <View style={styles.iconPill}>
+              <PhoneIcon color="#1e293b" size={17} />
             </View>
             <View style={styles.rowMainCol}>
               <Text style={styles.rowTitle}>WhatsApp Contact &amp; Alerts</Text>
               <Text style={styles.rowSubtitle} numberOfLines={1}>
-                {curStudioPhone || 'Setup WhatsApp number'}
+                {curStudioPhone || 'Setup WhatsApp business number'}
               </Text>
             </View>
             <ChevronRightIcon />
@@ -762,8 +738,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             }}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconPill, { backgroundColor: isPremium ? '#fef3c7' : '#f5f3ff' }]}>
-              <CrownIcon color={isPremium ? '#d97706' : '#be185d'} size={17} />
+            <View style={styles.iconPill}>
+              <CrownIcon color="#1e293b" size={17} />
             </View>
             <View style={styles.rowMainCol}>
               <Text style={styles.rowTitle}>Subscription</Text>
@@ -786,11 +762,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               try {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               } catch {}
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
               setQuotasExpanded(!quotasExpanded);
             }}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconPill, { backgroundColor: '#f8fafc' }]}>
+            <View style={styles.iconPill}>
               <BarChart2Icon color="#1e293b" size={17} />
             </View>
             <View style={styles.rowMainCol}>
@@ -835,23 +812,30 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </View>
       </View>
 
-      {/* 4. GROUP 3: APP PREFERENCES & THEMES (Live Switcher & Editable Templates) */}
+      {/* 4. GROUP 2: PREFERENCES & THEME */}
       <View style={styles.groupContainer}>
         <Text style={styles.groupSectionTitle}>PREFERENCES &amp; THEME</Text>
         <View style={styles.groupCard}>
           {/* Live App Theme Switcher */}
           <TouchableOpacity
-            style={styles.groupRow}
+            style={[styles.groupRow, styles.groupRowLast]}
             onPress={() => {
               try {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               } catch {}
+              if (Platform.OS === 'android') {
+                try {
+                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                } catch {}
+              } else {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+              }
               setThemePickerOpen(!themePickerOpen);
             }}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconPill, { backgroundColor: '#fdf2f8' }]}>
-              <PaletteIcon color="#be185d" size={17} />
+            <View style={styles.iconPill}>
+              <PaletteIcon color="#1e293b" size={17} />
             </View>
             <View style={styles.rowMainCol}>
               <Text style={styles.rowTitle}>App Theme</Text>
@@ -897,8 +881,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               })}
             </View>
           )}
+        </View>
+      </View>
 
-          {/* Edit WhatsApp Message Templates Row */}
+      {/* 5. GROUP 3: SETTINGS & HELP */}
+      <View style={styles.groupContainer}>
+        <Text style={styles.groupSectionTitle}>SETTINGS &amp; HELP</Text>
+        <View style={styles.groupCard}>
+          {/* WhatsApp Message Templates Row */}
           <TouchableOpacity
             style={styles.groupRow}
             onPress={() => {
@@ -909,7 +899,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             }}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
+            <View style={styles.iconPill}>
               <MessageSquareIcon color="#1e293b" size={17} />
             </View>
             <View style={styles.rowMainCol}>
@@ -919,160 +909,150 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <ChevronRightIcon />
           </TouchableOpacity>
 
-          {/* Notification Settings */}
+          {/* Privacy Policy */}
           <TouchableOpacity
             style={styles.groupRow}
-            onPress={() =>
-              Alert.alert(
-                'Notification Settings',
-                'Instant push notifications, upcoming client reminders, and deposit payment alerts are active.'
-              )
-            }
+            onPress={() => {
+              try {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              } catch {}
+              setPrivacyModalOpen(true);
+            }}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
-              <BellIcon color="#1e293b" size={17} />
+            <View style={styles.iconPill}>
+              <ShieldCheckIcon color="#1e293b" size={17} />
             </View>
             <View style={styles.rowMainCol}>
-              <Text style={styles.rowTitle}>Notifications &amp; Alerts</Text>
-              <Text style={styles.rowSubtitle}>Sound, Push &amp; WhatsApp reminders</Text>
+              <Text style={styles.rowTitle}>Privacy Policy</Text>
+              <Text style={styles.rowSubtitle}>Data privacy, ownership &amp; encryption</Text>
             </View>
             <ChevronRightIcon />
           </TouchableOpacity>
 
-          {/* Device Permissions */}
+          {/* Terms & Conditions */}
+          <TouchableOpacity
+            style={styles.groupRow}
+            onPress={() => {
+              try {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              } catch {}
+              setTermsModalOpen(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={styles.iconPill}>
+              <FileTextIcon color="#1e293b" size={17} />
+            </View>
+            <View style={styles.rowMainCol}>
+              <Text style={styles.rowTitle}>Terms of Conditions</Text>
+              <Text style={styles.rowSubtitle}>Service agreement &amp; billing terms</Text>
+            </View>
+            <ChevronRightIcon />
+          </TouchableOpacity>
+
+          {/* Help & Knowledge Base */}
           <TouchableOpacity
             style={[styles.groupRow, styles.groupRowLast]}
             onPress={() =>
               Alert.alert(
-                'Device Permissions',
-                'Camera (Portfolio lookbook), Photo Gallery (Client photos), and Contacts (Client CRM import) granted.'
-              )
-            }
-            activeOpacity={0.7}
-          >
-            <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
-              <ShieldIcon color="#1e293b" size={17} />
-            </View>
-            <View style={styles.rowMainCol}>
-              <Text style={styles.rowTitle}>Device Permissions</Text>
-              <Text style={styles.rowSubtitle}>Camera, Photos, Contacts</Text>
-            </View>
-            <ChevronRightIcon />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* 5. GROUP 4: SUPPORT & LEGAL */}
-      <View style={styles.groupContainer}>
-        <Text style={styles.groupSectionTitle}>SUPPORT &amp; LEGAL</Text>
-        <View style={styles.groupCard}>
-          <TouchableOpacity
-            style={styles.groupRow}
-            onPress={() =>
-              Alert.alert(
                 'Help & Knowledge Base',
-                'Browse Shilpi Studio ERP quick-start guides, invoicing tips, and offline backup protocols.'
+                'Browse Shilpi Studio quick-start guides, invoicing tips, or contact our priority WhatsApp concierge at +91 98765 43210 for live assistance.'
               )
             }
             activeOpacity={0.7}
           >
-            <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
+            <View style={styles.iconPill}>
               <HelpCircleIcon color="#1e293b" size={17} />
             </View>
             <View style={styles.rowMainCol}>
               <Text style={styles.rowTitle}>Help &amp; Knowledge Base</Text>
-              <Text style={styles.rowSubtitle}>Guides, FAQs &amp; Video Walkthroughs</Text>
+              <Text style={styles.rowSubtitle}>Studio guides &amp; concierge support</Text>
             </View>
             <ChevronRightIcon />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.groupRow}
-            onPress={() =>
-              Alert.alert(
-                'Privacy Policy',
-                'Your client data and financials are protected with industry-standard encryption and never sold to third parties.'
-              )
-            }
-            activeOpacity={0.7}
-          >
-            <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
-              <ShieldIcon color="#1e293b" size={17} />
-            </View>
-            <View style={styles.rowMainCol}>
-              <Text style={styles.rowTitle}>Privacy Policy</Text>
-              <Text style={styles.rowSubtitle}>Data security &amp; encryption terms</Text>
-            </View>
-            <ChevronRightIcon />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.groupRow, styles.groupRowLast]}
-            onPress={() =>
-              Alert.alert(
-                'Shilpi Studio ERP',
-                'Version 1.0.0 (Build 2026.11)\nArchitecture: React Native 0.88 + Expo SDK 58'
-              )
-            }
-            activeOpacity={0.7}
-          >
-            <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
-              <PackageIcon color="#1e293b" size={17} />
-            </View>
-            <View style={styles.rowMainCol}>
-              <Text style={styles.rowTitle}>App Version</Text>
-              <Text style={styles.rowSubtitle}>v1.0.0 · Build 2026.11 (Latest)</Text>
-            </View>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* 6. GROUP 5: ACCOUNT & DANGER ZONE */}
+      {/* 6. GROUP 4: ACCOUNT */}
       <View style={styles.groupContainer}>
-        <Text style={styles.groupSectionTitle}>ACCOUNT ACTIONS</Text>
+        <Text style={styles.groupSectionTitle}>ACCOUNT</Text>
         <View style={styles.groupCard}>
-          {/* Logout */}
+          {/* Account Actions Expandable Header */}
           <TouchableOpacity
-            style={styles.groupRow}
-            onPress={handleConfirmLogout}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
-              <LogOutIcon color="#1e293b" size={17} />
-            </View>
-            <View style={styles.rowMainCol}>
-              <Text style={styles.rowTitle}>Log Out</Text>
-              <Text style={styles.rowSubtitle}>Sign out from this device</Text>
-            </View>
-            <ChevronRightIcon />
-          </TouchableOpacity>
-
-          {/* PERMANENTLY DELETE ACCOUNT OPTION */}
-          <TouchableOpacity
-            style={[styles.groupRow, styles.groupRowLast, styles.dangerRow]}
+            style={[styles.groupRow, styles.groupRowLast]}
             onPress={() => {
               try {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               } catch {}
-              setSelectedReason('');
-              setFeedbackText('');
-              setConfirmText('');
-              setDeleteModalOpen(true);
+              if (Platform.OS === 'android') {
+                try {
+                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                } catch {}
+              } else {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+              }
+              setAccountActionsOpen(!accountActionsOpen);
             }}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconPill, { backgroundColor: '#fee2e2' }]}>
-              <Trash2Icon color="#dc2626" size={17} />
+            <View style={styles.iconPill}>
+              <LogOutIcon color="#1e293b" size={17} />
             </View>
             <View style={styles.rowMainCol}>
-              <Text style={styles.dangerRowTitle}>Permanently Delete Account</Text>
-              <Text style={styles.dangerRowSubtitle}>
-                Erase studio, bookings, clients &amp; financials
-              </Text>
+              <Text style={styles.rowTitle}>Account Actions</Text>
+              <Text style={styles.rowSubtitle}>Manage session &amp; account deletion</Text>
             </View>
-            <ChevronRightIcon color="#dc2626" />
+            <Text style={styles.themeToggleText}>{accountActionsOpen ? 'HIDE' : 'VIEW'}</Text>
+            <ChevronRightIcon />
           </TouchableOpacity>
+
+          {/* Expandable Sub-items for Account Actions */}
+          {accountActionsOpen && (
+            <View style={styles.accountActionsExpandBox}>
+              {/* Log Out Sub-row */}
+              <TouchableOpacity
+                style={styles.accountSubRow}
+                onPress={handleConfirmLogout}
+                activeOpacity={0.75}
+              >
+                <View style={styles.accountSubIconPill}>
+                  <LogOutIcon color="#475569" size={15} />
+                </View>
+                <View style={styles.rowMainCol}>
+                  <Text style={styles.accountSubTitle}>Log Out</Text>
+                  <Text style={styles.accountSubSubtitle}>Sign out from this device</Text>
+                </View>
+                <ChevronRightIcon color="#94a3b8" />
+              </TouchableOpacity>
+
+              {/* Permanently Delete Account Sub-row */}
+              <TouchableOpacity
+                style={[styles.accountSubRow, styles.accountSubRowDanger]}
+                onPress={() => {
+                  try {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                  } catch {}
+                  setSelectedReason('');
+                  setFeedbackText('');
+                  setConfirmText('');
+                  setDeleteModalOpen(true);
+                }}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.accountSubIconPill, { backgroundColor: '#fee2e2' }]}>
+                  <Trash2Icon color="#dc2626" size={15} />
+                </View>
+                <View style={styles.rowMainCol}>
+                  <Text style={styles.dangerRowTitle}>Permanently Delete Account</Text>
+                  <Text style={styles.dangerRowSubtitle}>
+                    Erase studio, bookings, clients &amp; financials
+                  </Text>
+                </View>
+                <ChevronRightIcon color="#dc2626" />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
 
@@ -1690,6 +1670,128 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 </View>
               </TouchableWithoutFeedback>
             </KeyboardAvoidingView>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* =========================================================================
+          MODAL 6: PRIVACY POLICY
+          ========================================================================= */}
+      <Modal
+        visible={privacyModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPrivacyModalOpen(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setPrivacyModalOpen(false)}>
+          <View style={styles.modalBackdrop}>
+            <TouchableWithoutFeedback>
+              <View style={styles.legalModalCard}>
+                <View style={styles.legalModalHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={styles.legalIconPill}>
+                      <ShieldCheckIcon color="#0f172a" size={18} />
+                    </View>
+                    <Text style={styles.legalModalTitle}>Privacy Policy</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setPrivacyModalOpen(false)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <CloseIcon color="#64748b" size={18} />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={styles.legalScroll} showsVerticalScrollIndicator={false}>
+                  <Text style={styles.legalHeading}>1. Complete Data Ownership</Text>
+                  <Text style={styles.legalBody}>
+                    Your studio records, client phone numbers, booking schedules, quotes, invoices, and financial transaction records belong exclusively to you. Shilpi Studio ERP does not monetize, sell, or rent your client contact details or business metrics to third parties or advertising brokers.
+                  </Text>
+
+                  <Text style={styles.legalHeading}>2. End-to-End Encryption &amp; Security</Text>
+                  <Text style={styles.legalBody}>
+                    All communications between your device and Shilpi Cloud servers are protected with TLS 1.3 transport security. Sensitive credentials, payment tokens, and authentication sessions are securely salted and hashed.
+                  </Text>
+
+                  <Text style={styles.legalHeading}>3. Client Information Privacy</Text>
+                  <Text style={styles.legalBody}>
+                    Client bridal requirements, wedding dates, advance payments, and notes entered inside your studio registry are only accessible by your authenticated studio account.
+                  </Text>
+
+                  <Text style={styles.legalHeading}>4. Right to Permanent Erasure</Text>
+                  <Text style={styles.legalBody}>
+                    You maintain complete autonomy over your digital footprint. Under "Account Actions" &gt; "Permanently Delete Account", you can execute immediate, irreversible erasure of your entire database footprint at any time.
+                  </Text>
+                </ScrollView>
+                <TouchableOpacity
+                  style={styles.legalCloseBtn}
+                  onPress={() => setPrivacyModalOpen(false)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.legalCloseBtnText}>CLOSE</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* =========================================================================
+          MODAL 7: TERMS OF CONDITIONS
+          ========================================================================= */}
+      <Modal
+        visible={termsModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTermsModalOpen(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setTermsModalOpen(false)}>
+          <View style={styles.modalBackdrop}>
+            <TouchableWithoutFeedback>
+              <View style={styles.legalModalCard}>
+                <View style={styles.legalModalHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={styles.legalIconPill}>
+                      <FileTextIcon color="#0f172a" size={18} />
+                    </View>
+                    <Text style={styles.legalModalTitle}>Terms of Conditions</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setTermsModalOpen(false)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <CloseIcon color="#64748b" size={18} />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView style={styles.legalScroll} showsVerticalScrollIndicator={false}>
+                  <Text style={styles.legalHeading}>1. Studio Service License</Text>
+                  <Text style={styles.legalBody}>
+                    Shilpi grants you an active subscription license to operate the bridal makeup, mehndi, and beauty salon ERP platform for legitimate business management, appointment scheduling, and client communication.
+                  </Text>
+
+                  <Text style={styles.legalHeading}>2. WhatsApp Message Automation</Text>
+                  <Text style={styles.legalBody}>
+                    WhatsApp reminders, balance notices, and greetings generated through the app utilize official URL schemes or device intents. You are responsible for ensuring that messages sent to clients comply with local telecommunication guidelines.
+                  </Text>
+
+                  <Text style={styles.legalHeading}>3. Subscriptions &amp; Active Quotas</Text>
+                  <Text style={styles.legalBody}>
+                    Paid plan tiers (Starter, Professional, Luxury Elite) provide monthly booking allowances, PDF/Excel reports, and priority cloud syncing as outlined in your subscription dashboard. Upgrades activate instantly across all your studio devices.
+                  </Text>
+
+                  <Text style={styles.legalHeading}>4. Account Termination</Text>
+                  <Text style={styles.legalBody}>
+                    You may cancel your subscription or permanently delete your account at any time. Permanent account deletion is final and permanently purges all client ledgers, booking calendars, and invoice histories.
+                  </Text>
+                </ScrollView>
+                <TouchableOpacity
+                  style={styles.legalCloseBtn}
+                  onPress={() => setTermsModalOpen(false)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.legalCloseBtnText}>I UNDERSTAND</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
@@ -2516,5 +2618,113 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: '800',
       letterSpacing: 0.8,
       color: '#ffffff',
+    },
+
+    // Account Actions Expandable Box
+    accountActionsExpandBox: {
+      backgroundColor: '#f8fafc',
+      borderTopWidth: 1,
+      borderTopColor: 'rgba(18, 18, 18, 0.06)',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderBottomLeftRadius: 18,
+      borderBottomRightRadius: 18,
+    },
+    accountSubRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(18, 18, 18, 0.05)',
+      gap: 12,
+    },
+    accountSubRowDanger: {
+      borderBottomWidth: 0,
+    },
+    accountSubIconPill: {
+      width: 32,
+      height: 32,
+      borderRadius: 10,
+      backgroundColor: '#e2e8f0',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    accountSubTitle: {
+      fontSize: 13.5,
+      fontWeight: '700',
+      color: '#1e293b',
+    },
+    accountSubSubtitle: {
+      fontSize: 11,
+      color: '#64748b',
+      marginTop: 1,
+    },
+
+    // Legal Modals (Privacy & Terms)
+    legalModalCard: {
+      width: '90%',
+      maxHeight: '80%',
+      backgroundColor: '#ffffff',
+      borderRadius: 24,
+      padding: 22,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.22,
+      shadowRadius: 16,
+      elevation: 10,
+    },
+    legalModalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(18, 18, 18, 0.08)',
+    },
+    legalIconPill: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      backgroundColor: '#f1f5f9',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    legalModalTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: '#0f172a',
+      letterSpacing: -0.2,
+    },
+    legalScroll: {
+      marginVertical: 14,
+    },
+    legalHeading: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: '#0f172a',
+      marginTop: 12,
+      marginBottom: 4,
+      letterSpacing: 0.2,
+    },
+    legalBody: {
+      fontSize: 12.5,
+      lineHeight: 18,
+      color: '#475569',
+      marginBottom: 6,
+    },
+    legalCloseBtn: {
+      backgroundColor: '#0f172a',
+      paddingVertical: 12,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 6,
+    },
+    legalCloseBtnText: {
+      color: '#ffffff',
+      fontSize: 11.5,
+      fontWeight: '800',
+      letterSpacing: 0.8,
     },
   });
