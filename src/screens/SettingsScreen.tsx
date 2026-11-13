@@ -197,6 +197,14 @@ const CheckVectorIcon = ({ color = '#ffffff' }: { color?: string }) => (
   </Svg>
 );
 
+const BarChart2Icon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Line x1="18" y1="20" x2="18" y2="10" />
+    <Line x1="12" y1="20" x2="12" y2="4" />
+    <Line x1="6" y1="20" x2="6" y2="14" />
+  </Svg>
+);
+
 // ---------------------------------------------------------------------------
 // Quotas & Default Templates
 // ---------------------------------------------------------------------------
@@ -358,6 +366,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
   // Interactive Theme State
   const [themePickerOpen, setThemePickerOpen] = useState(false);
+  const [quotasExpanded, setQuotasExpanded] = useState(false);
+  const [threeTierModalOpen, setThreeTierModalOpen] = useState(false);
 
   // Edit Modals State
   const [editArtistModalOpen, setEditArtistModalOpen] = useState(false);
@@ -638,11 +648,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               <Text style={styles.heroArtistName} numberOfLines={1}>
                 {curArtistName}
               </Text>
-              <View style={[styles.membershipBadge, isPremium ? styles.badgePremium : styles.badgeFree]}>
+              <TouchableOpacity
+                style={[styles.membershipBadge, isPremium ? styles.badgePremium : styles.badgeFree]}
+                onPress={() => {
+                  try {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  } catch {}
+                  setThreeTierModalOpen(true);
+                }}
+                activeOpacity={0.8}
+              >
                 <Text style={[styles.membershipBadgeText, isPremium ? styles.badgeTextPremium : styles.badgeTextFree]}>
                   {isPremium ? 'PRO' : 'FREE TIER'}
                 </Text>
-              </View>
+              </TouchableOpacity>
             </View>
 
             <Text style={styles.heroStudioName} numberOfLines={1}>
@@ -683,9 +702,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </View>
       </View>
 
-      {/* 2. GROUP 1: STUDIO & BUSINESS PROFILE (All Rows Editable on Tap) */}
+      {/* 2. GROUP 1: STUDIO & PROFILE (Unified Profile, Business, WhatsApp, 3-Tier Plan & Click-to-View Quotas) */}
       <View style={styles.groupContainer}>
-        <Text style={styles.groupSectionTitle}>STUDIO &amp; PROFILE</Text>
+        <View style={styles.groupSectionHeaderRow}>
+          <Text style={styles.groupSectionTitle}>STUDIO &amp; PROFILE</Text>
+          <Text style={styles.groupSectionHint}>
+            {isPremium ? 'PRO MEMBER' : 'FREE TIER'}
+          </Text>
+        </View>
+
         <View style={styles.groupCard}>
           {/* Edit Artist Profile Row */}
           <TouchableOpacity
@@ -741,7 +766,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
           {/* Edit WhatsApp Contact Row */}
           <TouchableOpacity
-            style={[styles.groupRow, styles.groupRowLast]}
+            style={styles.groupRow}
             onPress={() => {
               try {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -764,66 +789,91 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               <ChevronRightIcon />
             </View>
           </TouchableOpacity>
-        </View>
-      </View>
 
-      {/* 3. GROUP 2: MEMBERSHIP & USAGE LIMITS */}
-      <View style={styles.groupContainer}>
-        <View style={styles.groupSectionHeaderRow}>
-          <Text style={styles.groupSectionTitle}>MEMBERSHIP &amp; USAGE</Text>
-          <Text style={styles.groupSectionHint}>
-            {isPremium ? 'UNLIMITED ACCESS' : `${usageRows.atLimitCount} OF 5 REACHED`}
-          </Text>
-        </View>
-
-        <View style={styles.groupCard}>
+          {/* Subscription & Plan: Three-Tier Upgrade */}
           <TouchableOpacity
             style={styles.groupRow}
-            onPress={onGoToSubscription}
+            onPress={() => {
+              try {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              } catch {}
+              setThreeTierModalOpen(true);
+            }}
             activeOpacity={0.7}
           >
-            <View style={[styles.iconPill, { backgroundColor: isPremium ? '#fef3c7' : '#f1f5f9' }]}>
-              <CrownIcon color={isPremium ? '#d97706' : '#1e293b'} size={17} />
+            <View style={[styles.iconPill, { backgroundColor: isPremium ? '#fef3c7' : '#f5f3ff' }]}>
+              <CrownIcon color={isPremium ? '#d97706' : '#7c3aed'} size={17} />
             </View>
             <View style={styles.rowMainCol}>
-              <Text style={styles.rowTitle}>Subscription Plan</Text>
+              <Text style={styles.rowTitle}>Subscription &amp; Plan</Text>
               <Text style={styles.rowSubtitle} numberOfLines={1}>
-                {isPremium ? 'Shilpi Pro · Unlimited' : 'Free Tier · 20 Bookings Limit'}
+                {isPremium ? 'Shilpi Pro · Unlimited Bookings' : 'Free Tier · 3-Tier Upgrade Available'}
               </Text>
             </View>
             <View style={styles.planActionWrap}>
-              <Text style={[styles.planBadgeText, isPremium && { color: '#d97706' }]}>
-                {isPremium ? 'MANAGE' : 'UPGRADE'}
+              <Text style={[styles.planBadgeText, isPremium ? { color: '#d97706' } : { color: '#7c3aed' }]}>
+                {isPremium ? 'PRO TIER' : '3-TIER UPGRADE'}
               </Text>
               <ChevronRightIcon />
             </View>
           </TouchableOpacity>
 
-          {/* Usage Meters */}
-          <View style={styles.usageBlock}>
-            <Text style={styles.usageBlockKicker}>ACTIVE MONTH QUOTAS</Text>
-            {usageRows.rows.map((u, idx) => (
-              <View key={idx} style={styles.usageMeterItem}>
-                <View style={styles.usageMeterTop}>
-                  <Text style={styles.usageMeterLabel}>{u.label}</Text>
-                  <Text style={[styles.usageMeterVal, { color: u.textColor }]}>{u.value}</Text>
-                </View>
-                <View style={styles.usageMeterTrack}>
-                  <View style={[styles.usageMeterFill, { width: `${u.pct}%`, backgroundColor: u.barColor }]} />
-                </View>
-              </View>
-            ))}
+          {/* Active Month Quotas (Click-to-View Quotas) */}
+          <TouchableOpacity
+            style={[styles.groupRow, !quotasExpanded && styles.groupRowLast]}
+            onPress={() => {
+              try {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              } catch {}
+              setQuotasExpanded(!quotasExpanded);
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.iconPill, { backgroundColor: '#f8fafc' }]}>
+              <BarChart2Icon color="#1e293b" size={17} />
+            </View>
+            <View style={styles.rowMainCol}>
+              <Text style={styles.rowTitle}>Active Month Quotas</Text>
+              <Text style={styles.rowSubtitle} numberOfLines={1}>
+                {isPremium
+                  ? 'All 5 features unlimited · Tap to inspect'
+                  : `${usageRows.atLimitCount} of 5 limits reached · Tap to inspect`}
+              </Text>
+            </View>
+            <Text style={styles.themeToggleText}>{quotasExpanded ? 'HIDE' : 'VIEW'}</Text>
+            <ChevronRightIcon />
+          </TouchableOpacity>
 
-            {!isPremium && (
-              <TouchableOpacity
-                style={styles.upgradeCtaBtn}
-                onPress={onGoToSubscription}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.upgradeCtaText}>UNLOCK UNLIMITED BOOKINGS · ₹399/MO</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          {/* Quotas Visible ONLY If Clicked */}
+          {quotasExpanded && (
+            <View style={styles.usageBlock}>
+              <Text style={styles.usageBlockKicker}>ACTIVE MONTH USAGE STATUS</Text>
+              {usageRows.rows.map((u, idx) => (
+                <View key={idx} style={styles.usageMeterItem}>
+                  <View style={styles.usageMeterTop}>
+                    <Text style={styles.usageMeterLabel}>{u.label}</Text>
+                    <Text style={[styles.usageMeterVal, { color: u.textColor }]}>{u.value}</Text>
+                  </View>
+                  <View style={styles.usageMeterTrack}>
+                    <View style={[styles.usageMeterFill, { width: `${u.pct}%`, backgroundColor: u.barColor }]} />
+                  </View>
+                </View>
+              ))}
+
+              {!isPremium && (
+                <TouchableOpacity
+                  style={styles.upgradeCtaBtn}
+                  onPress={() => {
+                    setQuotasExpanded(false);
+                    setThreeTierModalOpen(true);
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.upgradeCtaText}>UNLOCK UNLIMITED USAGE · 3-TIER UPGRADE</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
         </View>
       </View>
 
@@ -1688,6 +1738,128 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      {/* 5. THREE-TIER SUBSCRIPTION UPGRADE MODAL */}
+      <Modal
+        visible={threeTierModalOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setThreeTierModalOpen(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setThreeTierModalOpen(false)}>
+          <View style={styles.modalBackdrop}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={[styles.editModalCard, { maxHeight: '90%' }]}>
+                <View style={styles.editModalHeader}>
+                  <Text style={styles.editModalTitle}>Choose Studio Plan</Text>
+                  <TouchableOpacity
+                    onPress={() => setThreeTierModalOpen(false)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <CloseIcon color="#64748b" size={18} />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }}>
+                  <Text style={styles.tierModalSubtitle}>
+                    Select the tier that fits your makeup &amp; styling studio. Upgrade anytime with instant activation.
+                  </Text>
+
+                  {/* Tier 1: Free Starter */}
+                  <View style={[styles.tierCard, !isPremium && styles.tierCardCurrent]}>
+                    <View style={styles.tierHeaderRow}>
+                      <View>
+                        <Text style={styles.tierName}>Free Starter</Text>
+                        <Text style={styles.tierPrice}>₹0 <Text style={styles.tierPeriod}>/ forever</Text></Text>
+                      </View>
+                      {!isPremium ? (
+                        <View style={styles.currentBadge}>
+                          <Text style={styles.currentBadgeText}>CURRENT</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <View style={styles.tierFeatureList}>
+                      <Text style={styles.tierFeatureItem}>✓ Up to 20 bridal bookings / month</Text>
+                      <Text style={styles.tierFeatureItem}>✓ Basic client CRM &amp; appointments</Text>
+                      <Text style={styles.tierFeatureItem}>✓ Standard WhatsApp receipts</Text>
+                    </View>
+                  </View>
+
+                  {/* Tier 2: Shilpi Pro (Most Popular) */}
+                  <View style={[styles.tierCard, styles.tierCardPro]}>
+                    <View style={styles.proPopularBadge}>
+                      <Text style={styles.proPopularBadgeText}>MOST POPULAR · RECOMMENDED</Text>
+                    </View>
+                    <View style={styles.tierHeaderRow}>
+                      <View>
+                        <Text style={[styles.tierName, { color: '#ffffff' }]}>Shilpi Pro</Text>
+                        <Text style={[styles.tierPrice, { color: '#ffffff' }]}>
+                          ₹399 <Text style={[styles.tierPeriod, { color: 'rgba(255,255,255,0.7)' }]}>/ month (billed annually)</Text>
+                        </Text>
+                      </View>
+                      {isPremium ? (
+                        <View style={[styles.currentBadge, { backgroundColor: '#fef3c7' }]}>
+                          <Text style={[styles.currentBadgeText, { color: '#b45309' }]}>ACTIVE</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <View style={styles.tierFeatureList}>
+                      <Text style={[styles.tierFeatureItem, { color: 'rgba(255,255,255,0.9)' }]}>✦ UNLIMITED wedding bookings &amp; clients</Text>
+                      <Text style={[styles.tierFeatureItem, { color: 'rgba(255,255,255,0.9)' }]}>✦ Auto-send advance receipts &amp; reminders</Text>
+                      <Text style={[styles.tierFeatureItem, { color: 'rgba(255,255,255,0.9)' }]}>✦ Monthly &amp; Day-Wise Profit Reports (PDF/Excel)</Text>
+                      <Text style={[styles.tierFeatureItem, { color: 'rgba(255,255,255,0.9)' }]}>✦ Unlimited portfolio looks &amp; client closes</Text>
+                      <Text style={[styles.tierFeatureItem, { color: 'rgba(255,255,255,0.9)' }]}>✦ Priority WhatsApp support</Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={styles.proCtaBtn}
+                      onPress={() => {
+                        setThreeTierModalOpen(false);
+                        if (onGoToSubscription) onGoToSubscription();
+                      }}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.proCtaBtnText}>
+                        {isPremium ? 'MANAGE PRO SUBSCRIPTION' : 'UPGRADE TO PRO · ₹399/MO'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Tier 3: Studio Elite */}
+                  <View style={[styles.tierCard, styles.tierCardElite]}>
+                    <View style={styles.tierHeaderRow}>
+                      <View>
+                        <Text style={styles.tierName}>Studio Elite</Text>
+                        <Text style={styles.tierPrice}>₹899 <Text style={styles.tierPeriod}>/ month</Text></Text>
+                      </View>
+                      <View style={[styles.currentBadge, { backgroundColor: '#f3e8ff' }]}>
+                        <Text style={[styles.currentBadgeText, { color: '#7e22ce' }]}>MULTI-ARTIST</Text>
+                      </View>
+                    </View>
+                    <View style={styles.tierFeatureList}>
+                      <Text style={styles.tierFeatureItem}>✓ Everything in Shilpi Pro</Text>
+                      <Text style={styles.tierFeatureItem}>✓ Multi-artist &amp; assistant team calendar</Text>
+                      <Text style={styles.tierFeatureItem}>✓ Custom branded contracts &amp; GST invoices</Text>
+                      <Text style={styles.tierFeatureItem}>✓ 1-on-1 VIP concierge setup on WhatsApp</Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={styles.eliteCtaBtn}
+                      onPress={() => {
+                        setThreeTierModalOpen(false);
+                        if (onGoToSubscription) onGoToSubscription();
+                      }}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.eliteCtaBtnText}>CHOOSE STUDIO ELITE</Text>
+                    </TouchableOpacity>
+                  </View>
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </ScrollView>
   );
 };
@@ -2526,5 +2698,119 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: '800',
       letterSpacing: 0.8,
       color: '#ffffff',
+    },
+
+    // Three-Tier Upgrade Modal
+    tierModalSubtitle: {
+      fontSize: 12,
+      color: 'rgba(18, 18, 18, 0.6)',
+      marginBottom: 14,
+      lineHeight: 17,
+    },
+    tierCard: {
+      backgroundColor: '#f8fafc',
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: 'rgba(18, 18, 18, 0.08)',
+      marginBottom: 12,
+    },
+    tierCardCurrent: {
+      borderColor: '#0284c7',
+      backgroundColor: '#f0f9ff',
+    },
+    tierCardPro: {
+      backgroundColor: '#121212',
+      borderColor: '#D4AF37',
+      borderWidth: 1.5,
+    },
+    tierCardElite: {
+      backgroundColor: '#faf5ff',
+      borderColor: '#d8b4fe',
+    },
+    proPopularBadge: {
+      backgroundColor: '#D4AF37',
+      alignSelf: 'flex-start',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 4,
+      marginBottom: 8,
+    },
+    proPopularBadgeText: {
+      fontSize: 9,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+      color: '#121212',
+    },
+    tierHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      marginBottom: 10,
+    },
+    tierName: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: '#121212',
+    },
+    tierPrice: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: '#121212',
+      marginTop: 2,
+    },
+    tierPeriod: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: 'rgba(18, 18, 18, 0.55)',
+    },
+    currentBadge: {
+      backgroundColor: '#e2e8f0',
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    currentBadgeText: {
+      fontSize: 9,
+      fontWeight: '800',
+      color: '#475569',
+      letterSpacing: 0.6,
+    },
+    tierFeatureList: {
+      gap: 5,
+      marginTop: 4,
+    },
+    tierFeatureItem: {
+      fontSize: 11.5,
+      color: '#334155',
+      fontWeight: '500',
+    },
+    proCtaBtn: {
+      backgroundColor: '#D4AF37',
+      borderRadius: 10,
+      paddingVertical: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 12,
+    },
+    proCtaBtnText: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: '#121212',
+      letterSpacing: 0.7,
+    },
+    eliteCtaBtn: {
+      backgroundColor: '#7e22ce',
+      borderRadius: 10,
+      paddingVertical: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 12,
+    },
+    eliteCtaBtnText: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: '#ffffff',
+      letterSpacing: 0.7,
     },
   });
