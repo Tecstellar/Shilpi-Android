@@ -161,9 +161,33 @@ const CloseIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: nu
   </Svg>
 );
 
-const EditIcon = ({ color = '#ffffff', size = 13 }: { color?: string; size?: number }) => (
+// Premium Vector Icon (Luxury Faceted Diamond Star / Sparkle - No Pencils!)
+const PremiumSparkleIcon = ({ color = '#D4AF37', size = 16 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"
+      fill={color}
+    />
+    <Path
+      d="M19 2L19.7 4.3L22 5L19.7 5.7L19 8L18.3 5.7L16 5L18.3 4.3L19 2Z"
+      fill={color}
+      opacity={0.88}
+    />
+  </Svg>
+);
+
+// Camera Icon for Avatar Photo Edit Badge (No Pencils!)
+const CameraIcon = ({ color = '#ffffff', size = 11 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+    <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+    <Circle cx="12" cy="13" r="4" />
+  </Svg>
+);
+
+const CheckCircleVectorIcon = ({ color = '#D4AF37', size = 13 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+    <Polyline points="22 4 12 14.01 9 11.01" />
   </Svg>
 );
 
@@ -596,11 +620,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </>
             )}
             <View style={styles.avatarEditOverlay}>
-              <EditIcon color="#ffffff" size={10} />
+              <CameraIcon color="#ffffff" size={10} />
             </View>
           </TouchableOpacity>
 
-          <View style={styles.heroDetails}>
+          <TouchableOpacity
+            style={styles.heroDetails}
+            onPress={() => {
+              try {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              } catch {}
+              setEditArtistModalOpen(true);
+            }}
+            activeOpacity={0.85}
+          >
             <View style={styles.heroTitleRow}>
               <Text style={styles.heroArtistName} numberOfLines={1}>
                 {curArtistName}
@@ -619,7 +652,22 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <Text style={styles.heroRoleLocation} numberOfLines={1}>
               {curStudioRole}{curStudioCity ? ` · ${curStudioCity}` : ''}
             </Text>
-          </View>
+          </TouchableOpacity>
+
+          {/* Premium Icon Button for editing profile */}
+          <TouchableOpacity
+            style={styles.heroPremiumEditBtn}
+            onPress={() => {
+              try {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              } catch {}
+              setEditArtistModalOpen(true);
+            }}
+            activeOpacity={0.75}
+            accessibilityLabel="Edit Profile"
+          >
+            <PremiumSparkleIcon color="#D4AF37" size={17} />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.heroBottomBar}>
@@ -628,19 +676,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <Text style={styles.heroPhoneText}>{curStudioPhone || 'No WhatsApp linked'}</Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.heroEditPill}
-            onPress={() => {
-              try {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              } catch {}
-              setEditArtistModalOpen(true);
-            }}
-            activeOpacity={0.8}
-          >
-            <EditIcon color="#ffffff" size={11} />
-            <Text style={styles.heroEditText}>EDIT PROFILE</Text>
-          </TouchableOpacity>
+          <View style={styles.heroVerifiedRow}>
+            <CheckCircleVectorIcon color="#D4AF37" size={13} />
+            <Text style={styles.heroVerifiedText}>VERIFIED ARTIST</Text>
+          </View>
         </View>
       </View>
 
@@ -669,7 +708,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </Text>
             </View>
             <View style={styles.editActionBadge}>
-              <Text style={styles.editActionText}>EDIT</Text>
+              <PremiumSparkleIcon color={colors.deep} size={14} />
               <ChevronRightIcon />
             </View>
           </TouchableOpacity>
@@ -695,7 +734,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </Text>
             </View>
             <View style={styles.editActionBadge}>
-              <Text style={styles.editActionText}>EDIT</Text>
+              <PremiumSparkleIcon color={colors.deep} size={14} />
               <ChevronRightIcon />
             </View>
           </TouchableOpacity>
@@ -721,7 +760,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </Text>
             </View>
             <View style={styles.editActionBadge}>
-              <Text style={styles.editActionText}>EDIT</Text>
+              <PremiumSparkleIcon color={colors.deep} size={14} />
               <ChevronRightIcon />
             </View>
           </TouchableOpacity>
@@ -870,7 +909,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               <Text style={styles.rowSubtitle}>{templates.length} client message templates</Text>
             </View>
             <View style={styles.editActionBadge}>
-              <Text style={styles.editActionText}>EDIT</Text>
+              <PremiumSparkleIcon color={colors.deep} size={14} />
               <ChevronRightIcon />
             </View>
           </TouchableOpacity>
@@ -1785,20 +1824,37 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: '600',
       color: 'rgba(255, 255, 255, 0.75)',
     },
-    heroEditPill: {
+    heroPremiumEditBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: 'rgba(212, 175, 55, 0.16)',
+      borderWidth: 1.2,
+      borderColor: 'rgba(212, 175, 55, 0.45)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#D4AF37',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    heroVerifiedRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 5,
-      backgroundColor: 'rgba(255, 255, 255, 0.14)',
-      paddingHorizontal: 10,
-      paddingVertical: 6,
+      backgroundColor: 'rgba(212, 175, 55, 0.12)',
+      paddingHorizontal: 8,
+      paddingVertical: 3.5,
       borderRadius: 999,
+      borderWidth: 1,
+      borderColor: 'rgba(212, 175, 55, 0.25)',
     },
-    heroEditText: {
-      fontSize: 10,
+    heroVerifiedText: {
+      fontSize: 9,
       fontWeight: '800',
       letterSpacing: 0.8,
-      color: '#ffffff',
+      color: '#F59E0B',
     },
 
     // 2. Group Section Cards

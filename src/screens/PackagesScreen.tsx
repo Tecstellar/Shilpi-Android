@@ -24,11 +24,11 @@ const MoreVerticalVectorIcon = ({ color = 'rgba(18, 18, 18, 0.45)' }: { color?: 
   </Svg>
 );
 
-// SquarePen Edit Icon (Premium Icon matching Web design)
-const SquarePenVectorIcon = ({ color = '#121212' }: { color?: string }) => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-    <Path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" />
+// Premium Vector Icon for Edit Package (No Pencils!)
+const PremiumSparkleVectorIcon = ({ color = '#121212' }: { color?: string }) => (
+  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill={color} />
+    <Path d="M19 2L19.7 4.3L22 5L19.7 5.7L19 8L18.3 5.7L16 5L18.3 4.3L19 2Z" fill={color} opacity={0.85} />
   </Svg>
 );
 
@@ -309,7 +309,7 @@ export const PackagesScreen: React.FC<PackagesScreenProps> = ({
                     }}
                   >
                     <View style={styles.actionIconWrap}>
-                      <SquarePenVectorIcon color="#121212" />
+                      <PremiumSparkleVectorIcon color="#121212" />
                     </View>
                     <View style={styles.actionTextCol}>
                       <Text style={styles.actionLabel}>Edit Package</Text>

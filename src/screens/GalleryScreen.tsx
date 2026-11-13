@@ -88,14 +88,10 @@ const InstagramGlyphIcon = ({ color, size = 13  }: { color?: string; size?: numb
   );
 };
 
-const EditPencilIcon = ({ color = 'rgba(18,18,18,0.55)', size = 14 }: { color?: string; size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
-    <Path d="M12 20h9" strokeLinecap="round" />
-    <Path
-      d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+const PremiumSparkleIcon = ({ color = 'rgba(18,18,18,0.55)', size = 14 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z" fill={color} />
+    <Path d="M19 2L19.7 4.3L22 5L19.7 5.7L19 8L18.3 5.7L16 5L18.3 4.3L19 2Z" fill={color} opacity={0.85} />
   </Svg>
 );
 
@@ -1203,7 +1199,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
                 if (target) openEditLookModal(target);
               }}
             >
-              <EditPencilIcon color="#121212" size={16} />
+              <PremiumSparkleIcon color="#121212" size={16} />
               <Text style={styles.menuSheetRowText}>Edit Look Details</Text>
             </TouchableOpacity>
 
