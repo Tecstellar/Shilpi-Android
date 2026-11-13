@@ -846,6 +846,52 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     AsyncStorage.setItem('@shilpi_packages', JSON.stringify(updated)).catch(() => {});
   };
 
+  const handleUpdatePackage = (
+    groupName: string,
+    oldName: string,
+    newName: string,
+    newPrice: number,
+    newGroupName?: string
+  ) => {
+    const targetGroup = newGroupName || groupName;
+    let updated: PackageGroup[];
+
+    if (targetGroup === groupName) {
+      updated = packageGroups.map((g) => {
+        if (g.name !== groupName) return g;
+        return {
+          ...g,
+          items: g.items.map((item) =>
+            item.name === oldName ? { ...item, name: newName, price: newPrice } : item
+          ),
+        };
+      });
+    } else {
+      // Moved category
+      updated = packageGroups.map((g) => {
+        if (g.name === groupName) {
+          return { ...g, items: g.items.filter((item) => item.name !== oldName) };
+        }
+        if (g.name === targetGroup) {
+          return { ...g, items: [...g.items, { name: newName, price: newPrice }] };
+        }
+        return g;
+      });
+    }
+
+    setPackageGroups(updated);
+    AsyncStorage.setItem('@shilpi_packages', JSON.stringify(updated)).catch(() => {});
+  };
+
+  const handleDeletePackage = (groupName: string, itemName: string) => {
+    const updated = packageGroups.map((g) => {
+      if (g.name !== groupName) return g;
+      return { ...g, items: g.items.filter((item) => item.name !== itemName) };
+    });
+    setPackageGroups(updated);
+    AsyncStorage.setItem('@shilpi_packages', JSON.stringify(updated)).catch(() => {});
+  };
+
   // WhatsApp Confirm Sheet Trigger
   const handleOpenConfirmSheet = (order: Booking) => {
     const total = order.items.reduce((s, i) => s + i.price, 0) + order.travel;
@@ -1535,6 +1581,8 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           <PackagesScreen
             packageGroups={packageGroups}
             onAddPackage={handleAddPackage}
+            onUpdatePackage={handleUpdatePackage}
+            onDeletePackage={handleDeletePackage}
             onGoBack={handleGoBack}
           />
         )}
