@@ -216,16 +216,61 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
         </View>
       </View>
 
-      {/* 3. Prototype 2x2 KPI Metrics Grid */}
-      <View style={styles.metricsGrid}>
-        {reportData.metrics.map((m, idx) => (
-          <View key={idx} style={styles.metricTile}>
-            <Text style={styles.metricTileLabel}>{m.label}</Text>
+      {/* 3. Structured 2x2 KPI Cards: Row 1 (Bookings & Avg Value) | Row 2 (Payments Received & Pending) */}
+      <View style={styles.metricsContainer}>
+        {/* Row 1: Bookings & Average Booking Value */}
+        <View style={styles.metricsRow}>
+          <View style={styles.metricCard}>
+            <View style={styles.metricCardHeader}>
+              <Text style={styles.metricTileLabel}>BOOKINGS</Text>
+            </View>
             <Text style={styles.metricTileValue} numberOfLines={1} adjustsFontSizeToFit>
-              {m.value}
+              {reportData.metrics[0]?.value || '0'}
+            </Text>
+            <Text style={styles.metricCardSub} numberOfLines={1}>
+              {isMonthly ? 'This month' : `Year ${currentYear}`}
             </Text>
           </View>
-        ))}
+
+          <View style={styles.metricCard}>
+            <View style={styles.metricCardHeader}>
+              <Text style={styles.metricTileLabel}>AVG BOOKING VALUE</Text>
+            </View>
+            <Text style={styles.metricTileValue} numberOfLines={1} adjustsFontSizeToFit>
+              {reportData.metrics[1]?.value || '₹0'}
+            </Text>
+            <Text style={styles.metricCardSub} numberOfLines={1}>
+              Per appointment
+            </Text>
+          </View>
+        </View>
+
+        {/* Row 2: Payments Received & Pending Payments */}
+        <View style={styles.metricsRow}>
+          <View style={styles.metricCard}>
+            <View style={styles.metricCardHeader}>
+              <Text style={styles.metricTileLabel}>PAYMENTS RECEIVED</Text>
+            </View>
+            <Text style={[styles.metricTileValue, styles.metricValueSuccess]} numberOfLines={1} adjustsFontSizeToFit>
+              {reportData.metrics[2]?.value || '₹0'}
+            </Text>
+            <Text style={styles.metricCardSub} numberOfLines={1}>
+              Collected advance &amp; balance
+            </Text>
+          </View>
+
+          <View style={styles.metricCard}>
+            <View style={styles.metricCardHeader}>
+              <Text style={styles.metricTileLabel}>PENDING PAYMENTS</Text>
+            </View>
+            <Text style={[styles.metricTileValue, styles.metricValueWarning]} numberOfLines={1} adjustsFontSizeToFit>
+              {reportData.metrics[3]?.value || '₹0'}
+            </Text>
+            <Text style={styles.metricCardSub} numberOfLines={1}>
+              Balance due from brides
+            </Text>
+          </View>
+        </View>
       </View>
 
       {/* 4. Prototype Bar Chart Section */}
@@ -336,19 +381,21 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: '700',
       color: '#ffffff',
     },
-    metricsGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
+    metricsContainer: {
       paddingHorizontal: 16,
       paddingVertical: 14,
+      gap: 10,
       borderBottomWidth: 1,
       borderBottomColor: 'rgba(18, 18, 18, 0.07)',
     },
-    metricTile: {
-      width: '48.8%',
+    metricsRow: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    metricCard: {
+      flex: 1,
       backgroundColor: '#ffffff',
-      paddingVertical: 13,
+      paddingVertical: 14,
       paddingHorizontal: 14,
       borderRadius: 18,
       shadowColor: '#121212',
@@ -356,19 +403,38 @@ const createStyles = (colors: ThemeColors) =>
       shadowOpacity: 0.06,
       shadowRadius: 3,
       elevation: 1,
+      justifyContent: 'space-between',
+    },
+    metricCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
     },
     metricTileLabel: {
       fontSize: 9,
       letterSpacing: 1,
       textTransform: 'uppercase',
       color: 'rgba(18, 18, 18, 0.55)',
-      fontWeight: '700',
+      fontWeight: '800',
     },
     metricTileValue: {
       fontSize: 18,
-      fontWeight: '700',
+      fontWeight: '800',
       color: '#121212',
       marginTop: 4,
+      fontVariant: ['tabular-nums'],
+    },
+    metricValueSuccess: {
+      color: '#059669',
+    },
+    metricValueWarning: {
+      color: '#d97706',
+    },
+    metricCardSub: {
+      fontSize: 10.5,
+      fontWeight: '500',
+      color: 'rgba(18, 18, 18, 0.45)',
+      marginTop: 3,
     },
     sectionHeader: {
       paddingHorizontal: 16,
