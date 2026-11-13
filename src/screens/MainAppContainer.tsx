@@ -1661,6 +1661,14 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             onGoToSubscription={() => setCurrentScreen('subscription')}
             onLogout={onLogout}
             onGoBack={handleGoBack}
+            onUpdateProfile={(updated) => {
+              if (updated.artistName !== undefined) setArtistName(updated.artistName);
+              if (updated.studioName !== undefined) setStudioName(updated.studioName);
+              if (updated.studioLogo !== undefined) setStudioLogo(updated.studioLogo);
+              if (updated.studioPhone !== undefined) setStudioPhone(updated.studioPhone);
+              if (updated.studioCity !== undefined) setStudioCity(updated.studioCity);
+              if (updated.studioRole !== undefined) setStudioRole(updated.studioRole);
+            }}
           />
         )}
       </View>

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop, Circle, Line, Polyline } from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
@@ -42,6 +44,16 @@ interface SettingsScreenProps {
   onLogout: () => void;
   onGoBack: () => void;
   onDeleteAccount?: (reason: string, feedback?: string) => Promise<void> | void;
+  onUpdateProfile?: (updated: {
+    artistName?: string;
+    studioName?: string;
+    studioLogo?: string;
+    studioPhone?: string;
+    studioCity?: string;
+    studioRole?: string;
+    address?: string;
+    pincode?: string;
+  }) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -149,6 +161,12 @@ const CloseIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: nu
   </Svg>
 );
 
+const EditIcon = ({ color = '#ffffff', size = 13 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+  </Svg>
+);
+
 const CheckVectorIcon = ({ color = '#ffffff' }: { color?: string }) => (
   <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={3}>
     <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
@@ -156,7 +174,7 @@ const CheckVectorIcon = ({ color = '#ffffff' }: { color?: string }) => (
 );
 
 // ---------------------------------------------------------------------------
-// Free Limits Quota Definition
+// Quotas & Default Templates
 // ---------------------------------------------------------------------------
 const LIMITS: { key: keyof SettingsUsageCounts; label: string; max: number }[] = [
   { key: 'orders', label: 'Order creation', max: 20 },
@@ -166,9 +184,6 @@ const LIMITS: { key: keyof SettingsUsageCounts; label: string; max: number }[] =
   { key: 'closes', label: 'Photo order closures', max: 10 },
 ];
 
-// ---------------------------------------------------------------------------
-// Account Deletion Reasons (Play Store & App Store Compliant)
-// ---------------------------------------------------------------------------
 const DELETION_REASONS = [
   'I am closing or pausing my studio business',
   'Switching to another app or physical registers',
@@ -176,6 +191,60 @@ const DELETION_REASONS = [
   'Subscription pricing / upgrade is too expensive',
   'Privacy, data security, or backup concerns',
   'Other reason',
+];
+
+const ROLE_SUGGESTIONS = [
+  'Bridal Makeup Artist',
+  'Celebrity Makeup & Hair Stylist',
+  'Bridal Mehendi Artist',
+  'Hairstylist & Saree Draper',
+  'Nails & Lash Extension Specialist',
+  'Beauty Studio & Academy Owner',
+];
+
+const CITY_SUGGESTIONS = [
+  'Coimbatore',
+  'Bangalore',
+  'Chennai',
+  'Hyderabad',
+  'Mumbai',
+  'Delhi NCR',
+  'Kochi',
+  'Pune',
+];
+
+interface MessageTemplateItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  body: string;
+}
+
+const DEFAULT_TEMPLATES: MessageTemplateItem[] = [
+  {
+    id: 'advance',
+    title: 'Booking & Advance Receipt',
+    subtitle: 'Sent when advance payment is received',
+    body: 'Dear {client_name}, your bridal appointment for {event_date} is confirmed with advance payment. Total package: {package_name}. Thank you for choosing {studio_name}!',
+  },
+  {
+    id: 'trial',
+    title: 'Wedding Trial Reminder',
+    subtitle: 'Sent 2-3 days before bridal trial look',
+    body: 'Hi {client_name}, this is a gentle reminder for your bridal makeup trial session scheduled on {event_date} at {studio_name}. Please arrive with a clean face and your outfit reference.',
+  },
+  {
+    id: 'balance',
+    title: 'Pending Balance Due Alert',
+    subtitle: 'Sent before the wedding day event',
+    body: 'Dear {client_name}, the remaining balance of {balance_due} for your booking on {event_date} is due. You can pay via UPI or Cash. Looking forward to making you look stunning!',
+  },
+  {
+    id: 'thanks',
+    title: 'Post-Wedding Thank You Note',
+    subtitle: 'Sent after wedding day completion',
+    body: 'Thank you {client_name} for choosing {studio_name} on your most special day! We would love to see your professional photos and hear your feedback.',
+  },
 ];
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
@@ -189,13 +258,60 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   usage = { orders: 0, clients: 0, packages: 0, reminders: 0, closes: 0 },
   onGoToSubscription,
   onLogout,
-  onDeleteAccount,
+  onUpdateProfile,
 }) => {
   const insets = useSafeAreaInsets();
   const { themeName, colors, themes, setTheme } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const initialLetter = (artistName.trim().charAt(0) || 'S').toUpperCase();
+  // Editable Profile State
+  const [curArtistName, setCurArtistName] = useState(artistName);
+  const [curStudioName, setCurStudioName] = useState(studioName);
+  const [curStudioLogo, setCurStudioLogo] = useState<string | undefined>(studioLogo);
+  const [curStudioPhone, setCurStudioPhone] = useState(studioPhone);
+  const [curStudioCity, setCurStudioCity] = useState(studioCity);
+  const [curStudioRole, setCurStudioRole] = useState(studioRole);
+  const [curAddress, setCurAddress] = useState('');
+  const [curPincode, setCurPincode] = useState('');
+
+  // WhatsApp auto-send toggles
+  const [autoSendReceipt, setAutoSendReceipt] = useState(true);
+  const [autoSendReminder, setAutoSendReminder] = useState(true);
+
+  // Templates
+  const [templates, setTemplates] = useState<MessageTemplateItem[]>(DEFAULT_TEMPLATES);
+  const [activeEditingTemplate, setActiveEditingTemplate] = useState<MessageTemplateItem | null>(null);
+
+  // Sync with incoming props
+  useEffect(() => {
+    setCurArtistName(artistName);
+    setCurStudioName(studioName);
+    setCurStudioLogo(studioLogo);
+    setCurStudioPhone(studioPhone);
+    setCurStudioCity(studioCity);
+    setCurStudioRole(studioRole);
+  }, [artistName, studioName, studioLogo, studioPhone, studioCity, studioRole]);
+
+  // Load existing profile & templates from AsyncStorage
+  useEffect(() => {
+    const hydrate = async () => {
+      try {
+        const storedProfile = await AsyncStorage.getItem('@shilpi_profile');
+        if (storedProfile) {
+          const p = JSON.parse(storedProfile);
+          if (p.address) setCurAddress(p.address);
+          if (p.pincode) setCurPincode(p.pincode);
+        }
+        const storedTemplates = await AsyncStorage.getItem('@shilpi_templates');
+        if (storedTemplates) {
+          setTemplates(JSON.parse(storedTemplates));
+        }
+      } catch {}
+    };
+    hydrate();
+  }, []);
+
+  const initialLetter = (curArtistName.trim().charAt(0) || 'S').toUpperCase();
 
   // Usage Quota Calculations
   const usageRows = useMemo(() => {
@@ -216,11 +332,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     return { rows, atLimitCount };
   }, [usage, isPremium]);
 
-  // Theme expand state
+  // Interactive Theme State
   const [themePickerOpen, setThemePickerOpen] = useState(false);
 
-  // Profile Preview Modal
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  // Edit Modals State
+  const [editArtistModalOpen, setEditArtistModalOpen] = useState(false);
+  const [editBusinessModalOpen, setEditBusinessModalOpen] = useState(false);
+  const [editWhatsAppModalOpen, setEditWhatsAppModalOpen] = useState(false);
+  const [editTemplatesModalOpen, setEditTemplatesModalOpen] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Delete Account Modal State
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -228,6 +348,112 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [feedbackText, setFeedbackText] = useState<string>('');
   const [confirmText, setConfirmText] = useState<string>('');
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
+  // Helper: Persist updated profile to AsyncStorage, Parent State, and Backend
+  const saveProfileData = async (updates: {
+    artistName?: string;
+    studioName?: string;
+    studioLogo?: string;
+    studioPhone?: string;
+    studioCity?: string;
+    studioRole?: string;
+    address?: string;
+    pincode?: string;
+  }) => {
+    try {
+      setIsSavingProfile(true);
+
+      const stored = await AsyncStorage.getItem('@shilpi_profile');
+      const existing = stored ? JSON.parse(stored) : {};
+
+      const nextProfile = {
+        ...existing,
+        ownerName: updates.artistName !== undefined ? updates.artistName : curArtistName,
+        businessName: updates.studioName !== undefined ? updates.studioName : curStudioName,
+        phone: updates.studioPhone !== undefined ? updates.studioPhone : curStudioPhone,
+        city: updates.studioCity !== undefined ? updates.studioCity : curStudioCity,
+        businessTypes: [updates.studioRole !== undefined ? updates.studioRole : curStudioRole],
+        address: updates.address !== undefined ? updates.address : curAddress,
+        pincode: updates.pincode !== undefined ? updates.pincode : curPincode,
+        logoUri: updates.studioLogo !== undefined ? updates.studioLogo : curStudioLogo,
+      };
+
+      await AsyncStorage.setItem('@shilpi_profile', JSON.stringify(nextProfile));
+
+      // Notify parent container
+      if (onUpdateProfile) {
+        onUpdateProfile({
+          artistName: nextProfile.ownerName,
+          studioName: nextProfile.businessName,
+          studioLogo: nextProfile.logoUri,
+          studioPhone: nextProfile.phone,
+          studioCity: nextProfile.city,
+          studioRole: nextProfile.businessTypes[0],
+          address: nextProfile.address,
+          pincode: nextProfile.pincode,
+        });
+      }
+
+      // Sync with backend API
+      try {
+        const token = await AsyncStorage.getItem('@shilpi_token');
+        if (token) {
+          await fetch('http://localhost:4000/api/v1/auth/me', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              ownerName: nextProfile.ownerName,
+              businessName: nextProfile.businessName,
+              businessTypes: nextProfile.businessTypes,
+              city: nextProfile.city,
+              address: nextProfile.address,
+              pincode: nextProfile.pincode,
+              phone: nextProfile.phone,
+              logoUri: nextProfile.logoUri,
+            }),
+          });
+        }
+      } catch {}
+
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {}
+
+      setIsSavingProfile(false);
+      return true;
+    } catch {
+      setIsSavingProfile(false);
+      Alert.alert('Save Error', 'Could not save profile changes.');
+      return false;
+    }
+  };
+
+  // Pick Logo / Photo with ImagePicker
+  const handlePickLogo = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('Permission Needed', 'Please allow gallery access to pick a studio logo or artist photo.');
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!res.canceled && res.assets[0]?.uri) {
+        const pickedUri = res.assets[0].uri;
+        setCurStudioLogo(pickedUri);
+        await saveProfileData({ studioLogo: pickedUri });
+      }
+    } catch {
+      Alert.alert('Picker Notice', 'Could not open photo gallery.');
+    }
+  };
 
   // Logout Confirmation Handler
   const handleConfirmLogout = () => {
@@ -281,43 +507,38 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             try {
               setIsDeleting(true);
 
-              if (onDeleteAccount) {
-                await onDeleteAccount(selectedReason, feedbackText);
-              } else {
-                // Call backend delete endpoint if reachable
-                try {
-                  const token = await AsyncStorage.getItem('@shilpi_token');
-                  if (token) {
-                    await fetch('http://localhost:4000/api/v1/auth/account', {
-                      method: 'DELETE',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`,
-                      },
-                      body: JSON.stringify({
-                        reason: selectedReason,
-                        feedback: feedbackText,
-                      }),
-                    });
-                  }
-                } catch {
-                  // Fallback offline deletion
+              // Call backend delete endpoint if reachable
+              try {
+                const token = await AsyncStorage.getItem('@shilpi_token');
+                if (token) {
+                  await fetch('http://localhost:4000/api/v1/auth/account', {
+                    method: 'DELETE',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                      reason: selectedReason,
+                      feedback: feedbackText,
+                    }),
+                  });
                 }
+              } catch {}
 
-                // Clear all stored local data
-                await AsyncStorage.multiRemove([
-                  '@shilpi_token',
-                  '@shilpi_beautician_id',
-                  '@shilpi_profile',
-                  '@shilpi_clients',
-                  '@shilpi_bookings',
-                  '@shilpi_notifs',
-                  '@shilpi_packages',
-                  '@shilpi_setup_done',
-                  '@shilpi_theme',
-                  '@shilpi_theme_mode',
-                ]);
-              }
+              // Clear all stored local data
+              await AsyncStorage.multiRemove([
+                '@shilpi_token',
+                '@shilpi_beautician_id',
+                '@shilpi_profile',
+                '@shilpi_clients',
+                '@shilpi_bookings',
+                '@shilpi_notifs',
+                '@shilpi_packages',
+                '@shilpi_setup_done',
+                '@shilpi_theme',
+                '@shilpi_theme_mode',
+                '@shilpi_templates',
+              ]);
 
               setIsDeleting(false);
               setDeleteModalOpen(false);
@@ -350,16 +571,16 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       ]}
       showsVerticalScrollIndicator={false}
     >
-      {/* 1. STUDIO & ARTIST PROFILE HERO CARD */}
+      {/* 1. STUDIO & ARTIST PROFILE HERO CARD (Interactive with Edit Badge) */}
       <View style={styles.heroProfileCard}>
         <View style={styles.heroTopRow}>
           <TouchableOpacity
             style={styles.avatarWrap}
-            onPress={() => setProfileModalOpen(true)}
+            onPress={handlePickLogo}
             activeOpacity={0.8}
           >
-            {studioLogo ? (
-              <Image source={{ uri: studioLogo }} style={styles.avatarImage} />
+            {curStudioLogo ? (
+              <Image source={{ uri: curStudioLogo }} style={styles.avatarImage} />
             ) : (
               <>
                 <Svg width={64} height={64} style={StyleSheet.absoluteFill}>
@@ -374,12 +595,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 <Text style={styles.avatarLetter}>{initialLetter}</Text>
               </>
             )}
+            <View style={styles.avatarEditOverlay}>
+              <EditIcon color="#ffffff" size={10} />
+            </View>
           </TouchableOpacity>
 
           <View style={styles.heroDetails}>
             <View style={styles.heroTitleRow}>
               <Text style={styles.heroArtistName} numberOfLines={1}>
-                {artistName}
+                {curArtistName}
               </Text>
               <View style={[styles.membershipBadge, isPremium ? styles.badgePremium : styles.badgeFree]}>
                 <Text style={[styles.membershipBadgeText, isPremium ? styles.badgeTextPremium : styles.badgeTextFree]}>
@@ -389,30 +613,50 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </View>
 
             <Text style={styles.heroStudioName} numberOfLines={1}>
-              {studioName}
+              {curStudioName}
             </Text>
 
             <Text style={styles.heroRoleLocation} numberOfLines={1}>
-              {studioRole}{studioCity ? ` · ${studioCity}` : ''}
+              {curStudioRole}{curStudioCity ? ` · ${curStudioCity}` : ''}
             </Text>
           </View>
         </View>
 
-        {studioPhone ? (
+        <View style={styles.heroBottomBar}>
           <View style={styles.heroContactRow}>
             <PhoneIcon color="rgba(255, 255, 255, 0.7)" size={13} />
-            <Text style={styles.heroPhoneText}>{studioPhone}</Text>
+            <Text style={styles.heroPhoneText}>{curStudioPhone || 'No WhatsApp linked'}</Text>
           </View>
-        ) : null}
+
+          <TouchableOpacity
+            style={styles.heroEditPill}
+            onPress={() => {
+              try {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              } catch {}
+              setEditArtistModalOpen(true);
+            }}
+            activeOpacity={0.8}
+          >
+            <EditIcon color="#ffffff" size={11} />
+            <Text style={styles.heroEditText}>EDIT PROFILE</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* 2. GROUP 1: STUDIO & BUSINESS PROFILE */}
+      {/* 2. GROUP 1: STUDIO & BUSINESS PROFILE (All Rows Editable on Tap) */}
       <View style={styles.groupContainer}>
         <Text style={styles.groupSectionTitle}>STUDIO &amp; PROFILE</Text>
         <View style={styles.groupCard}>
+          {/* Edit Artist Profile Row */}
           <TouchableOpacity
             style={styles.groupRow}
-            onPress={() => setProfileModalOpen(true)}
+            onPress={() => {
+              try {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              } catch {}
+              setEditArtistModalOpen(true);
+            }}
             activeOpacity={0.7}
           >
             <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
@@ -420,14 +664,25 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </View>
             <View style={styles.rowMainCol}>
               <Text style={styles.rowTitle}>Artist Profile</Text>
-              <Text style={styles.rowSubtitle} numberOfLines={1}>{artistName} · {studioRole}</Text>
+              <Text style={styles.rowSubtitle} numberOfLines={1}>
+                {curArtistName} · {curStudioRole}
+              </Text>
             </View>
-            <ChevronRightIcon />
+            <View style={styles.editActionBadge}>
+              <Text style={styles.editActionText}>EDIT</Text>
+              <ChevronRightIcon />
+            </View>
           </TouchableOpacity>
 
+          {/* Edit Business Profile Row */}
           <TouchableOpacity
             style={styles.groupRow}
-            onPress={() => setProfileModalOpen(true)}
+            onPress={() => {
+              try {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              } catch {}
+              setEditBusinessModalOpen(true);
+            }}
             activeOpacity={0.7}
           >
             <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
@@ -435,24 +690,40 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </View>
             <View style={styles.rowMainCol}>
               <Text style={styles.rowTitle}>Business Profile</Text>
-              <Text style={styles.rowSubtitle} numberOfLines={1}>{studioName}{studioCity ? ` · ${studioCity}` : ''}</Text>
+              <Text style={styles.rowSubtitle} numberOfLines={1}>
+                {curStudioName}{curStudioCity ? ` · ${curStudioCity}` : ''}
+              </Text>
             </View>
-            <ChevronRightIcon />
+            <View style={styles.editActionBadge}>
+              <Text style={styles.editActionText}>EDIT</Text>
+              <ChevronRightIcon />
+            </View>
           </TouchableOpacity>
 
+          {/* Edit WhatsApp Contact Row */}
           <TouchableOpacity
             style={[styles.groupRow, styles.groupRowLast]}
-            onPress={() => Alert.alert('WhatsApp Business', `Linked to ${studioPhone || 'your registered mobile'}`)}
+            onPress={() => {
+              try {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              } catch {}
+              setEditWhatsAppModalOpen(true);
+            }}
             activeOpacity={0.7}
           >
             <View style={[styles.iconPill, { backgroundColor: '#ecfdf5' }]}>
               <PhoneIcon color="#059669" size={17} />
             </View>
             <View style={styles.rowMainCol}>
-              <Text style={styles.rowTitle}>WhatsApp Contact</Text>
-              <Text style={styles.rowSubtitle} numberOfLines={1}>{studioPhone || 'Setup WhatsApp number'}</Text>
+              <Text style={styles.rowTitle}>WhatsApp Contact &amp; Alerts</Text>
+              <Text style={styles.rowSubtitle} numberOfLines={1}>
+                {curStudioPhone || 'Setup WhatsApp number'}
+              </Text>
             </View>
-            <ChevronRightIcon />
+            <View style={styles.editActionBadge}>
+              <Text style={styles.editActionText}>EDIT</Text>
+              <ChevronRightIcon />
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -517,13 +788,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </View>
       </View>
 
-      {/* 4. GROUP 3: APP PREFERENCES & THEMES */}
+      {/* 4. GROUP 3: APP PREFERENCES & THEMES (Live Switcher & Editable Templates) */}
       <View style={styles.groupContainer}>
         <Text style={styles.groupSectionTitle}>PREFERENCES &amp; THEME</Text>
         <View style={styles.groupCard}>
+          {/* Live App Theme Switcher */}
           <TouchableOpacity
             style={styles.groupRow}
-            onPress={() => setThemePickerOpen(!themePickerOpen)}
+            onPress={() => {
+              try {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              } catch {}
+              setThemePickerOpen(!themePickerOpen);
+            }}
             activeOpacity={0.7}
           >
             <View style={[styles.iconPill, { backgroundColor: '#fdf2f8' }]}>
@@ -574,9 +851,39 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </View>
           )}
 
+          {/* Edit WhatsApp Message Templates Row */}
           <TouchableOpacity
             style={styles.groupRow}
-            onPress={() => Alert.alert('Notification Settings', 'Instant WhatsApp push notifications, trial booking alerts, and client follow-up reminders are enabled.')}
+            onPress={() => {
+              try {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              } catch {}
+              setEditTemplatesModalOpen(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
+              <MessageSquareIcon color="#1e293b" size={17} />
+            </View>
+            <View style={styles.rowMainCol}>
+              <Text style={styles.rowTitle}>WhatsApp Message Templates</Text>
+              <Text style={styles.rowSubtitle}>{templates.length} client message templates</Text>
+            </View>
+            <View style={styles.editActionBadge}>
+              <Text style={styles.editActionText}>EDIT</Text>
+              <ChevronRightIcon />
+            </View>
+          </TouchableOpacity>
+
+          {/* Notification Settings */}
+          <TouchableOpacity
+            style={styles.groupRow}
+            onPress={() =>
+              Alert.alert(
+                'Notification Settings',
+                'Instant push notifications, upcoming client reminders, and deposit payment alerts are active.'
+              )
+            }
             activeOpacity={0.7}
           >
             <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
@@ -589,24 +896,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <ChevronRightIcon />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.groupRow}
-            onPress={() => Alert.alert('WhatsApp Templates', '4 bridal templates configured: Advance receipt, Wedding trial reminder, Balance due alert, and Post-event thank you.')}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
-              <MessageSquareIcon color="#1e293b" size={17} />
-            </View>
-            <View style={styles.rowMainCol}>
-              <Text style={styles.rowTitle}>WhatsApp Message Templates</Text>
-              <Text style={styles.rowSubtitle}>4 pre-saved client templates</Text>
-            </View>
-            <ChevronRightIcon />
-          </TouchableOpacity>
-
+          {/* Device Permissions */}
           <TouchableOpacity
             style={[styles.groupRow, styles.groupRowLast]}
-            onPress={() => Alert.alert('Device Permissions', 'Camera (Portfolio lookbook), Photo Gallery (Client photos), and Contacts (Client CRM import) granted.')}
+            onPress={() =>
+              Alert.alert(
+                'Device Permissions',
+                'Camera (Portfolio lookbook), Photo Gallery (Client photos), and Contacts (Client CRM import) granted.'
+              )
+            }
             activeOpacity={0.7}
           >
             <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
@@ -627,7 +925,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         <View style={styles.groupCard}>
           <TouchableOpacity
             style={styles.groupRow}
-            onPress={() => Alert.alert('Help & Knowledge Base', 'Browse Shilpi Studio ERP quick-start guides, invoicing tips, and offline backup protocols.')}
+            onPress={() =>
+              Alert.alert(
+                'Help & Knowledge Base',
+                'Browse Shilpi Studio ERP quick-start guides, invoicing tips, and offline backup protocols.'
+              )
+            }
             activeOpacity={0.7}
           >
             <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
@@ -642,7 +945,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
           <TouchableOpacity
             style={styles.groupRow}
-            onPress={() => Alert.alert('Privacy Policy', 'Your client data and financials are protected with industry-standard encryption and never sold to third parties.')}
+            onPress={() =>
+              Alert.alert(
+                'Privacy Policy',
+                'Your client data and financials are protected with industry-standard encryption and never sold to third parties.'
+              )
+            }
             activeOpacity={0.7}
           >
             <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
@@ -657,7 +965,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
           <TouchableOpacity
             style={[styles.groupRow, styles.groupRowLast]}
-            onPress={() => Alert.alert('Shilpi Studio ERP', 'Version 1.0.0 (Build 2026.11)\nArchitecture: React Native 0.88 + Expo SDK 58')}
+            onPress={() =>
+              Alert.alert(
+                'Shilpi Studio ERP',
+                'Version 1.0.0 (Build 2026.11)\nArchitecture: React Native 0.88 + Expo SDK 58'
+              )
+            }
             activeOpacity={0.7}
           >
             <View style={[styles.iconPill, { backgroundColor: '#f1f5f9' }]}>
@@ -719,53 +1032,480 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         </View>
       </View>
 
-      {/* 7. PROFILE PREVIEW MODAL */}
-      <Modal visible={profileModalOpen} transparent animationType="slide" onRequestClose={() => setProfileModalOpen(false)}>
-        <TouchableWithoutFeedback onPress={() => setProfileModalOpen(false)}>
+      {/* =========================================================================
+          MODAL 1: EDIT ARTIST PROFILE
+          ========================================================================= */}
+      <Modal
+        visible={editArtistModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditArtistModalOpen(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setEditArtistModalOpen(false)}>
           <View style={styles.modalBackdrop}>
-            <TouchableWithoutFeedback>
-              <View style={styles.profileModalCard}>
-                <View style={styles.profileModalHeader}>
-                  <Text style={styles.profileModalKicker}>STUDIO PROFILE</Text>
-                  <Text style={styles.profileModalTitle}>{artistName}</Text>
-                  <Text style={styles.profileModalSubtitle}>{studioName}</Text>
-                </View>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              style={{ width: '100%', alignItems: 'center' }}
+            >
+              <TouchableWithoutFeedback>
+                <View style={styles.editModalCard}>
+                  <View style={styles.editModalHeader}>
+                    <Text style={styles.editModalTitle}>Edit Artist Profile</Text>
+                    <TouchableOpacity
+                      onPress={() => setEditArtistModalOpen(false)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <CloseIcon color="#64748b" size={18} />
+                    </TouchableOpacity>
+                  </View>
 
-                <View style={styles.profileDetailsList}>
-                  <View style={styles.profileDetailRow}>
-                    <Text style={styles.profileDetailLabel}>Role / Designation</Text>
-                    <Text style={styles.profileDetailVal}>{studioRole}</Text>
-                  </View>
-                  <View style={styles.profileDetailRow}>
-                    <Text style={styles.profileDetailLabel}>City / Location</Text>
-                    <Text style={styles.profileDetailVal}>{studioCity || 'Not specified'}</Text>
-                  </View>
-                  <View style={styles.profileDetailRow}>
-                    <Text style={styles.profileDetailLabel}>Contact Phone</Text>
-                    <Text style={styles.profileDetailVal}>{studioPhone || 'Not specified'}</Text>
-                  </View>
-                  <View style={styles.profileDetailRow}>
-                    <Text style={styles.profileDetailLabel}>Membership Tier</Text>
-                    <Text style={[styles.profileDetailVal, { color: isPremium ? '#d97706' : '#121212', fontWeight: '800' }]}>
-                      {isPremium ? 'Shilpi Pro (Unlimited)' : 'Free Tier'}
-                    </Text>
+                  <ScrollView style={styles.editModalScroll} showsVerticalScrollIndicator={false}>
+                    {/* Avatar Picker */}
+                    <View style={styles.avatarEditRow}>
+                      <TouchableOpacity style={styles.avatarPickerCircle} onPress={handlePickLogo}>
+                        {curStudioLogo ? (
+                          <Image source={{ uri: curStudioLogo }} style={styles.avatarPickerImage} />
+                        ) : (
+                          <Text style={styles.avatarPickerLetter}>{initialLetter}</Text>
+                        )}
+                      </TouchableOpacity>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.avatarPickerTitle}>Artist Photo / Logo</Text>
+                        <TouchableOpacity style={styles.avatarPickerBtn} onPress={handlePickLogo}>
+                          <Text style={styles.avatarPickerBtnText}>CHOOSE FROM GALLERY</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {/* Artist Name Input */}
+                    <Text style={styles.inputLabel}>ARTIST FULL NAME</Text>
+                    <TextInput
+                      style={styles.textInputBox}
+                      value={curArtistName}
+                      onChangeText={setCurArtistName}
+                      placeholder="e.g. Pooja Sharma"
+                      placeholderTextColor="rgba(18, 18, 18, 0.4)"
+                    />
+
+                    {/* Artist Role / Designation */}
+                    <Text style={styles.inputLabel}>DESIGNATION / SPECIALTY</Text>
+                    <TextInput
+                      style={styles.textInputBox}
+                      value={curStudioRole}
+                      onChangeText={setCurStudioRole}
+                      placeholder="e.g. Bridal Makeup Artist"
+                      placeholderTextColor="rgba(18, 18, 18, 0.4)"
+                    />
+
+                    {/* Role Suggestion Chips */}
+                    <View style={styles.suggestionChipsWrap}>
+                      {ROLE_SUGGESTIONS.map((r) => (
+                        <TouchableOpacity
+                          key={r}
+                          style={[styles.suggestionChip, curStudioRole === r && styles.suggestionChipActive]}
+                          onPress={() => {
+                            try {
+                              Haptics.selectionAsync();
+                            } catch {}
+                            setCurStudioRole(r);
+                          }}
+                        >
+                          <Text style={[styles.suggestionChipText, curStudioRole === r && styles.suggestionChipTextActive]}>
+                            {r}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
+
+                  <View style={styles.editModalActions}>
+                    <TouchableOpacity
+                      style={styles.modalCancelBtn}
+                      onPress={() => setEditArtistModalOpen(false)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.modalCancelText}>CANCEL</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.modalSaveBtn}
+                      onPress={async () => {
+                        const ok = await saveProfileData({
+                          artistName: curArtistName,
+                          studioRole: curStudioRole,
+                        });
+                        if (ok) setEditArtistModalOpen(false);
+                      }}
+                      disabled={isSavingProfile}
+                      activeOpacity={0.8}
+                    >
+                      {isSavingProfile ? (
+                        <ActivityIndicator color="#ffffff" size="small" />
+                      ) : (
+                        <Text style={styles.modalSaveText}>SAVE CHANGES</Text>
+                      )}
+                    </TouchableOpacity>
                   </View>
                 </View>
-
-                <TouchableOpacity
-                  style={styles.profileModalCloseBtn}
-                  onPress={() => setProfileModalOpen(false)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.profileModalCloseText}>CLOSE</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableWithoutFeedback>
+              </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* 8. PERMANENT ACCOUNT DELETION MODAL WITH DELETION REASON OPTION */}
+      {/* =========================================================================
+          MODAL 2: EDIT BUSINESS PROFILE
+          ========================================================================= */}
+      <Modal
+        visible={editBusinessModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditBusinessModalOpen(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setEditBusinessModalOpen(false)}>
+          <View style={styles.modalBackdrop}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              style={{ width: '100%', alignItems: 'center' }}
+            >
+              <TouchableWithoutFeedback>
+                <View style={styles.editModalCard}>
+                  <View style={styles.editModalHeader}>
+                    <Text style={styles.editModalTitle}>Edit Business Profile</Text>
+                    <TouchableOpacity
+                      onPress={() => setEditBusinessModalOpen(false)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <CloseIcon color="#64748b" size={18} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView style={styles.editModalScroll} showsVerticalScrollIndicator={false}>
+                    {/* Studio Name Input */}
+                    <Text style={styles.inputLabel}>STUDIO / SALON NAME</Text>
+                    <TextInput
+                      style={styles.textInputBox}
+                      value={curStudioName}
+                      onChangeText={setCurStudioName}
+                      placeholder="e.g. Shilpi Bridal Studio"
+                      placeholderTextColor="rgba(18, 18, 18, 0.4)"
+                    />
+
+                    {/* Studio City Input */}
+                    <Text style={styles.inputLabel}>PRIMARY CITY</Text>
+                    <TextInput
+                      style={styles.textInputBox}
+                      value={curStudioCity}
+                      onChangeText={setCurStudioCity}
+                      placeholder="e.g. Coimbatore"
+                      placeholderTextColor="rgba(18, 18, 18, 0.4)"
+                    />
+
+                    {/* City Chips */}
+                    <View style={styles.suggestionChipsWrap}>
+                      {CITY_SUGGESTIONS.map((c) => (
+                        <TouchableOpacity
+                          key={c}
+                          style={[styles.suggestionChip, curStudioCity === c && styles.suggestionChipActive]}
+                          onPress={() => {
+                            try {
+                              Haptics.selectionAsync();
+                            } catch {}
+                            setCurStudioCity(c);
+                          }}
+                        >
+                          <Text style={[styles.suggestionChipText, curStudioCity === c && styles.suggestionChipTextActive]}>
+                            {c}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    {/* Address Input */}
+                    <Text style={styles.inputLabel}>STUDIO ADDRESS</Text>
+                    <TextInput
+                      style={[styles.textInputBox, { minHeight: 60, textAlignVertical: 'top' }]}
+                      value={curAddress}
+                      onChangeText={setCurAddress}
+                      placeholder="Street, locality, area details..."
+                      placeholderTextColor="rgba(18, 18, 18, 0.4)"
+                      multiline
+                    />
+
+                    {/* Pincode Input */}
+                    <Text style={styles.inputLabel}>PINCODE</Text>
+                    <TextInput
+                      style={styles.textInputBox}
+                      value={curPincode}
+                      onChangeText={setCurPincode}
+                      placeholder="e.g. 641012"
+                      placeholderTextColor="rgba(18, 18, 18, 0.4)"
+                      keyboardType="number-pad"
+                    />
+                  </ScrollView>
+
+                  <View style={styles.editModalActions}>
+                    <TouchableOpacity
+                      style={styles.modalCancelBtn}
+                      onPress={() => setEditBusinessModalOpen(false)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.modalCancelText}>CANCEL</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.modalSaveBtn}
+                      onPress={async () => {
+                        const ok = await saveProfileData({
+                          studioName: curStudioName,
+                          studioCity: curStudioCity,
+                          address: curAddress,
+                          pincode: curPincode,
+                        });
+                        if (ok) setEditBusinessModalOpen(false);
+                      }}
+                      disabled={isSavingProfile}
+                      activeOpacity={0.8}
+                    >
+                      {isSavingProfile ? (
+                        <ActivityIndicator color="#ffffff" size="small" />
+                      ) : (
+                        <Text style={styles.modalSaveText}>SAVE BUSINESS</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* =========================================================================
+          MODAL 3: EDIT WHATSAPP SETTINGS
+          ========================================================================= */}
+      <Modal
+        visible={editWhatsAppModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditWhatsAppModalOpen(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setEditWhatsAppModalOpen(false)}>
+          <View style={styles.modalBackdrop}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              style={{ width: '100%', alignItems: 'center' }}
+            >
+              <TouchableWithoutFeedback>
+                <View style={styles.editModalCard}>
+                  <View style={styles.editModalHeader}>
+                    <Text style={styles.editModalTitle}>WhatsApp Contact &amp; Alerts</Text>
+                    <TouchableOpacity
+                      onPress={() => setEditWhatsAppModalOpen(false)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <CloseIcon color="#64748b" size={18} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView style={styles.editModalScroll} showsVerticalScrollIndicator={false}>
+                    <Text style={styles.inputLabel}>WHATSAPP BUSINESS NUMBER</Text>
+                    <TextInput
+                      style={styles.textInputBox}
+                      value={curStudioPhone}
+                      onChangeText={setCurStudioPhone}
+                      placeholder="+91 98765 43210"
+                      placeholderTextColor="rgba(18, 18, 18, 0.4)"
+                      keyboardType="phone-pad"
+                    />
+                    <Text style={styles.inputHint}>
+                      Used for client invoices, booking advance confirmations, and reminders.
+                    </Text>
+
+                    <View style={styles.switchOptionRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.switchOptionTitle}>Auto-Send Advance Receipts</Text>
+                        <Text style={styles.switchOptionSub}>Prompt to send WhatsApp receipt after booking</Text>
+                      </View>
+                      <Switch
+                        value={autoSendReceipt}
+                        onValueChange={setAutoSendReceipt}
+                        trackColor={{ false: '#cbd5e1', true: '#10b981' }}
+                      />
+                    </View>
+
+                    <View style={styles.switchOptionRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.switchOptionTitle}>Auto-Send Balance Reminders</Text>
+                        <Text style={styles.switchOptionSub}>Notify clients of upcoming payment dues</Text>
+                      </View>
+                      <Switch
+                        value={autoSendReminder}
+                        onValueChange={setAutoSendReminder}
+                        trackColor={{ false: '#cbd5e1', true: '#10b981' }}
+                      />
+                    </View>
+                  </ScrollView>
+
+                  <View style={styles.editModalActions}>
+                    <TouchableOpacity
+                      style={styles.modalCancelBtn}
+                      onPress={() => setEditWhatsAppModalOpen(false)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.modalCancelText}>CANCEL</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.modalSaveBtn}
+                      onPress={async () => {
+                        const ok = await saveProfileData({ studioPhone: curStudioPhone });
+                        if (ok) setEditWhatsAppModalOpen(false);
+                      }}
+                      disabled={isSavingProfile}
+                      activeOpacity={0.8}
+                    >
+                      {isSavingProfile ? (
+                        <ActivityIndicator color="#ffffff" size="small" />
+                      ) : (
+                        <Text style={styles.modalSaveText}>SAVE WHATSAPP</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* =========================================================================
+          MODAL 4: EDIT WHATSAPP MESSAGE TEMPLATES
+          ========================================================================= */}
+      <Modal
+        visible={editTemplatesModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditTemplatesModalOpen(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setEditTemplatesModalOpen(false)}>
+          <View style={styles.modalBackdrop}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              style={{ width: '100%', alignItems: 'center' }}
+            >
+              <TouchableWithoutFeedback>
+                <View style={styles.editModalCard}>
+                  <View style={styles.editModalHeader}>
+                    <Text style={styles.editModalTitle}>Message Templates</Text>
+                    <TouchableOpacity
+                      onPress={() => setEditTemplatesModalOpen(false)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <CloseIcon color="#64748b" size={18} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView style={styles.editModalScroll} showsVerticalScrollIndicator={false}>
+                    {activeEditingTemplate ? (
+                      <View>
+                        <TouchableOpacity
+                          style={styles.backToTemplatesBtn}
+                          onPress={() => setActiveEditingTemplate(null)}
+                        >
+                          <Text style={styles.backToTemplatesText}>← Back to all templates</Text>
+                        </TouchableOpacity>
+
+                        <Text style={styles.templateEditTitle}>{activeEditingTemplate.title}</Text>
+                        <Text style={styles.templateEditSub}>{activeEditingTemplate.subtitle}</Text>
+
+                        <TextInput
+                          style={styles.templateTextInput}
+                          value={activeEditingTemplate.body}
+                          onChangeText={(txt) =>
+                            setActiveEditingTemplate({ ...activeEditingTemplate, body: txt })
+                          }
+                          multiline
+                          numberOfLines={6}
+                        />
+
+                        <Text style={styles.templateTokensHint}>
+                          Variables you can use: {'{client_name}'}, {'{event_date}'}, {'{package_name}'}, {'{balance_due}'}, {'{studio_name}'}
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={{ gap: 10 }}>
+                        {templates.map((tpl) => (
+                          <TouchableOpacity
+                            key={tpl.id}
+                            style={styles.templateCardItem}
+                            onPress={() => {
+                              try {
+                                Haptics.selectionAsync();
+                              } catch {}
+                              setActiveEditingTemplate(tpl);
+                            }}
+                            activeOpacity={0.75}
+                          >
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.templateCardTitle}>{tpl.title}</Text>
+                              <Text style={styles.templateCardSub}>{tpl.subtitle}</Text>
+                              <Text style={styles.templateCardPreview} numberOfLines={2}>
+                                {tpl.body}
+                              </Text>
+                            </View>
+                            <View style={styles.templateEditPill}>
+                              <Text style={styles.templateEditText}>CUSTOMIZE</Text>
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                  </ScrollView>
+
+                  <View style={styles.editModalActions}>
+                    <TouchableOpacity
+                      style={styles.modalCancelBtn}
+                      onPress={() => {
+                        setActiveEditingTemplate(null);
+                        setEditTemplatesModalOpen(false);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.modalCancelText}>CLOSE</Text>
+                    </TouchableOpacity>
+
+                    {activeEditingTemplate && (
+                      <TouchableOpacity
+                        style={styles.modalSaveBtn}
+                        onPress={async () => {
+                          const updated = templates.map((t) =>
+                            t.id === activeEditingTemplate.id ? activeEditingTemplate : t
+                          );
+                          setTemplates(updated);
+                          await AsyncStorage.setItem('@shilpi_templates', JSON.stringify(updated));
+                          setActiveEditingTemplate(null);
+                          try {
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                          } catch {}
+                          Alert.alert('Template Saved', 'Your custom message template has been updated.');
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.modalSaveText}>SAVE TEMPLATE</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              </TouchableWithoutFeedback>
+            </KeyboardAvoidingView>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* =========================================================================
+          MODAL 5: PERMANENT ACCOUNT DELETION MODAL WITH DELETION REASON OPTION
+          ========================================================================= */}
       <Modal
         visible={deleteModalOpen}
         transparent
@@ -933,7 +1673,7 @@ const createStyles = (colors: ThemeColors) =>
       borderBottomRightRadius: 28,
       paddingHorizontal: 20,
       paddingTop: 20,
-      paddingBottom: 22,
+      paddingBottom: 20,
       shadowColor: '#121212',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.18,
@@ -949,7 +1689,7 @@ const createStyles = (colors: ThemeColors) =>
       width: 64,
       height: 64,
       borderRadius: 32,
-      overflow: 'hidden',
+      position: 'relative',
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 2,
@@ -965,6 +1705,19 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: '800',
       color: '#ffffff',
     },
+    avatarEditOverlay: {
+      position: 'absolute',
+      bottom: -2,
+      right: -2,
+      backgroundColor: '#be185d',
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: '#121212',
+    },
     heroDetails: {
       flex: 1,
     },
@@ -975,7 +1728,7 @@ const createStyles = (colors: ThemeColors) =>
       gap: 8,
     },
     heroArtistName: {
-      fontSize: 20,
+      fontSize: 19,
       fontWeight: '800',
       color: '#ffffff',
       flex: 1,
@@ -1005,27 +1758,47 @@ const createStyles = (colors: ThemeColors) =>
     heroStudioName: {
       fontSize: 13,
       fontWeight: '600',
-      color: 'rgba(255, 255, 255, 0.8)',
+      color: 'rgba(255, 255, 255, 0.82)',
       marginTop: 2,
     },
     heroRoleLocation: {
       fontSize: 11.5,
-      color: 'rgba(255, 255, 255, 0.5)',
+      color: 'rgba(255, 255, 255, 0.55)',
       marginTop: 2,
+    },
+    heroBottomBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 14,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: 'rgba(255, 255, 255, 0.1)',
     },
     heroContactRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      marginTop: 12,
-      paddingTop: 10,
-      borderTopWidth: 1,
-      borderTopColor: 'rgba(255, 255, 255, 0.1)',
     },
     heroPhoneText: {
       fontSize: 12,
       fontWeight: '600',
       color: 'rgba(255, 255, 255, 0.75)',
+    },
+    heroEditPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: 'rgba(255, 255, 255, 0.14)',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+    },
+    heroEditText: {
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+      color: '#ffffff',
     },
 
     // 2. Group Section Cards
@@ -1069,6 +1842,7 @@ const createStyles = (colors: ThemeColors) =>
     groupRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      minHeight: 52,
       paddingVertical: 13,
       paddingHorizontal: 16,
       borderBottomWidth: 1,
@@ -1098,6 +1872,17 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 11,
       color: 'rgba(18, 18, 18, 0.48)',
       marginTop: 1.5,
+    },
+    editActionBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    editActionText: {
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.6,
+      color: colors.deep,
     },
     planActionWrap: {
       flexDirection: 'row',
@@ -1256,71 +2041,259 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: 18,
     },
 
-    // Profile Preview Modal
-    profileModalCard: {
+    // Edit Modal Shared Styles
+    editModalCard: {
       backgroundColor: '#ffffff',
       borderRadius: 24,
-      padding: 22,
+      padding: 20,
+      width: '100%',
+      maxHeight: '85%',
       shadowColor: '#000000',
       shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.2,
-      shadowRadius: 18,
-      elevation: 8,
+      shadowOpacity: 0.25,
+      shadowRadius: 20,
+      elevation: 10,
     },
-    profileModalHeader: {
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(18, 18, 18, 0.08)',
-      paddingBottom: 14,
-    },
-    profileModalKicker: {
-      fontSize: 9.5,
-      fontWeight: '800',
-      letterSpacing: 1.2,
-      color: colors.deep,
-    },
-    profileModalTitle: {
-      fontSize: 20,
-      fontWeight: '800',
-      color: '#121212',
-      marginTop: 2,
-    },
-    profileModalSubtitle: {
-      fontSize: 13,
-      color: 'rgba(18, 18, 18, 0.6)',
-      marginTop: 2,
-    },
-    profileDetailsList: {
-      marginVertical: 14,
-      gap: 12,
-    },
-    profileDetailRow: {
+    editModalHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingVertical: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(18, 18, 18, 0.08)',
+      paddingBottom: 12,
     },
-    profileDetailLabel: {
-      fontSize: 12.5,
-      color: 'rgba(18, 18, 18, 0.55)',
+    editModalTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: '#121212',
+    },
+    editModalScroll: {
+      marginVertical: 12,
+    },
+    inputLabel: {
+      fontSize: 9.5,
+      fontWeight: '800',
+      letterSpacing: 1,
+      color: '#1e293b',
+      marginBottom: 6,
+      marginTop: 8,
+    },
+    textInputBox: {
+      backgroundColor: '#f8fafc',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: 'rgba(18, 18, 18, 0.12)',
+      paddingVertical: 11,
+      paddingHorizontal: 13,
+      fontSize: 13,
+      color: '#121212',
       fontWeight: '600',
     },
-    profileDetailVal: {
+    inputHint: {
+      fontSize: 10.5,
+      color: 'rgba(18, 18, 18, 0.5)',
+      marginTop: 4,
+      marginBottom: 8,
+    },
+    suggestionChipsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginTop: 8,
+      marginBottom: 10,
+    },
+    suggestionChip: {
+      backgroundColor: 'rgba(18, 18, 18, 0.05)',
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+    },
+    suggestionChipActive: {
+      backgroundColor: '#121212',
+    },
+    suggestionChipText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: '#1e293b',
+    },
+    suggestionChipTextActive: {
+      color: '#ffffff',
+    },
+    avatarEditRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      marginBottom: 12,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(18, 18, 18, 0.06)',
+    },
+    avatarPickerCircle: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: '#1e293b',
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    avatarPickerImage: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+    },
+    avatarPickerLetter: {
+      fontSize: 20,
+      fontWeight: '800',
+      color: '#ffffff',
+    },
+    avatarPickerTitle: {
+      fontSize: 12.5,
+      fontWeight: '700',
+      color: '#121212',
+    },
+    avatarPickerBtn: {
+      backgroundColor: 'rgba(18, 18, 18, 0.06)',
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 8,
+      alignSelf: 'flex-start',
+      marginTop: 4,
+    },
+    avatarPickerBtnText: {
+      fontSize: 9.5,
+      fontWeight: '800',
+      letterSpacing: 0.6,
+      color: '#121212',
+    },
+    switchOptionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(18, 18, 18, 0.05)',
+    },
+    switchOptionTitle: {
       fontSize: 13,
       fontWeight: '700',
       color: '#121212',
     },
-    profileModalCloseBtn: {
-      backgroundColor: '#121212',
-      paddingVertical: 13,
-      borderRadius: 14,
-      alignItems: 'center',
-      marginTop: 4,
+    switchOptionSub: {
+      fontSize: 10.5,
+      color: 'rgba(18, 18, 18, 0.5)',
+      marginTop: 1,
     },
-    profileModalCloseText: {
+    editModalActions: {
+      flexDirection: 'row',
+      gap: 10,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: 'rgba(18, 18, 18, 0.08)',
+    },
+    modalCancelBtn: {
+      flex: 1,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: '#f1f5f9',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalCancelText: {
       fontSize: 11,
       fontWeight: '800',
-      letterSpacing: 1,
+      letterSpacing: 0.8,
+      color: '#1e293b',
+    },
+    modalSaveBtn: {
+      flex: 1.3,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: '#121212',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalSaveText: {
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 0.8,
       color: '#ffffff',
+    },
+
+    // Templates Modal
+    templateCardItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: 'rgba(18, 18, 18, 0.1)',
+      backgroundColor: '#ffffff',
+      gap: 10,
+    },
+    templateCardTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#121212',
+    },
+    templateCardSub: {
+      fontSize: 10.5,
+      color: 'rgba(18, 18, 18, 0.5)',
+      marginTop: 1,
+    },
+    templateCardPreview: {
+      fontSize: 11,
+      color: '#475569',
+      marginTop: 4,
+      fontStyle: 'italic',
+    },
+    templateEditPill: {
+      backgroundColor: 'rgba(18, 18, 18, 0.06)',
+      paddingVertical: 6,
+      paddingHorizontal: 8,
+      borderRadius: 8,
+    },
+    templateEditText: {
+      fontSize: 9.5,
+      fontWeight: '800',
+      letterSpacing: 0.6,
+      color: '#121212',
+    },
+    backToTemplatesBtn: {
+      marginBottom: 10,
+    },
+    backToTemplatesText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.deep,
+    },
+    templateEditTitle: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: '#121212',
+    },
+    templateEditSub: {
+      fontSize: 11,
+      color: 'rgba(18, 18, 18, 0.5)',
+      marginTop: 1,
+      marginBottom: 10,
+    },
+    templateTextInput: {
+      backgroundColor: '#f8fafc',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: 'rgba(18, 18, 18, 0.12)',
+      padding: 12,
+      fontSize: 12.5,
+      color: '#121212',
+      textAlignVertical: 'top',
+      minHeight: 120,
+    },
+    templateTokensHint: {
+      fontSize: 10.5,
+      color: 'rgba(18, 18, 18, 0.5)',
+      marginTop: 8,
+      lineHeight: 15,
     },
 
     // Account Deletion Modal (Compliant with reason selection)
