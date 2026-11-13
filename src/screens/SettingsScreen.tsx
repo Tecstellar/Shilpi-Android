@@ -65,17 +65,34 @@ const ChevronRightIcon = ({ color = 'rgba(18, 18, 18, 0.35)', size = 16 }: { col
   </Svg>
 );
 
-const UserIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
+const ChevronLeftIcon = ({ color = '#be185d', size = 14 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M15 18l-6-6 6-6" />
+  </Svg>
+);
+
+const UserIcon = ({ color = '#121212', size = 17 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <Path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
     <Circle cx="12" cy="7" r="4" />
   </Svg>
 );
 
-const BuildingIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
+const BuildingIcon = ({ color = '#121212', size = 17 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
-    <Path d="M9 22v-4h6v4M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01" />
+    <Path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
+    <Path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+    <Path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
+    <Path d="M10 6h4" />
+    <Path d="M10 10h4" />
+    <Path d="M10 14h4" />
+    <Path d="M10 18h4" />
+  </Svg>
+);
+
+const WhatsAppIcon = ({ color = '#25D366', size = 17 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <Path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.885-9.888 9.885m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.456 5.711 1.457h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
   </Svg>
 );
 
@@ -85,66 +102,73 @@ const PhoneIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: nu
   </Svg>
 );
 
-const PackageIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
+const CrownIcon = ({ color = '#121212', size = 17 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Line x1="16.5" y1="9.4" x2="7.5" y2="4.21" />
-    <Path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-    <Polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-    <Line x1="12" y1="22.08" x2="12" y2="12" />
+    <Path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7z" />
+    <Circle cx="12" cy="4" r="1.3" fill={color} />
+    <Circle cx="5" cy="4" r="1.3" fill={color} />
+    <Circle cx="19" cy="4" r="1.3" fill={color} />
+    <Path d="M5 20h14" />
   </Svg>
 );
 
-const CrownIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14v2H5v-2z" />
+const BarChart2Icon = ({ color = '#121212', size = 17 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+    <Line x1="18" y1="20" x2="18" y2="10" />
+    <Line x1="12" y1="20" x2="12" y2="4" />
+    <Line x1="6" y1="20" x2="6" y2="14" />
   </Svg>
 );
 
-const PaletteIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
+const PaletteIcon = ({ color = '#121212', size = 17 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Circle cx="13.5" cy="6.5" r=".7" fill={color} />
-    <Circle cx="17.5" cy="10.5" r=".7" fill={color} />
-    <Circle cx="8.5" cy="7.5" r=".7" fill={color} />
-    <Circle cx="6.5" cy="12.5" r=".7" fill={color} />
+    <Circle cx="13.5" cy="6.5" r=".9" fill={color} />
+    <Circle cx="17.5" cy="10.5" r=".9" fill={color} />
+    <Circle cx="8.5" cy="7.5" r=".9" fill={color} />
+    <Circle cx="6.5" cy="12.5" r=".9" fill={color} />
     <Path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
   </Svg>
 );
 
-const BellIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
-  </Svg>
-);
-
-const MessageSquareIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
+const MessageSquareIcon = ({ color = '#121212', size = 17 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <Path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    <Line x1="8" y1="9" x2="16" y2="9" />
+    <Line x1="8" y1="13" x2="13" y2="13" />
   </Svg>
 );
 
-const ShieldIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
+const FileTextIcon = ({ color = '#121212', size = 17 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <Polyline points="14 2 14 8 20 8" />
+    <Line x1="16" y1="13" x2="8" y2="13" />
+    <Line x1="16" y1="17" x2="8" y2="17" />
+    <Line x1="10" y1="9" x2="8" y2="9" />
+  </Svg>
+);
+
+const ShieldIcon = ({ color = '#121212', size = 17 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <Polyline points="9 12 11 14 15 10" />
   </Svg>
 );
 
-const HelpCircleIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
+const LogOutIcon = ({ color = '#121212', size = 17 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Circle cx="12" cy="12" r="10" />
-    <Path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
+    <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <Polyline points="16 17 21 12 16 7" />
+    <Line x1="21" y1="12" x2="9" y2="12" />
   </Svg>
 );
 
-const LogOutIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-  </Svg>
-);
-
-const Trash2Icon = ({ color = '#DC2626', size = 16 }: { color?: string; size?: number }) => (
+const Trash2Icon = ({ color = '#DC2626', size = 17 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <Polyline points="3 6 5 6 21 6" />
-    <Path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
+    <Path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    <Line x1="10" y1="11" x2="10" y2="17" />
+    <Line x1="14" y1="11" x2="14" y2="17" />
   </Svg>
 );
 
@@ -161,7 +185,6 @@ const CloseIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: nu
   </Svg>
 );
 
-// Camera Icon for Avatar Photo Edit Badge (No Pencils!)
 const CameraIcon = ({ color = '#ffffff', size = 11 }: { color?: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
     <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
@@ -179,24 +202,6 @@ const CheckCircleVectorIcon = ({ color = '#D4AF37', size = 13 }: { color?: strin
 const CheckVectorIcon = ({ color = '#ffffff' }: { color?: string }) => (
   <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={3}>
     <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
-  </Svg>
-);
-
-const BarChart2Icon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Line x1="18" y1="20" x2="18" y2="10" />
-    <Line x1="12" y1="20" x2="12" y2="4" />
-    <Line x1="6" y1="20" x2="6" y2="14" />
-  </Svg>
-);
-
-const FileTextIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <Polyline points="14 2 14 8 20 8" />
-    <Line x1="16" y1="13" x2="8" y2="13" />
-    <Line x1="16" y1="17" x2="8" y2="17" />
-    <Polyline points="10 9 9 9 8 9" />
   </Svg>
 );
 
@@ -750,7 +755,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             activeOpacity={0.7}
           >
             <View style={[styles.iconPill, { backgroundColor: '#ecfdf5' }]}>
-              <PhoneIcon color="#059669" size={17} />
+              <WhatsAppIcon color="#25D366" size={18} />
             </View>
             <View style={styles.rowMainCol}>
               <Text style={styles.rowTitle}>WhatsApp</Text>
@@ -1288,7 +1293,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               <TouchableWithoutFeedback>
                 <View style={styles.editModalCard}>
                   <View style={styles.editModalHeader}>
-                    <Text style={styles.editModalTitle}>WhatsApp Contact &amp; Alerts</Text>
+                    <Text style={styles.editModalTitle}>WhatsApp Settings</Text>
                     <TouchableOpacity
                       onPress={() => setEditWhatsAppModalOpen(false)}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -1402,7 +1407,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                           style={styles.backToTemplatesBtn}
                           onPress={() => setActiveEditingTemplate(null)}
                         >
-                          <Text style={styles.backToTemplatesText}>← Back to all templates</Text>
+                          <ChevronLeftIcon color={colors.deep} size={14} />
+                          <Text style={styles.backToTemplatesText}>Back to all templates</Text>
                         </TouchableOpacity>
 
                         <Text style={styles.templateEditTitle}>{activeEditingTemplate.title}</Text>
@@ -2251,6 +2257,9 @@ const createStyles = (colors: ThemeColors) =>
       color: '#121212',
     },
     backToTemplatesBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
       marginBottom: 10,
     },
     backToTemplatesText: {
