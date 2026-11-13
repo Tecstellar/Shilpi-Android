@@ -13,7 +13,7 @@ import {
   TouchableWithoutFeedback,
   Linking,
 } from 'react-native';
-import Svg, { Path, Rect } from 'react-native-svg';
+import Svg, { Path, Rect, Circle, Line, Polyline } from 'react-native-svg';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -75,35 +75,75 @@ function bookingTotalAmount(b: Booking): number {
   return b.items.reduce((s, item) => s + (item.price || 0), 0) + (b.travel || 0);
 }
 
-// Icons
-const CalendarIcon = ({ color = '#ffffff' }: { color?: string }) => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+// Premium Vector Icons
+const CalendarIcon = ({ color = '#ffffff', size = 14 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
     <Rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
     <Path d="M16 2v4M8 2v4M3 10h18" />
   </Svg>
 );
 
-const ChevronLeftIcon = () => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-    <Path d="M15 18l-6-6 6-6" stroke="#ffffff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+const ChevronLeftIcon = ({ color = '#ffffff', size = 16 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M15 18l-6-6 6-6" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
-const ChevronRightIcon = () => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
-    <Path d="M9 18l6-6-6-6" stroke="#ffffff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+const ChevronRightIcon = ({ color = '#ffffff', size = 16 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M9 18l6-6-6-6" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
-const ChevronDownIcon = ({ color = '#121212' }: { color?: string }) => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+const ChevronDownIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M6 9l6 6 6-6" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
-const ChevronUpIcon = ({ color = '#121212' }: { color?: string }) => (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+const ChevronUpIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M18 15l-6-6-6 6" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const EyeIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <Circle cx="12" cy="12" r="3" />
+  </Svg>
+);
+
+const PdfDocumentIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <Polyline points="14 2 14 8 20 8" />
+    <Line x1="16" y1="13" x2="8" y2="13" />
+    <Line x1="16" y1="17" x2="8" y2="17" />
+    <Line x1="10" y1="9" x2="8" y2="9" />
+  </Svg>
+);
+
+const ExcelTableIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <Rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+    <Line x1="3" y1="9" x2="21" y2="9" />
+    <Line x1="3" y1="15" x2="21" y2="15" />
+    <Line x1="9" y1="3" x2="9" y2="21" />
+    <Line x1="15" y1="3" x2="15" y2="21" />
+  </Svg>
+);
+
+const WhatsAppIcon = ({ color = '#ffffff', size = 16 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <Path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.885-9.888 9.885m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.746.953 3.71 1.456 5.711 1.457h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+  </Svg>
+);
+
+const CloseIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+    <Line x1="18" y1="6" x2="6" y2="18" />
+    <Line x1="6" y1="6" x2="18" y2="18" />
   </Svg>
 );
 
@@ -333,6 +373,15 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
       sortedDayWiseList,
     };
   }, [bookings, expenses, selectedSerial, selectedYear, selectedMonthIdx, selectedMonthLong, currentSerial, monthExpenses]);
+
+  // Chronologically sorted bookings for the Day Wise Table
+  const tableBookings = useMemo(() => {
+    return [...monthData.monthBookings].sort((a, b) => {
+      const dtA = parseBookingDayLocal(a, selectedYear).getTime();
+      const dtB = parseBookingDayLocal(b, selectedYear).getTime();
+      return dtA - dtB;
+    });
+  }, [monthData.monthBookings, selectedYear]);
 
   // Annual Summary for the "Summary" slider (All Years / 2026 -> Months -> Date/Item Details)
   const annualSummary = useMemo(() => {
@@ -670,7 +719,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                         styles.stackedSegment,
                         {
                           width: `${monthData.totalSales > 0 ? Math.max(5, (monthData.upiPaid / monthData.totalSales) * 100) : 0}%`,
-                          backgroundColor: '#2563eb',
+                          backgroundColor: '#0f172a',
                         },
                       ]}
                     />
@@ -679,7 +728,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                         styles.stackedSegment,
                         {
                           width: `${monthData.totalSales > 0 ? Math.max(5, (monthData.cashPaid / monthData.totalSales) * 100) : 0}%`,
-                          backgroundColor: '#059669',
+                          backgroundColor: '#64748b',
                         },
                       ]}
                     />
@@ -688,7 +737,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                         styles.stackedSegment,
                         {
                           width: `${monthData.totalSales > 0 ? Math.max(5, (monthData.pendingDues / monthData.totalSales) * 100) : 0}%`,
-                          backgroundColor: '#e8276b',
+                          backgroundColor: '#cbd5e1',
                         },
                       ]}
                     />
@@ -696,15 +745,15 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
 
                   <View style={styles.paymentLegendGrid}>
                     <View style={styles.paymentLegendItem}>
-                      <View style={[styles.paymentLegendSquare, { backgroundColor: '#2563eb' }]} />
+                      <View style={[styles.paymentLegendSquare, { backgroundColor: '#0f172a' }]} />
                       <View>
-                        <Text style={styles.paymentLegendName}>UPI / GPay</Text>
+                        <Text style={styles.paymentLegendName}>UPI / Online</Text>
                         <Text style={styles.paymentLegendAmount}>{fmt(monthData.upiPaid)}</Text>
                       </View>
                     </View>
 
                     <View style={styles.paymentLegendItem}>
-                      <View style={[styles.paymentLegendSquare, { backgroundColor: '#059669' }]} />
+                      <View style={[styles.paymentLegendSquare, { backgroundColor: '#64748b' }]} />
                       <View>
                         <Text style={styles.paymentLegendName}>Cash</Text>
                         <Text style={styles.paymentLegendAmount}>{fmt(monthData.cashPaid)}</Text>
@@ -712,10 +761,10 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                     </View>
 
                     <View style={styles.paymentLegendItem}>
-                      <View style={[styles.paymentLegendSquare, { backgroundColor: '#e8276b' }]} />
+                      <View style={[styles.paymentLegendSquare, { backgroundColor: '#cbd5e1' }]} />
                       <View>
                         <Text style={styles.paymentLegendName}>Pending Dues</Text>
-                        <Text style={[styles.paymentLegendAmount, { color: '#e8276b' }]}>
+                        <Text style={[styles.paymentLegendAmount, { color: '#64748b' }]}>
                           {fmt(monthData.pendingDues)}
                         </Text>
                       </View>
@@ -756,18 +805,20 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                   <Text style={styles.pendingDuesAmount}>{fmt(monthData.pendingDues)}</Text>
                 </View>
                 <TouchableOpacity style={styles.remindBtn} onPress={handleSendWhatsApp} activeOpacity={0.8}>
+                  <WhatsAppIcon color="#ffffff" size={14} />
                   <Text style={styles.remindBtnText}>SEND REMINDERS</Text>
                 </TouchableOpacity>
               </View>
 
-              {/* Action Buttons: Preview, PDF, Excel, WhatsApp */}
+              {/* Action Buttons: Preview, PDF, Excel, WhatsApp with Premium Vector Icons */}
               <View style={styles.actionButtonsWrap}>
                 <TouchableOpacity
                   style={styles.previewBtn}
                   onPress={() => setPreviewOpen(true)}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.previewBtnText}>👁 PREVIEW REPORT</Text>
+                  <EyeIcon color="#121212" size={17} />
+                  <Text style={styles.previewBtnText}>PREVIEW REPORT</Text>
                 </TouchableOpacity>
 
                 <View style={styles.exportBtnRow}>
@@ -776,7 +827,8 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                     onPress={() => handleDownloadPdf()}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.exportBtnText}>📄 DOWNLOAD PDF</Text>
+                    <PdfDocumentIcon color="#121212" size={16} />
+                    <Text style={styles.exportBtnText}>DOWNLOAD PDF</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -784,7 +836,8 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                     onPress={() => handleDownloadExcel()}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.exportBtnText}>📊 DOWNLOAD EXCEL</Text>
+                    <ExcelTableIcon color="#121212" size={16} />
+                    <Text style={styles.exportBtnText}>DOWNLOAD EXCEL</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -793,84 +846,114 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                   onPress={handleSendWhatsApp}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.whatsappBtnText}>💬 SEND ON WHATSAPP</Text>
+                  <WhatsAppIcon color="#ffffff" size={18} />
+                  <Text style={styles.whatsappBtnText}>SEND ON WHATSAPP</Text>
                 </TouchableOpacity>
               </View>
             </View>
           ) : (
-            /* SUB-VIEW 2: DAY WISE OF CURRENT MONTH */
+            /* SUB-VIEW 2: DAY WISE TABLE OF CURRENT MONTH (Table with Name, Date, Amount) */
             <View style={styles.dayWiseMonthContainer}>
               <View style={styles.dayWiseMonthHeader}>
                 <Text style={styles.dayWiseMonthKicker}>
-                  DAY-BY-DAY BREAKDOWN · {selectedMonthLong.toUpperCase()} {selectedYear}
+                  DAY WISE · {selectedMonthLong.toUpperCase()} {selectedYear}
                 </Text>
                 <Text style={styles.dayWiseMonthSub}>
-                  Slide the month slider above to inspect any other month
+                  Slide the month selector above to switch months
                 </Text>
               </View>
 
-              {monthData.sortedDayWiseList.length === 0 ? (
-                <View style={styles.emptyCardWrap}>
-                  <Text style={styles.emptyTitle}>No activity in {selectedMonthLong} {selectedYear}</Text>
-                  <Text style={styles.emptyNotice}>Use the slider arrows above to navigate to other months.</Text>
+              <View style={styles.dayWiseTableCard}>
+                {/* Table Header Row */}
+                <View style={styles.dayWiseTableHeaderRow}>
+                  <Text style={[styles.dayWiseTableColHeader, styles.colName]}>NAME</Text>
+                  <Text style={[styles.dayWiseTableColHeader, styles.colDate]}>DATE</Text>
+                  <Text style={[styles.dayWiseTableColHeader, styles.colAmount]}>AMOUNT</Text>
                 </View>
-              ) : (
-                monthData.sortedDayWiseList.map((dayItem) => (
-                  <View key={dayItem.day} style={styles.dayWiseCard}>
-                    <View style={styles.dayWiseCardHeader}>
-                      <View style={styles.dayPill}>
-                        <Text style={styles.dayPillText}>{dayItem.dateStr}</Text>
-                      </View>
-                      <View style={styles.dayFinancials}>
-                        <Text style={styles.daySalesText}>+{fmt(dayItem.sales)}</Text>
-                        {dayItem.expenses > 0 && (
-                          <Text style={styles.dayExpenseText}>Exp: -{fmt(dayItem.expenses)}</Text>
-                        )}
-                      </View>
-                    </View>
 
-                    {/* Bookings on this day */}
-                    {dayItem.bookings.map((b, bIdx) => (
-                      <View key={b.id || bIdx} style={styles.dayBookingRow}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.dayBookingClient}>{b.client}</Text>
-                          <Text style={styles.dayBookingItems}>
-                            {b.items.map((it) => it.name).join(' + ')}
+                {/* Table Body */}
+                {tableBookings.length === 0 ? (
+                  <View style={styles.tableEmptyRow}>
+                    <Text style={styles.tableEmptyText}>No bookings recorded for {selectedMonthLong} {selectedYear}</Text>
+                  </View>
+                ) : (
+                  tableBookings.map((b, idx) => {
+                    const dt = parseBookingDayLocal(b, selectedYear);
+                    const dateStr = `${dt.getDate()} ${MONTH_SHORT_ARR[dt.getMonth()]}`;
+                    const amountVal = bookingTotalAmount(b);
+                    const isLast = idx === tableBookings.length - 1;
+                    const isAlt = idx % 2 === 1;
+
+                    return (
+                      <View
+                        key={b.id || idx}
+                        style={[
+                          styles.dayWiseTableRow,
+                          isAlt && styles.dayWiseTableRowAlt,
+                          isLast && styles.dayWiseTableRowLast,
+                        ]}
+                      >
+                        <View style={styles.colNameCell}>
+                          <Text style={styles.tableClientName} numberOfLines={1}>{b.client}</Text>
+                          <Text style={styles.tableServiceSub} numberOfLines={1}>
+                            {b.items.map((it) => it.name).join(', ') || 'Custom Package'}
                           </Text>
                         </View>
-                        <Text style={styles.dayBookingPrice}>{fmt(bookingTotalAmount(b))}</Text>
+
+                        <View style={styles.colDateCell}>
+                          <Text style={styles.tableDateText}>{dateStr}</Text>
+                        </View>
+
+                        <View style={styles.colAmountCell}>
+                          <Text style={styles.tableAmountText}>{fmt(amountVal)}</Text>
+                        </View>
                       </View>
-                    ))}
+                    );
+                  })
+                )}
+
+                {/* Table Footer Summary Row */}
+                {tableBookings.length > 0 && (
+                  <View style={styles.dayWiseTableFooterRow}>
+                    <View style={styles.colNameCell}>
+                      <Text style={styles.tableFooterLabel}>TOTAL ({tableBookings.length} {tableBookings.length === 1 ? 'BILL' : 'BILLS'})</Text>
+                    </View>
+                    <View style={styles.colDateCell}>
+                      <Text style={styles.tableFooterSub}>{selectedMonthLong.slice(0, 3)}</Text>
+                    </View>
+                    <View style={styles.colAmountCell}>
+                      <Text style={styles.tableFooterAmount}>{fmt(monthData.totalSales)}</Text>
+                    </View>
                   </View>
-                ))
-              )}
+                )}
+              </View>
             </View>
           )}
         </View>
       ) : (
         /* =========================================================================
-           SECTION 2: SUMMARY SLIDER (All Years 2026 -> Months -> Date & Items Details)
+           SECTION 2: SUMMARY (All Years 2026 -> Months -> Date & Items Details)
            ========================================================================= */
         <View style={styles.summarySliderContainer}>
-          {/* A. Top Year Header Card: All Years 2026 & How much bills */}
+          {/* A. Only ONE container that contains 2026 with arrow on right, NO 'collapse' word */}
           <TouchableOpacity
-            style={styles.allYearsCard}
+            style={styles.yearContainerCard}
             onPress={() => setSummaryYearExpanded(!summaryYearExpanded)}
             activeOpacity={0.8}
           >
-            <View style={styles.allYearsCardLeft}>
-              <Text style={styles.allYearsKicker}>ALL YEARS · {annualSummary.year}</Text>
-              <Text style={styles.allYearsBillsText}>
-                {annualSummary.ordersCompleted} {annualSummary.ordersCompleted === 1 ? 'BILL RECORDED' : 'BILLS RECORDED'}
+            <View style={styles.yearCardLeft}>
+              <Text style={styles.yearNumberText}>{annualSummary.year}</Text>
+              <Text style={styles.yearSubText}>
+                {annualSummary.ordersCompleted} {annualSummary.ordersCompleted === 1 ? 'Bill' : 'Bills'} · {fmt(annualSummary.yearTotalSales)}
               </Text>
-              <Text style={styles.allYearsTotalSales}>{fmt(annualSummary.yearTotalSales)}</Text>
             </View>
 
-            <View style={styles.allYearsCardRight}>
-              <View style={styles.yearExpandPill}>
-                <Text style={styles.yearExpandText}>{summaryYearExpanded ? 'COLLAPSE' : 'EXPAND'}</Text>
-                {summaryYearExpanded ? <ChevronUpIcon color="#ffffff" /> : <ChevronDownIcon color="#ffffff" />}
-              </View>
+            <View style={styles.yearArrowWrap}>
+              {summaryYearExpanded ? (
+                <ChevronUpIcon color="#ffffff" size={18} />
+              ) : (
+                <ChevronDownIcon color="#ffffff" size={18} />
+              )}
             </View>
           </TouchableOpacity>
 
@@ -878,7 +961,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
           {summaryYearExpanded && (
             <View style={styles.monthsAccordionList}>
               <Text style={styles.monthsAccordionKicker}>
-                ALL MONTHS IN {annualSummary.year} · TAP TO VIEW FULL OVERVIEW
+                ALL MONTHS IN {annualSummary.year}
               </Text>
 
               {annualSummary.months.map((m) => {
@@ -900,7 +983,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                       <View style={styles.summaryMonthRightCol}>
                         <Text style={styles.summaryMonthAmount}>{fmt(m.grandTotal)}</Text>
                         <View style={styles.arrowIconWrap}>
-                          {isMonthOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
+                          {isMonthOpen ? <ChevronUpIcon size={14} /> : <ChevronDownIcon size={14} />}
                         </View>
                       </View>
                     </TouchableOpacity>
@@ -917,11 +1000,11 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                           </View>
                           <View style={styles.totalMiniItem}>
                             <Text style={styles.totalMiniLabel}>EXPENSES</Text>
-                            <Text style={[styles.totalMiniVal, { color: '#d97706' }]}>{fmt(m.expenses)}</Text>
+                            <Text style={[styles.totalMiniVal, { color: '#64748b' }]}>{fmt(m.expenses)}</Text>
                           </View>
                           <View style={styles.totalMiniItem}>
                             <Text style={styles.totalMiniLabel}>PROFIT</Text>
-                            <Text style={[styles.totalMiniVal, { color: '#059669' }]}>{fmt(m.profit)}</Text>
+                            <Text style={[styles.totalMiniVal, { color: '#0f172a' }]}>{fmt(m.profit)}</Text>
                           </View>
                           <View style={styles.totalMiniItem}>
                             <Text style={styles.totalMiniLabel}>GRAND TOTAL</Text>
@@ -954,19 +1037,23 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                           ))
                         )}
 
-                        {/* Download Excel & PDF Buttons */}
+                        {/* Download Excel & PDF Buttons with vector icons */}
                         <View style={styles.monthDownloadBtnRow}>
                           <TouchableOpacity
                             style={styles.monthDownloadBtn}
                             onPress={() => handleDownloadPdf(m.monthName, m.sales, m.expenses, m.profit)}
+                            activeOpacity={0.8}
                           >
-                            <Text style={styles.monthDownloadBtnText}>📄 PDF REPORT</Text>
+                            <PdfDocumentIcon color="#121212" size={15} />
+                            <Text style={styles.monthDownloadBtnText}>PDF REPORT</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={styles.monthDownloadBtn}
                             onPress={() => handleDownloadExcel(m.monthName, m.bookings)}
+                            activeOpacity={0.8}
                           >
-                            <Text style={styles.monthDownloadBtnText}>📊 EXCEL EXPORT</Text>
+                            <ExcelTableIcon color="#121212" size={15} />
+                            <Text style={styles.monthDownloadBtnText}>EXCEL EXPORT</Text>
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -1003,13 +1090,13 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                     </View>
                     <View style={styles.previewRow}>
                       <Text style={styles.previewLabel}>Net Profit</Text>
-                      <Text style={[styles.previewVal, { color: '#059669', fontWeight: '800' }]}>
+                      <Text style={[styles.previewVal, { color: '#0f172a', fontWeight: '800' }]}>
                         {fmt(monthData.profit)}
                       </Text>
                     </View>
                     <View style={styles.previewRow}>
                       <Text style={styles.previewLabel}>Pending Balance</Text>
-                      <Text style={[styles.previewVal, { color: '#e8276b' }]}>
+                      <Text style={[styles.previewVal, { color: '#64748b' }]}>
                         {fmt(monthData.pendingDues)}
                       </Text>
                     </View>
@@ -1026,9 +1113,11 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
 
                 <View style={styles.previewActionRow}>
                   <TouchableOpacity style={styles.previewCloseBtn} onPress={() => setPreviewOpen(false)}>
+                    <CloseIcon color="#121212" size={14} />
                     <Text style={styles.previewCloseBtnText}>CLOSE</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.previewShareBtn} onPress={handleSendWhatsApp}>
+                    <WhatsAppIcon color="#ffffff" size={16} />
                     <Text style={styles.previewShareBtnText}>SHARE WHATSAPP</Text>
                   </TouchableOpacity>
                 </View>
@@ -1489,6 +1578,9 @@ const createStyles = (colors: ThemeColors) =>
       fontVariant: ['tabular-nums'],
     },
     remindBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
       backgroundColor: '#e8276b',
       paddingVertical: 10,
       paddingHorizontal: 14,
@@ -1508,12 +1600,15 @@ const createStyles = (colors: ThemeColors) =>
       gap: 10,
     },
     previewBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
       backgroundColor: '#ffffff',
       borderWidth: 1.5,
       borderColor: '#121212',
       paddingVertical: 13,
       borderRadius: 14,
-      alignItems: 'center',
     },
     previewBtnText: {
       fontSize: 11,
@@ -1527,12 +1622,15 @@ const createStyles = (colors: ThemeColors) =>
     },
     exportBtn: {
       flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
       backgroundColor: '#ffffff',
       borderWidth: 1,
       borderColor: 'rgba(18, 18, 18, 0.14)',
       paddingVertical: 12,
       borderRadius: 14,
-      alignItems: 'center',
     },
     exportBtnText: {
       fontSize: 10.5,
@@ -1541,10 +1639,13 @@ const createStyles = (colors: ThemeColors) =>
       color: '#121212',
     },
     whatsappBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
       backgroundColor: '#25D366',
       paddingVertical: 13,
       borderRadius: 14,
-      alignItems: 'center',
     },
     whatsappBtnText: {
       fontSize: 11,
@@ -1553,7 +1654,7 @@ const createStyles = (colors: ThemeColors) =>
       color: '#ffffff',
     },
 
-    // Day Wise in Monthly Reports
+    // Day Wise in Monthly Reports (Table: Name, Date, Amount)
     dayWiseMonthContainer: {
       marginTop: 10,
       paddingHorizontal: 16,
@@ -1572,98 +1673,142 @@ const createStyles = (colors: ThemeColors) =>
       color: 'rgba(18, 18, 18, 0.5)',
       marginTop: 2,
     },
-    dayWiseCard: {
+    dayWiseTableCard: {
       backgroundColor: '#ffffff',
-      borderRadius: 16,
-      padding: 14,
-      marginBottom: 10,
+      borderRadius: 18,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: 'rgba(18, 18, 18, 0.08)',
       shadowColor: '#121212',
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.05,
       shadowRadius: 3,
       elevation: 1,
     },
-    dayWiseCardHeader: {
+    dayWiseTableHeaderRow: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(18, 18, 18, 0.06)',
-      paddingBottom: 8,
-      marginBottom: 8,
-    },
-    dayPill: {
       backgroundColor: '#121212',
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 8,
+      paddingVertical: 11,
+      paddingHorizontal: 14,
     },
-    dayPillText: {
-      fontSize: 11,
-      fontWeight: '700',
+    dayWiseTableColHeader: {
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 1,
       color: '#ffffff',
     },
-    dayFinancials: {
-      alignItems: 'flex-end',
+    colName: {
+      flex: 2,
     },
-    daySalesText: {
-      fontSize: 13,
-      fontWeight: '800',
-      color: '#059669',
-      fontVariant: ['tabular-nums'],
+    colDate: {
+      flex: 1,
+      textAlign: 'center',
     },
-    dayExpenseText: {
-      fontSize: 10.5,
-      fontWeight: '600',
-      color: '#d97706',
-      marginTop: 1,
-      fontVariant: ['tabular-nums'],
+    colAmount: {
+      flex: 1.2,
+      textAlign: 'right',
     },
-    dayBookingRow: {
+    dayWiseTableRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: 6,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
       borderBottomWidth: 1,
-      borderBottomColor: 'rgba(18, 18, 18, 0.03)',
-    },
-    dayBookingClient: {
-      fontSize: 12.5,
-      fontWeight: '700',
-      color: '#121212',
-    },
-    dayBookingItems: {
-      fontSize: 10.5,
-      color: 'rgba(18, 18, 18, 0.5)',
-    },
-    dayBookingPrice: {
-      fontSize: 12.5,
-      fontWeight: '800',
-      color: '#121212',
-      fontVariant: ['tabular-nums'],
-    },
-    emptyCardWrap: {
+      borderBottomColor: 'rgba(18, 18, 18, 0.05)',
       backgroundColor: '#ffffff',
-      borderRadius: 16,
-      padding: 24,
-      alignItems: 'center',
-      marginTop: 10,
     },
-    emptyTitle: {
+    dayWiseTableRowAlt: {
+      backgroundColor: '#fafafb',
+    },
+    dayWiseTableRowLast: {
+      borderBottomWidth: 0,
+    },
+    colNameCell: {
+      flex: 2,
+      paddingRight: 6,
+    },
+    colDateCell: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    colAmountCell: {
+      flex: 1.2,
+      alignItems: 'flex-end',
+    },
+    tableClientName: {
       fontSize: 13,
       fontWeight: '700',
       color: '#121212',
     },
+    tableServiceSub: {
+      fontSize: 10,
+      color: 'rgba(18, 18, 18, 0.48)',
+      marginTop: 2,
+    },
+    tableDateText: {
+      fontSize: 11.5,
+      fontWeight: '600',
+      color: '#475569',
+      backgroundColor: 'rgba(18, 18, 18, 0.04)',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    tableAmountText: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: '#121212',
+      fontVariant: ['tabular-nums'],
+    },
+    tableEmptyRow: {
+      paddingVertical: 24,
+      paddingHorizontal: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    tableEmptyText: {
+      fontSize: 12,
+      color: 'rgba(18, 18, 18, 0.45)',
+      textAlign: 'center',
+    },
+    dayWiseTableFooterRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#f1f1f4',
+      paddingVertical: 11,
+      paddingHorizontal: 14,
+      borderTopWidth: 1.5,
+      borderTopColor: 'rgba(18, 18, 18, 0.1)',
+    },
+    tableFooterLabel: {
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.8,
+      color: '#121212',
+    },
+    tableFooterSub: {
+      fontSize: 10.5,
+      fontWeight: '700',
+      color: '#64748b',
+    },
+    tableFooterAmount: {
+      fontSize: 13.5,
+      fontWeight: '900',
+      color: '#121212',
+      fontVariant: ['tabular-nums'],
+    },
 
-    // SUMMARY SLIDER (All Years 2026 -> Months -> Date & Items Details)
+    // SUMMARY (One 2026 container with arrow on right, no 'collapse' text)
     summarySliderContainer: {
       marginTop: 12,
     },
-    allYearsCard: {
+    yearContainerCard: {
       backgroundColor: '#121212',
       marginHorizontal: 16,
       borderRadius: 22,
-      padding: 18,
+      paddingVertical: 18,
+      paddingHorizontal: 20,
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
@@ -1673,44 +1818,29 @@ const createStyles = (colors: ThemeColors) =>
       shadowRadius: 8,
       elevation: 4,
     },
-    allYearsCardLeft: {
+    yearCardLeft: {
       flex: 1,
     },
-    allYearsKicker: {
-      fontSize: 10,
-      fontWeight: '800',
-      letterSpacing: 1.2,
-      color: 'rgba(255, 255, 255, 0.65)',
-    },
-    allYearsBillsText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: '#e8276b',
-      marginTop: 2,
-    },
-    allYearsTotalSales: {
-      fontSize: 32,
+    yearNumberText: {
+      fontSize: 28,
       fontWeight: '800',
       color: '#ffffff',
-      marginTop: 4,
+      letterSpacing: 0.5,
       fontVariant: ['tabular-nums'],
     },
-    allYearsCardRight: {
-      alignItems: 'flex-end',
+    yearSubText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: 'rgba(255, 255, 255, 0.7)',
+      marginTop: 2,
     },
-    yearExpandPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
+    yearArrowWrap: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
       backgroundColor: 'rgba(255, 255, 255, 0.12)',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 10,
-    },
-    yearExpandText: {
-      fontSize: 10,
-      fontWeight: '800',
-      color: '#ffffff',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
 
     monthsAccordionList: {
@@ -1855,12 +1985,15 @@ const createStyles = (colors: ThemeColors) =>
     },
     monthDownloadBtn: {
       flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
       backgroundColor: '#ffffff',
       paddingVertical: 10,
       borderRadius: 10,
       borderWidth: 1,
       borderColor: 'rgba(18, 18, 18, 0.12)',
-      alignItems: 'center',
     },
     monthDownloadBtnText: {
       fontSize: 9.5,
@@ -1941,10 +2074,13 @@ const createStyles = (colors: ThemeColors) =>
     },
     previewCloseBtn: {
       flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
       paddingVertical: 12,
       borderRadius: 12,
       backgroundColor: 'rgba(18, 18, 18, 0.06)',
-      alignItems: 'center',
     },
     previewCloseBtnText: {
       fontSize: 11,
@@ -1954,10 +2090,13 @@ const createStyles = (colors: ThemeColors) =>
     },
     previewShareBtn: {
       flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
       paddingVertical: 12,
       borderRadius: 12,
       backgroundColor: '#25D366',
-      alignItems: 'center',
     },
     previewShareBtnText: {
       fontSize: 11,
