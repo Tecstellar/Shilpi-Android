@@ -367,7 +367,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   // Interactive Theme State
   const [themePickerOpen, setThemePickerOpen] = useState(false);
   const [quotasExpanded, setQuotasExpanded] = useState(false);
-  const [threeTierModalOpen, setThreeTierModalOpen] = useState(false);
 
   // Edit Modals State
   const [editArtistModalOpen, setEditArtistModalOpen] = useState(false);
@@ -654,7 +653,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   try {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   } catch {}
-                  setThreeTierModalOpen(true);
+                  if (onGoToSubscription) onGoToSubscription();
                 }}
                 activeOpacity={0.8}
               >
@@ -790,29 +789,29 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </View>
           </TouchableOpacity>
 
-          {/* Subscription & Plan: Three-Tier Upgrade */}
+          {/* Subscription */}
           <TouchableOpacity
             style={styles.groupRow}
             onPress={() => {
               try {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               } catch {}
-              setThreeTierModalOpen(true);
+              if (onGoToSubscription) onGoToSubscription();
             }}
             activeOpacity={0.7}
           >
             <View style={[styles.iconPill, { backgroundColor: isPremium ? '#fef3c7' : '#f5f3ff' }]}>
-              <CrownIcon color={isPremium ? '#d97706' : '#7c3aed'} size={17} />
+              <CrownIcon color={isPremium ? '#d97706' : '#be185d'} size={17} />
             </View>
             <View style={styles.rowMainCol}>
-              <Text style={styles.rowTitle}>Subscription &amp; Plan</Text>
+              <Text style={styles.rowTitle}>Subscription</Text>
               <Text style={styles.rowSubtitle} numberOfLines={1}>
-                {isPremium ? 'Shilpi Pro · Unlimited Bookings' : 'Free Tier · 3-Tier Upgrade Available'}
+                {isPremium ? 'Shilpi Pro · Unlimited' : 'Free Tier · 20 Bookings Limit'}
               </Text>
             </View>
             <View style={styles.planActionWrap}>
-              <Text style={[styles.planBadgeText, isPremium ? { color: '#d97706' } : { color: '#7c3aed' }]}>
-                {isPremium ? 'PRO TIER' : '3-TIER UPGRADE'}
+              <Text style={[styles.planBadgeText, isPremium ? { color: '#d97706' } : { color: '#be185d' }]}>
+                {isPremium ? 'MANAGE' : 'UPGRADE'}
               </Text>
               <ChevronRightIcon />
             </View>
@@ -863,13 +862,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               {!isPremium && (
                 <TouchableOpacity
                   style={styles.upgradeCtaBtn}
-                  onPress={() => {
-                    setQuotasExpanded(false);
-                    setThreeTierModalOpen(true);
-                  }}
+                  onPress={onGoToSubscription}
                   activeOpacity={0.85}
                 >
-                  <Text style={styles.upgradeCtaText}>UNLOCK UNLIMITED USAGE · 3-TIER UPGRADE</Text>
+                  <Text style={styles.upgradeCtaText}>UNLOCK UNLIMITED BOOKINGS · UPGRADE</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -1738,128 +1734,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-
-      {/* 5. THREE-TIER SUBSCRIPTION UPGRADE MODAL */}
-      <Modal
-        visible={threeTierModalOpen}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setThreeTierModalOpen(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setThreeTierModalOpen(false)}>
-          <View style={styles.modalBackdrop}>
-            <TouchableWithoutFeedback onPress={() => {}}>
-              <View style={[styles.editModalCard, { maxHeight: '90%' }]}>
-                <View style={styles.editModalHeader}>
-                  <Text style={styles.editModalTitle}>Choose Studio Plan</Text>
-                  <TouchableOpacity
-                    onPress={() => setThreeTierModalOpen(false)}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <CloseIcon color="#64748b" size={18} />
-                  </TouchableOpacity>
-                </View>
-
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }}>
-                  <Text style={styles.tierModalSubtitle}>
-                    Select the tier that fits your makeup &amp; styling studio. Upgrade anytime with instant activation.
-                  </Text>
-
-                  {/* Tier 1: Free Starter */}
-                  <View style={[styles.tierCard, !isPremium && styles.tierCardCurrent]}>
-                    <View style={styles.tierHeaderRow}>
-                      <View>
-                        <Text style={styles.tierName}>Free Starter</Text>
-                        <Text style={styles.tierPrice}>₹0 <Text style={styles.tierPeriod}>/ forever</Text></Text>
-                      </View>
-                      {!isPremium ? (
-                        <View style={styles.currentBadge}>
-                          <Text style={styles.currentBadgeText}>CURRENT</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                    <View style={styles.tierFeatureList}>
-                      <Text style={styles.tierFeatureItem}>✓ Up to 20 bridal bookings / month</Text>
-                      <Text style={styles.tierFeatureItem}>✓ Basic client CRM &amp; appointments</Text>
-                      <Text style={styles.tierFeatureItem}>✓ Standard WhatsApp receipts</Text>
-                    </View>
-                  </View>
-
-                  {/* Tier 2: Shilpi Pro (Most Popular) */}
-                  <View style={[styles.tierCard, styles.tierCardPro]}>
-                    <View style={styles.proPopularBadge}>
-                      <Text style={styles.proPopularBadgeText}>MOST POPULAR · RECOMMENDED</Text>
-                    </View>
-                    <View style={styles.tierHeaderRow}>
-                      <View>
-                        <Text style={[styles.tierName, { color: '#ffffff' }]}>Shilpi Pro</Text>
-                        <Text style={[styles.tierPrice, { color: '#ffffff' }]}>
-                          ₹399 <Text style={[styles.tierPeriod, { color: 'rgba(255,255,255,0.7)' }]}>/ month (billed annually)</Text>
-                        </Text>
-                      </View>
-                      {isPremium ? (
-                        <View style={[styles.currentBadge, { backgroundColor: '#fef3c7' }]}>
-                          <Text style={[styles.currentBadgeText, { color: '#b45309' }]}>ACTIVE</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                    <View style={styles.tierFeatureList}>
-                      <Text style={[styles.tierFeatureItem, { color: 'rgba(255,255,255,0.9)' }]}>✦ UNLIMITED wedding bookings &amp; clients</Text>
-                      <Text style={[styles.tierFeatureItem, { color: 'rgba(255,255,255,0.9)' }]}>✦ Auto-send advance receipts &amp; reminders</Text>
-                      <Text style={[styles.tierFeatureItem, { color: 'rgba(255,255,255,0.9)' }]}>✦ Monthly &amp; Day-Wise Profit Reports (PDF/Excel)</Text>
-                      <Text style={[styles.tierFeatureItem, { color: 'rgba(255,255,255,0.9)' }]}>✦ Unlimited portfolio looks &amp; client closes</Text>
-                      <Text style={[styles.tierFeatureItem, { color: 'rgba(255,255,255,0.9)' }]}>✦ Priority WhatsApp support</Text>
-                    </View>
-
-                    <TouchableOpacity
-                      style={styles.proCtaBtn}
-                      onPress={() => {
-                        setThreeTierModalOpen(false);
-                        if (onGoToSubscription) onGoToSubscription();
-                      }}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.proCtaBtnText}>
-                        {isPremium ? 'MANAGE PRO SUBSCRIPTION' : 'UPGRADE TO PRO · ₹399/MO'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Tier 3: Studio Elite */}
-                  <View style={[styles.tierCard, styles.tierCardElite]}>
-                    <View style={styles.tierHeaderRow}>
-                      <View>
-                        <Text style={styles.tierName}>Studio Elite</Text>
-                        <Text style={styles.tierPrice}>₹899 <Text style={styles.tierPeriod}>/ month</Text></Text>
-                      </View>
-                      <View style={[styles.currentBadge, { backgroundColor: '#f3e8ff' }]}>
-                        <Text style={[styles.currentBadgeText, { color: '#7e22ce' }]}>MULTI-ARTIST</Text>
-                      </View>
-                    </View>
-                    <View style={styles.tierFeatureList}>
-                      <Text style={styles.tierFeatureItem}>✓ Everything in Shilpi Pro</Text>
-                      <Text style={styles.tierFeatureItem}>✓ Multi-artist &amp; assistant team calendar</Text>
-                      <Text style={styles.tierFeatureItem}>✓ Custom branded contracts &amp; GST invoices</Text>
-                      <Text style={styles.tierFeatureItem}>✓ 1-on-1 VIP concierge setup on WhatsApp</Text>
-                    </View>
-
-                    <TouchableOpacity
-                      style={styles.eliteCtaBtn}
-                      onPress={() => {
-                        setThreeTierModalOpen(false);
-                        if (onGoToSubscription) onGoToSubscription();
-                      }}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.eliteCtaBtnText}>CHOOSE STUDIO ELITE</Text>
-                    </TouchableOpacity>
-                  </View>
-                </ScrollView>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
     </ScrollView>
   );
 };
@@ -2698,119 +2572,5 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: '800',
       letterSpacing: 0.8,
       color: '#ffffff',
-    },
-
-    // Three-Tier Upgrade Modal
-    tierModalSubtitle: {
-      fontSize: 12,
-      color: 'rgba(18, 18, 18, 0.6)',
-      marginBottom: 14,
-      lineHeight: 17,
-    },
-    tierCard: {
-      backgroundColor: '#f8fafc',
-      borderRadius: 16,
-      padding: 14,
-      borderWidth: 1,
-      borderColor: 'rgba(18, 18, 18, 0.08)',
-      marginBottom: 12,
-    },
-    tierCardCurrent: {
-      borderColor: '#0284c7',
-      backgroundColor: '#f0f9ff',
-    },
-    tierCardPro: {
-      backgroundColor: '#121212',
-      borderColor: '#D4AF37',
-      borderWidth: 1.5,
-    },
-    tierCardElite: {
-      backgroundColor: '#faf5ff',
-      borderColor: '#d8b4fe',
-    },
-    proPopularBadge: {
-      backgroundColor: '#D4AF37',
-      alignSelf: 'flex-start',
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 4,
-      marginBottom: 8,
-    },
-    proPopularBadgeText: {
-      fontSize: 9,
-      fontWeight: '800',
-      letterSpacing: 0.8,
-      color: '#121212',
-    },
-    tierHeaderRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      marginBottom: 10,
-    },
-    tierName: {
-      fontSize: 15,
-      fontWeight: '800',
-      color: '#121212',
-    },
-    tierPrice: {
-      fontSize: 18,
-      fontWeight: '800',
-      color: '#121212',
-      marginTop: 2,
-    },
-    tierPeriod: {
-      fontSize: 11,
-      fontWeight: '500',
-      color: 'rgba(18, 18, 18, 0.55)',
-    },
-    currentBadge: {
-      backgroundColor: '#e2e8f0',
-      paddingHorizontal: 7,
-      paddingVertical: 3,
-      borderRadius: 6,
-    },
-    currentBadgeText: {
-      fontSize: 9,
-      fontWeight: '800',
-      color: '#475569',
-      letterSpacing: 0.6,
-    },
-    tierFeatureList: {
-      gap: 5,
-      marginTop: 4,
-    },
-    tierFeatureItem: {
-      fontSize: 11.5,
-      color: '#334155',
-      fontWeight: '500',
-    },
-    proCtaBtn: {
-      backgroundColor: '#D4AF37',
-      borderRadius: 10,
-      paddingVertical: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: 12,
-    },
-    proCtaBtnText: {
-      fontSize: 11,
-      fontWeight: '800',
-      color: '#121212',
-      letterSpacing: 0.7,
-    },
-    eliteCtaBtn: {
-      backgroundColor: '#7e22ce',
-      borderRadius: 10,
-      paddingVertical: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginTop: 12,
-    },
-    eliteCtaBtnText: {
-      fontSize: 11,
-      fontWeight: '800',
-      color: '#ffffff',
-      letterSpacing: 0.7,
     },
   });
