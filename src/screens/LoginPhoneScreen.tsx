@@ -17,7 +17,7 @@ import { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { apiClient } from '../services/apiClient';
 
-// Premium Vector Icons replacing emojis
+// Premium Hand-Drawn Vector Icons (Zero Emojis)
 const IndiaFlagVector: React.FC = () => (
   <Svg width={18} height={12} viewBox="0 0 60 40">
     <Rect width={60} height={13.33} fill="#FF9933" />
@@ -33,54 +33,7 @@ const CheckMarkVectorIcon: React.FC = () => (
   </Svg>
 );
 
-const SmsBubbleIcon: React.FC = () => {
-  const { colors } = useTheme();
-  return (
-  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
-      stroke={colors.accent}
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      fill={colors.palePinkBorder}
-    />
-    <Circle cx={8.5} cy={11.5} r={1.2} fill={colors.accent} />
-    <Circle cx={12} cy={11.5} r={1.2} fill={colors.accent} />
-    <Circle cx={15.5} cy={11.5} r={1.2} fill={colors.accent} />
-  </Svg>
-  );
-};
-
-const SecurityLockIcon: React.FC = () => {
-  const { colors } = useTheme();
-  return (
-  <Svg width={17} height={17} viewBox="0 0 24 24" fill="none">
-    <Rect
-      x={3.5}
-      y={11}
-      width={17}
-      height={11}
-      rx={2.5}
-      stroke={colors.accent}
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      fill={colors.palePinkBorder}
-    />
-    <Path
-      d="M7 11V7a5 5 0 0 1 10 0v4"
-      stroke={colors.accent}
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <Circle cx={12} cy={16} r={1.5} fill={colors.accent} />
-  </Svg>
-  );
-};
-
-const LocationPinVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ff2d75', size = 18 }) => (
+const LocationPinVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ffffff', size = 14 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
       d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
@@ -89,13 +42,32 @@ const LocationPinVector: React.FC<{ color?: string; size?: number }> = ({ color 
       strokeLinecap="round"
       strokeLinejoin="round"
     />
-    <Circle cx={12} cy={10} r={3.2} stroke={color} strokeWidth={2} />
+    <Circle cx={12} cy={10} r={3} stroke={color} strokeWidth={2} />
   </Svg>
 );
 
-const ChevronRightVector: React.FC<{ color?: string; size?: number }> = ({ color = '#888888', size = 16 }) => (
+const MapCompassVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ff2d75', size = 16 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx={12} cy={12} r={10} stroke={color} strokeWidth={1.8} />
+    <Path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" stroke={color} strokeWidth={1.6} strokeLinejoin="round" />
+  </Svg>
+);
+
+const ChevronRightVector: React.FC<{ color?: string; size?: number }> = ({ color = '#888888', size = 14 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M9 18l6-6-6-6" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const SecurityShieldVector: React.FC<{ color?: string; size?: number }> = ({ color = '#888899', size = 13 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   </Svg>
 );
 
@@ -108,7 +80,7 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent, o
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [agreed, setAgreed] = useState(false); // Default unkept/unchecked as requested
+  const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState('');
 
@@ -170,33 +142,48 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent, o
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
+        contentContainerStyle={styles.scrollContent}
         bounces={false}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         automaticallyAdjustKeyboardInsets={true}
       >
-        {/* Curved Deep Black Header with Shilpi White & Gold Lockup */}
+        {/* Curved Obsidian Header with Shilpi Branding & Floating Concierge Pill */}
         <View style={styles.headerBlack}>
-          <Image
-            source={require('../../assets/shilpi-lockup-black.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          <View style={styles.headerTopRow}>
+            <Image
+              source={require('../../assets/shilpi-lockup-black.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+
+            {/* Subtle Luxury Floating Concierge Button in Header */}
+            {onFindNearest && (
+              <TouchableOpacity
+                style={styles.headerDiscoveryPill}
+                onPress={onFindNearest}
+                activeOpacity={0.82}
+              >
+                <LocationPinVector color={colors.accent} size={13} />
+                <Text style={styles.headerDiscoveryText}>Explore Artists</Text>
+                <ChevronRightVector color="rgba(255, 255, 255, 0.6)" size={11} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
-        {/* Input Card matching Prototype */}
+        {/* Clean, Focused Input Card */}
         <View style={styles.cardContainer}>
           <View style={styles.inputCard}>
-            <Text style={styles.kicker}>SIGN IN</Text>
-            <Text style={styles.headline}>What's your phone number?</Text>
+            <Text style={styles.headline}>Enter your phone number</Text>
+            <Text style={styles.subheadline}>
+              We'll send a 6-digit SMS code to verify your account
+            </Text>
 
-            {/* Pink-shaped Phone Number Field with only black and pink used in prototype */}
+            {/* Refined Phone Number Input */}
             <View style={styles.phoneInputRow}>
               <View style={styles.countryPrefix}>
-                <View style={{ marginRight: 4 }}>
-                  <IndiaFlagVector />
-                </View>
+                <IndiaFlagVector />
                 <Text style={styles.prefixText}>+91</Text>
                 <View style={styles.verticalDivider} />
               </View>
@@ -205,7 +192,7 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent, o
                 style={styles.textInput}
                 keyboardType="number-pad"
                 placeholder="9876543210"
-                placeholderTextColor="rgba(18, 18, 18, 0.4)"
+                placeholderTextColor="rgba(18, 18, 24, 0.35)"
                 selectionColor={colors.accent}
                 value={phoneNumber}
                 onChangeText={(val) => {
@@ -219,7 +206,7 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent, o
 
             {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
 
-            {/* Clickable Agreement Row: Terms and Privacy Policy */}
+            {/* Clickable Agreement Row */}
             <TouchableOpacity
               style={styles.consentRow}
               onPress={() => setAgreed(!agreed)}
@@ -243,7 +230,7 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent, o
               </View>
             </TouchableOpacity>
 
-            {/* 'Send Code' button - Defaultly unkept/disabled until clicked, pink color when enabled */}
+            {/* 'Send Code' Button */}
             <TouchableOpacity
               style={[
                 styles.sendBtn,
@@ -262,72 +249,49 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent, o
                     !isButtonEnabled && styles.sendBtnTextDisabled,
                   ]}
                 >
-                  SEND CODE
+                  SEND VERIFICATION CODE
                 </Text>
               )}
             </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Customer Public Discovery Entry Point - No Login Required */}
-        {onFindNearest && (
-          <View style={styles.discoverySection}>
-            <View style={styles.discoveryDividerWrap}>
-              <View style={styles.discoveryDividerLine} />
-              <Text style={styles.discoveryDividerText}>LOOKING FOR A BEAUTICIAN?</Text>
-              <View style={styles.discoveryDividerLine} />
-            </View>
+          {/* Customer Discovery Luxury Concierge Row */}
+          {onFindNearest && (
+            <View style={styles.customerEntryWrap}>
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerLabel}>OR EXPLORE AS A CLIENT</Text>
+                <View style={styles.dividerLine} />
+              </View>
 
-            <TouchableOpacity
-              style={styles.findNearestCard}
-              onPress={onFindNearest}
-              activeOpacity={0.85}
-            >
-              <View style={styles.findNearestLeft}>
-                <View style={styles.findNearestIconCircle}>
-                  <LocationPinVector color="#ffffff" size={20} />
+              <TouchableOpacity
+                style={styles.discoveryBanner}
+                onPress={onFindNearest}
+                activeOpacity={0.85}
+              >
+                <View style={styles.discoveryIconCircle}>
+                  <MapCompassVector color={colors.accent} size={18} />
                 </View>
-                <View style={styles.findNearestTextWrap}>
-                  <View style={styles.findNearestHeaderRow}>
-                    <Text style={styles.findNearestTitle}>Find Nearest Beautician</Text>
-                    <View style={styles.guestBadge}>
-                      <Text style={styles.guestBadgeText}>NO LOGIN</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.findNearestSubtitle}>
-                    Locate top bridal, mehendi & hair artists around your PIN code with direct WhatsApp & call
+                <View style={styles.discoveryContent}>
+                  <Text style={styles.discoveryTitle}>Find Nearest Beautician</Text>
+                  <Text style={styles.discoverySubtitle}>
+                    Locate registered bridal & makeover artists on a live map
                   </Text>
                 </View>
-              </View>
-              <View style={styles.findNearestChevronWrap}>
-                <ChevronRightVector color={colors.accent} size={18} />
-              </View>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Trust Badges matching Prototype with Premium Vector Icons */}
-        <View style={styles.trustContainer}>
-          <View style={styles.trustItem}>
-            <View style={styles.iconCircle}>
-              <SmsBubbleIcon />
+                <View style={styles.discoveryActionPill}>
+                  <Text style={styles.discoveryActionText}>OPEN MAP</Text>
+                  <ChevronRightVector color={colors.accent} size={11} />
+                </View>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.trustLabel}>
-              The six-digit code arrives on SMS.
-            </Text>
-          </View>
+          )}
 
-          <View style={styles.trustItem}>
-            <View style={styles.iconCircle}>
-              <SecurityLockIcon />
-            </View>
-            <Text style={styles.trustLabel}>
-              This number sends your client confirmations.
-            </Text>
+          {/* Minimalist Security Footnote */}
+          <View style={styles.securityRow}>
+            <SecurityShieldVector color="#8e8e99" size={13} />
+            <Text style={styles.securityText}>256-Bit Encrypted · SMS Verification Only</Text>
           </View>
         </View>
-
-        <View style={{ height: 40 }} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -335,295 +299,266 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent, o
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#f4f4f6',
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  headerBlack: {
-    backgroundColor: '#000000',
-    paddingTop: Platform.OS === 'ios' ? 56 : 42,
-    paddingBottom: 28,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    alignItems: 'flex-start',
-  },
-  logo: {
-    width: 260,
-    height: 104,
-    marginLeft: -8,
-  },
-  cardContainer: {
-    paddingHorizontal: 16,
-    marginTop: -10,
-  },
-  inputCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    padding: 22,
-    shadowColor: '#121212',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  kicker: {
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    color: colors.deep,
-    fontWeight: '700',
-  },
-  headline: {
-    fontSize: 22,
-    letterSpacing: -0.3,
-    marginTop: 6,
-    color: '#121212',
-    fontWeight: '700',
-  },
-  phoneInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 18,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: colors.accent, // Pink colored shape from prototype
-    backgroundColor: colors.tint2, // Soft pink surface tint from prototype
-    overflow: 'hidden',
-  },
-  countryPrefix: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    gap: 8,
-  },
-  flagEmoji: {
-    fontSize: 18,
-  },
-  prefixText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#121212',
-  },
-  verticalDivider: {
-    width: 1.5,
-    height: 24,
-    backgroundColor: colors.palePinkBorder,
-    marginLeft: 6,
-  },
-  textInput: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    fontSize: 18,
-    letterSpacing: 1,
-    color: '#121212', // Black text
-    fontWeight: '700',
-  },
-  errorText: {
-    color: colors.deep,
-    fontSize: 12,
-    marginTop: 8,
-    marginLeft: 2,
-    fontWeight: '600',
-  },
-  consentRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: 16,
-    gap: 10,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: 'rgba(18, 18, 18, 0.35)',
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 2,
-  },
-  checkboxAgreed: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  checkmark: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  consentTextWrap: {
-    flex: 1,
-  },
-  consentText: {
-    fontSize: 12,
-    color: 'rgba(18, 18, 18, 0.75)',
-    lineHeight: 18,
-  },
-  linkText: {
-    color: colors.accent,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
-  },
-  sendBtn: {
-    marginTop: 18,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendBtnActive: {
-    backgroundColor: colors.accent, // Pink color from design system
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  sendBtnDisabled: {
-    backgroundColor: '#f1f1f4',
-    borderWidth: 1.5,
-    borderColor: 'rgba(18, 18, 18, 0.1)',
-  },
-  sendBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
-    letterSpacing: 1.2,
-    fontWeight: '700',
-  },
-  sendBtnTextDisabled: {
-    color: 'rgba(18, 18, 18, 0.35)',
-  },
-  trustContainer: {
-    paddingHorizontal: 16,
-    marginTop: 18,
-    gap: 8,
-  },
-  trustItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  iconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    backgroundColor: colors.tint2,
-    borderWidth: 1.2,
-    borderColor: colors.palePinkBorder,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  trustLabel: {
-    flex: 1,
-    fontSize: 12,
-    color: '#121212',
-    fontWeight: '600',
-    lineHeight: 18,
-  },
-  discoverySection: {
-    paddingHorizontal: 16,
-    marginTop: 18,
-  },
-  discoveryDividerWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 10,
-  },
-  discoveryDividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-  },
-  discoveryDividerText: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    letterSpacing: 1.1,
-    color: 'rgba(18, 18, 18, 0.45)',
-  },
-  findNearestCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1.5,
-    borderColor: colors.palePinkBorder,
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  findNearestLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  findNearestIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  findNearestTextWrap: {
-    flex: 1,
-  },
-  findNearestHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 3,
-  },
-  findNearestTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#121212',
-    letterSpacing: -0.2,
-  },
-  guestBadge: {
-    backgroundColor: colors.tint2,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: colors.palePinkBorder,
-  },
-  guestBadgeText: {
-    fontSize: 8.5,
-    fontWeight: '800',
-    letterSpacing: 0.6,
-    color: colors.accent,
-  },
-  findNearestSubtitle: {
-    fontSize: 11,
-    lineHeight: 15,
-    color: 'rgba(18, 18, 18, 0.6)',
-    fontWeight: '500',
-  },
-  findNearestChevronWrap: {
-    paddingLeft: 8,
-  },
-});
+    screen: {
+      flex: 1,
+      backgroundColor: '#f6f6f8',
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingBottom: 40,
+    },
+    headerBlack: {
+      backgroundColor: '#0a0a0e',
+      paddingTop: Platform.OS === 'ios' ? 52 : 36,
+      paddingBottom: 24,
+      paddingHorizontal: 20,
+      borderBottomLeftRadius: 26,
+      borderBottomRightRadius: 26,
+    },
+    headerTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    logo: {
+      width: 170,
+      height: 68,
+      marginLeft: -6,
+    },
+    headerDiscoveryPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+      paddingVertical: 7,
+      paddingHorizontal: 11,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.15)',
+    },
+    headerDiscoveryText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: '#ffffff',
+      letterSpacing: 0.2,
+    },
+    cardContainer: {
+      paddingHorizontal: 18,
+      marginTop: -8,
+    },
+    inputCard: {
+      backgroundColor: '#ffffff',
+      borderRadius: 22,
+      padding: 22,
+      shadowColor: '#0a0a0e',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.06,
+      shadowRadius: 14,
+      elevation: 3,
+      borderWidth: 1,
+      borderColor: 'rgba(0, 0, 0, 0.04)',
+    },
+    headline: {
+      fontSize: 20,
+      letterSpacing: -0.4,
+      color: '#111116',
+      fontWeight: '700',
+    },
+    subheadline: {
+      fontSize: 12.5,
+      lineHeight: 17,
+      color: 'rgba(17, 17, 22, 0.55)',
+      marginTop: 4,
+      marginBottom: 16,
+    },
+    phoneInputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: 14,
+      borderWidth: 1.5,
+      borderColor: colors.palePinkBorder,
+      backgroundColor: colors.tint2,
+      overflow: 'hidden',
+    },
+    countryPrefix: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      gap: 7,
+    },
+    prefixText: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: '#111116',
+    },
+    verticalDivider: {
+      width: 1,
+      height: 20,
+      backgroundColor: colors.palePinkBorder,
+      marginLeft: 4,
+    },
+    textInput: {
+      flex: 1,
+      paddingVertical: 14,
+      paddingHorizontal: 12,
+      fontSize: 16,
+      fontWeight: '600',
+      letterSpacing: 1.2,
+      color: '#111116',
+    },
+    errorText: {
+      fontSize: 11.5,
+      color: '#e53935',
+      marginTop: 8,
+      fontWeight: '600',
+    },
+    consentRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      marginTop: 16,
+      marginBottom: 18,
+      gap: 10,
+    },
+    checkbox: {
+      width: 18,
+      height: 18,
+      borderRadius: 5,
+      borderWidth: 1.5,
+      borderColor: 'rgba(17, 17, 22, 0.25)',
+      backgroundColor: '#ffffff',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 2,
+    },
+    checkboxAgreed: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    consentTextWrap: {
+      flex: 1,
+    },
+    consentText: {
+      fontSize: 11.5,
+      lineHeight: 16,
+      color: 'rgba(17, 17, 22, 0.65)',
+    },
+    linkText: {
+      color: colors.accent,
+      fontWeight: '700',
+      textDecorationLine: 'underline',
+    },
+    sendBtn: {
+      borderRadius: 14,
+      paddingVertical: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sendBtnActive: {
+      backgroundColor: colors.accent,
+      shadowColor: colors.accent,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.28,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    sendBtnDisabled: {
+      backgroundColor: '#eeeeF2',
+      borderWidth: 1,
+      borderColor: 'rgba(17, 17, 22, 0.08)',
+    },
+    sendBtnText: {
+      color: '#ffffff',
+      fontSize: 12,
+      letterSpacing: 1,
+      fontWeight: '700',
+    },
+    sendBtnTextDisabled: {
+      color: 'rgba(17, 17, 22, 0.35)',
+    },
+    customerEntryWrap: {
+      marginTop: 22,
+    },
+    dividerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginBottom: 12,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.08)',
+    },
+    dividerLabel: {
+      fontSize: 9.5,
+      letterSpacing: 1,
+      fontWeight: '700',
+      color: 'rgba(17, 17, 22, 0.45)',
+    },
+    discoveryBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#ffffff',
+      borderRadius: 18,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderWidth: 1,
+      borderColor: 'rgba(0, 0, 0, 0.06)',
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 8,
+      elevation: 2,
+      gap: 12,
+    },
+    discoveryIconCircle: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: colors.tint2,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    discoveryContent: {
+      flex: 1,
+    },
+    discoveryTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: '#111116',
+      letterSpacing: -0.2,
+    },
+    discoverySubtitle: {
+      fontSize: 10.5,
+      lineHeight: 14,
+      color: 'rgba(17, 17, 22, 0.55)',
+      marginTop: 2,
+    },
+    discoveryActionPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingVertical: 5,
+      paddingHorizontal: 8,
+      borderRadius: 8,
+      backgroundColor: colors.tint2,
+    },
+    discoveryActionText: {
+      fontSize: 9.5,
+      fontWeight: '800',
+      color: colors.accent,
+      letterSpacing: 0.5,
+    },
+    securityRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      marginTop: 24,
+    },
+    securityText: {
+      fontSize: 11,
+      color: '#8e8e99',
+      fontWeight: '500',
+    },
+  });
