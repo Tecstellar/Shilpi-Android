@@ -13,7 +13,7 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import Svg, {
@@ -23,6 +23,7 @@ import Svg, {
   Defs,
   LinearGradient,
   Stop,
+  G,
 } from 'react-native-svg';
 import { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
@@ -31,10 +32,10 @@ import { apiClient } from '../services/apiClient';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // -------------------------------------------------------------
-// 1. BESPOKE SVG VECTOR ICONS (Zero Emojis, 100% Crisp Vectors)
+// 1. BESPOKE SVG VECTOR ICONS (Zero Emojis, Dribbble High-Craft)
 // -------------------------------------------------------------
 
-const BackArrowVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ffffff', size = 18 }) => (
+const BackArrowVector: React.FC<{ color?: string; size?: number }> = ({ color = '#111116', size = 18 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M19 12H5M12 19l-7-7 7-7" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
@@ -53,19 +54,19 @@ const LocationPinVector: React.FC<{ color?: string; size?: number }> = ({ color 
   </Svg>
 );
 
-const CrownProVector: React.FC<{ color?: string; size?: number }> = ({ color = '#f59e0b', size = 13 }) => (
+const CrownProVector: React.FC<{ color?: string; size?: number }> = ({ color = '#f59e0b', size = 12 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
     <Path
       d="M2 4l3 12h14l3-12-5 6-5-6-5 6-5-6zM3 20h18v2H3v-2z"
       stroke={color}
-      strokeWidth={1.5}
+      strokeWidth={1.4}
       strokeLinecap="round"
       strokeLinejoin="round"
     />
   </Svg>
 );
 
-const VerifiedBadgeVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ff2d75', size = 14 }) => (
+const VerifiedBadgeVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ff2d75', size = 13 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
       d="M12 2l2.4 2.4 3.4-.4 1.4 3.1 3.1 1.4-.4 3.4 2.4 2.4-2.4 2.4.4 3.4-3.1 1.4-1.4 3.1-3.4-.4L12 22l-2.4-2.4-3.4.4-1.4-3.1-3.1-1.4.4-3.4L-0.3 12l2.4-2.4-.4-3.4 3.1-1.4 1.4-3.1 3.4.4L12 2z"
@@ -105,14 +106,22 @@ const MapNavigationVector: React.FC<{ color?: string; size?: number }> = ({ colo
   </Svg>
 );
 
-const CompassVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ffffff', size = 13 }) => (
+const CrosshairTargetVector: React.FC<{ color?: string; size?: number }> = ({ color = '#111116', size = 18 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx={12} cy={12} r={8} stroke={color} strokeWidth={2} />
+    <Path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    <Circle cx={12} cy={12} r={2.5} fill={color} />
+  </Svg>
+);
+
+const CompassVector: React.FC<{ color?: string; size?: number }> = ({ color = '#111116', size = 16 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Circle cx={12} cy={12} r={10} stroke={color} strokeWidth={1.8} />
     <Path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" stroke={color} strokeWidth={1.6} strokeLinejoin="round" />
   </Svg>
 );
 
-const ListVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ffffff', size = 13 }) => (
+const ListVector: React.FC<{ color?: string; size?: number }> = ({ color = '#111116', size = 16 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
@@ -121,6 +130,13 @@ const ListVector: React.FC<{ color?: string; size?: number }> = ({ color = '#fff
 const CloseVector: React.FC<{ color?: string; size?: number }> = ({ color = '#111116', size = 18 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M18 6L6 18M6 6l12 12" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
+  </Svg>
+);
+
+const EditPencilVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ff2d75', size = 12 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke={color} strokeWidth={2} strokeLinecap="round" />
+    <Path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke={color} strokeWidth={2} strokeLinecap="round" />
   </Svg>
 );
 
@@ -148,11 +164,11 @@ export interface RegisteredMakeover {
   services: string[];
   latitude: number;
   longitude: number;
-  mapX?: number;
-  mapY?: number;
+  mapX: number;
+  mapY: number;
 }
 
-// Exactly the registered studios from the Shilpi database (No fake/random numbers)
+// Exactly the registered studios from the Shilpi database (No fake numbers)
 const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
   {
     id: '2c704aa6-5642-4b9e-8b8a-3be33a4e53f2',
@@ -174,8 +190,8 @@ const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
     services: ['HD Bridal Makeup', 'Muhurtham Saree Draping', 'Airbrush Makeup'],
     latitude: 11.0168,
     longitude: 76.9558,
-    mapX: 0.50,
-    mapY: 0.44,
+    mapX: 0.62,
+    mapY: 0.36,
   },
   {
     id: '2b919ddb-a83d-4cdd-b779-fb03b846b77c',
@@ -197,8 +213,8 @@ const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
     services: ['Bridal Makeover', 'Flower Hairstyling', 'Saree Pleating'],
     latitude: 11.0016,
     longitude: 76.9620,
-    mapX: 0.70,
-    mapY: 0.36,
+    mapX: 0.78,
+    mapY: 0.48,
   },
   {
     id: 'add09d3c-707a-4a01-9787-0932a837b0e2',
@@ -220,8 +236,8 @@ const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
     services: ['South Indian Bridal', 'Mehendi Design', 'Reception Look'],
     latitude: 9.1447,
     longitude: 77.7081,
-    mapX: 0.30,
-    mapY: 0.60,
+    mapX: 0.28,
+    mapY: 0.58,
   },
   {
     id: '16b10f24-72c8-4331-88e8-97636b8f33a3',
@@ -243,13 +259,13 @@ const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
     services: ['Party Makeover', 'Facials & Skincare', 'Hair Styling'],
     latitude: 9.1480,
     longitude: 77.7120,
-    mapX: 0.72,
-    mapY: 0.70,
+    mapX: 0.35,
+    mapY: 0.72,
   },
 ];
 
 const FILTER_TABS = [
-  { id: 'all', label: 'All' },
+  { id: 'all', label: 'All Makeovers' },
   { id: 'pro', label: '👑 Shilpi Pro' },
   { id: 'bridal', label: 'Bridal Artists' },
   { id: 'mehendi', label: 'Mehendi' },
@@ -261,8 +277,9 @@ interface NearestBeauticiansScreenProps {
 }
 
 export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> = ({ onGoBack }) => {
+  const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createStyles(colors, insets), [colors, insets]);
 
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const [loading, setLoading] = useState(false);
@@ -278,13 +295,14 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
   // Radar Pulse Animation
   const radarScale = useRef(new Animated.Value(1)).current;
   const pinSpring = useRef(new Animated.Value(1)).current;
+  const cardSlideAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
         Animated.timing(radarScale, {
-          toValue: 2,
-          duration: 1800,
+          toValue: 2.2,
+          duration: 2000,
           useNativeDriver: true,
         }),
         Animated.timing(radarScale, {
@@ -344,8 +362,8 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
           return {
             ...item,
             isExactPincode: isExact,
-            mapX: 0.25 + ((i * 35) % 55) / 100,
-            mapY: 0.25 + ((i * 45) % 50) / 100,
+            mapX: 0.30 + ((i * 35) % 50) / 100,
+            mapY: 0.32 + ((i * 45) % 40) / 100,
           };
         });
         setStudios(mapped);
@@ -382,7 +400,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } catch {}
     setSelectedStudio(studio);
-    pinSpring.setValue(0.85);
+    pinSpring.setValue(0.8);
     Animated.spring(pinSpring, {
       toValue: 1,
       friction: 4,
@@ -458,350 +476,387 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
     Linking.openURL(url);
   };
 
+  // User coordinate on map canvas
+  const userMapX = SCREEN_WIDTH * 0.46;
+  const userMapY = SCREEN_HEIGHT * 0.45;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.screen}>
-        {/* ----------------- Top Header Bar (Fully Responsive & Overflow-Safe) ----------------- */}
-        <View style={styles.topBar}>
-          <TouchableOpacity style={styles.backBtn} onPress={onGoBack} activeOpacity={0.8}>
-            <BackArrowVector color="#ffffff" size={17} />
-          </TouchableOpacity>
+    <View style={styles.screen}>
+      {viewMode === 'map' ? (
+        // -------------------------------------------------------------
+        // 3. DRIBBLE NIXTIO STYLE FULL-BLEED INTERACTIVE MAP CANVAS
+        // -------------------------------------------------------------
+        <View style={styles.fullBleedMapContainer}>
+          <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT} style={StyleSheet.absoluteFill}>
+            <Defs>
+              <LinearGradient id="mapCanvasBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor="#f4f6fa" />
+                <Stop offset="50%" stopColor="#f8f9fc" />
+                <Stop offset="100%" stopColor="#f1f3f8" />
+              </LinearGradient>
+              <LinearGradient id="riverPinkSoft" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor="#ffeef4" stopOpacity="0.85" />
+                <Stop offset="100%" stopColor="#ffdce8" stopOpacity="0.45" />
+              </LinearGradient>
+              <LinearGradient id="routePinkGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor="#ff2d75" />
+                <Stop offset="100%" stopColor="#e8276b" />
+              </LinearGradient>
+            </Defs>
 
-          {/* Location Selector Pill (Zero Overflows: City shrinks gracefully, PIN never cuts off) */}
-          <TouchableOpacity
-            style={styles.locationPill}
-            onPress={() => {
-              setManualPinInput(userPincode);
-              setPincodeModalOpen(true);
-            }}
-            activeOpacity={0.8}
-          >
-            <View style={{ flexShrink: 0 }}>
-              <LocationPinVector color="#ff2d75" size={14} />
-            </View>
-            <View style={styles.locationTextWrap}>
-              <Text style={styles.locationCityText} numberOfLines={1} ellipsizeMode="tail">
-                {userCity}
-              </Text>
-              <View style={styles.pinDot} />
-              <Text style={styles.locationPinText}>
-                {userPincode}
-              </Text>
-            </View>
-          </TouchableOpacity>
+            {/* Base Canvas */}
+            <Rect width="100%" height="100%" fill="url(#mapCanvasBg)" />
 
-          {/* View Switcher: Map vs List */}
-          <View style={styles.viewToggleContainer}>
+            {/* Architectural Urban City Blocks (Soft 3D Parcels) */}
+            <Rect x={SCREEN_WIDTH * 0.08} y={SCREEN_HEIGHT * 0.18} width={SCREEN_WIDTH * 0.35} height={SCREEN_HEIGHT * 0.10} rx={12} fill="#edf2f7" />
+            <Rect x={SCREEN_WIDTH * 0.52} y={SCREEN_HEIGHT * 0.16} width={SCREEN_WIDTH * 0.40} height={SCREEN_HEIGHT * 0.12} rx={12} fill="#edf2f7" />
+            <Rect x={SCREEN_WIDTH * 0.06} y={SCREEN_HEIGHT * 0.52} width={SCREEN_WIDTH * 0.36} height={SCREEN_HEIGHT * 0.12} rx={12} fill="#edf2f7" />
+            <Rect x={SCREEN_WIDTH * 0.50} y={SCREEN_HEIGHT * 0.54} width={SCREEN_WIDTH * 0.44} height={SCREEN_HEIGHT * 0.14} rx={12} fill="#edf2f7" />
+
+            {/* Soft Ambient River Contour */}
+            <Path
+              d={`M0,${SCREEN_HEIGHT * 0.68} C${SCREEN_WIDTH * 0.3},${SCREEN_HEIGHT * 0.62} ${SCREEN_WIDTH * 0.6},${SCREEN_HEIGHT * 0.74} ${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.65} L${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.72} C${SCREEN_WIDTH * 0.6},${SCREEN_HEIGHT * 0.80} ${SCREEN_WIDTH * 0.3},${SCREEN_HEIGHT * 0.68} 0,${SCREEN_HEIGHT * 0.74} Z`}
+              fill="url(#riverPinkSoft)"
+            />
+
+            {/* Secondary Street Road Grid (Slate / Charcoal) */}
+            <Path d={`M-30,${SCREEN_HEIGHT * 0.30} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.30}`} stroke="#e2e8f0" strokeWidth={3} />
+            <Path d={`M-30,${SCREEN_HEIGHT * 0.48} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.48}`} stroke="#e2e8f0" strokeWidth={3} />
+            <Path d={`M${SCREEN_WIDTH * 0.46},0 L${SCREEN_WIDTH * 0.46},${SCREEN_HEIGHT}`} stroke="#cbd5e1" strokeWidth={3.5} />
+            <Path d={`M${SCREEN_WIDTH * 0.85},0 L${SCREEN_WIDTH * 0.85},${SCREEN_HEIGHT}`} stroke="#e2e8f0" strokeWidth={2.5} />
+
+            {/* Primary Jet Black Dual-Carriageway Arterials */}
+            <Path
+              d={`M0,${SCREEN_HEIGHT * 0.38} Q${SCREEN_WIDTH * 0.45},${SCREEN_HEIGHT * 0.38} ${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.44}`}
+              stroke="#0f172a"
+              strokeWidth={4.5}
+            />
+
+            {/* ACTIVE DRIBBLE NIXTIO STYLE NAVIGATION ROUTE POLYLINE (From user to selected studio) */}
+            {selectedStudio && (
+              <G>
+                {/* Route Glow Shadow */}
+                <Path
+                  d={`M${userMapX},${userMapY} Q${(userMapX + SCREEN_WIDTH * (selectedStudio.mapX || 0.6)) / 2},${userMapY - 30} ${SCREEN_WIDTH * (selectedStudio.mapX || 0.6)},${SCREEN_HEIGHT * (selectedStudio.mapY || 0.4)}`}
+                  stroke="rgba(255, 45, 117, 0.25)"
+                  strokeWidth={8}
+                  fill="none"
+                  strokeLinecap="round"
+                />
+                {/* Sharp Vibrant Core Route */}
+                <Path
+                  d={`M${userMapX},${userMapY} Q${(userMapX + SCREEN_WIDTH * (selectedStudio.mapX || 0.6)) / 2},${userMapY - 30} ${SCREEN_WIDTH * (selectedStudio.mapX || 0.6)},${SCREEN_HEIGHT * (selectedStudio.mapY || 0.4)}`}
+                  stroke="url(#routePinkGlow)"
+                  strokeWidth={4}
+                  fill="none"
+                  strokeLinecap="round"
+                />
+              </G>
+            )}
+
+            {/* Intersections Indicator Dots */}
+            <Circle cx={SCREEN_WIDTH * 0.46} cy={SCREEN_HEIGHT * 0.38} r={3} fill="#ff2d75" />
+            <Circle cx={SCREEN_WIDTH * 0.85} cy={SCREEN_HEIGHT * 0.44} r={3} fill="#0f172a" />
+          </Svg>
+
+          {/* USER LIVE GPS BEACON (Pulsing Sonar & Hot Pink Dot) */}
+          <View style={[styles.userGpsBeacon, { left: userMapX - 22, top: userMapY - 22 }]}>
+            <Animated.View
+              style={[
+                styles.userGpsSonarWave,
+                {
+                  transform: [{ scale: radarScale }],
+                  opacity: radarScale.interpolate({
+                    inputRange: [1, 2.2],
+                    outputRange: [0.7, 0],
+                  }),
+                },
+              ]}
+            />
+            <View style={styles.userGpsCorePoint}>
+              <View style={styles.userGpsWhiteCenter} />
+            </View>
+            <View style={styles.userGpsTag}>
+              <Text style={styles.userGpsTagText}>YOU ({userPincode})</Text>
+            </View>
+          </View>
+
+          {/* DRIBBLE NIXTIO STYLE ELEVATED 3D LOCATION PINS */}
+          {filteredStudios.map((studio) => {
+            const pinX = SCREEN_WIDTH * studio.mapX;
+            const pinY = SCREEN_HEIGHT * studio.mapY;
+            const isSelected = selectedStudio?.id === studio.id;
+
+            return (
+              <TouchableOpacity
+                key={studio.id}
+                style={[
+                  styles.nixtioPinAnchor,
+                  { left: pinX - 30, top: pinY - 50 },
+                  isSelected && styles.nixtioPinAnchorSelected,
+                ]}
+                onPress={() => handleSelectPin(studio)}
+                activeOpacity={0.88}
+              >
+                {/* Floating Capsule Label on Top of Pin */}
+                <View style={[styles.nixtioPinPill, isSelected && styles.nixtioPinPillSelected]}>
+                  {studio.isPro && (
+                    <View style={styles.proMiniBadge}>
+                      <CrownProVector color="#f59e0b" size={10} />
+                    </View>
+                  )}
+                  <Text style={[styles.nixtioPinPillText, isSelected && styles.nixtioPinPillTextSelected]} numberOfLines={1}>
+                    {studio.businessName}
+                  </Text>
+                  <View style={styles.pinDistDot} />
+                  <Text style={styles.pinDistText}>{studio.distanceKm}km</Text>
+                </View>
+
+                {/* 3D Elevated Pin Marker Head */}
+                <Animated.View
+                  style={[
+                    styles.nixtioPinHead,
+                    isSelected && {
+                      transform: [{ scale: pinSpring }],
+                      backgroundColor: '#ff2d75',
+                      borderColor: '#ffffff',
+                    },
+                  ]}
+                >
+                  <View style={[styles.nixtioPinInner, isSelected && styles.nixtioPinInnerSelected]}>
+                    <Text style={[styles.nixtioPinChar, isSelected && styles.nixtioPinCharSelected]}>
+                      {studio.businessName.charAt(0)}
+                    </Text>
+                  </View>
+                </Animated.View>
+
+                {/* Pin Tip */}
+                <View style={[styles.nixtioPinTip, isSelected && { borderTopColor: '#ff2d75' }]} />
+              </TouchableOpacity>
+            );
+          })}
+
+          {/* -------------------------------------------------------------
+              4. FLOATING TOP CONTROLS (TRANSLUCENT GLASS & CLEAN WHITE)
+             ------------------------------------------------------------- */}
+          <View style={[styles.floatingTopBarWrap, { top: insets.top + 8 }]}>
+            {/* Back Button (Floating Circle) */}
+            <TouchableOpacity style={styles.floatingCircleBtn} onPress={onGoBack} activeOpacity={0.82}>
+              <BackArrowVector color="#111116" size={18} />
+            </TouchableOpacity>
+
+            {/* Location Selector Pill (Zero Overflows: Flex Shrink city, PIN pinned) */}
             <TouchableOpacity
-              style={[styles.toggleBtn, viewMode === 'map' && styles.toggleBtnActive]}
+              style={styles.floatingLocationCapsule}
+              onPress={() => {
+                setManualPinInput(userPincode);
+                setPincodeModalOpen(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <LocationPinVector color="#ff2d75" size={15} />
+              <View style={styles.locationContentWrap}>
+                <Text style={styles.capsuleCityText} numberOfLines={1} ellipsizeMode="tail">
+                  {userCity}
+                </Text>
+                <View style={styles.capsuleDot} />
+                <Text style={styles.capsulePinText}>{userPincode}</Text>
+              </View>
+              <EditPencilVector color="#ff2d75" size={12} />
+            </TouchableOpacity>
+
+            {/* View Switcher Toggle */}
+            <TouchableOpacity
+              style={styles.floatingCircleBtn}
+              onPress={() => setViewMode('list')}
+              activeOpacity={0.82}
+            >
+              <ListVector color="#111116" size={16} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Floating Category Filter Chips (Right Below Header) */}
+          <View style={[styles.floatingFilterChipsRow, { top: insets.top + 62 }]}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsScroll}>
+              {FILTER_TABS.map((tab) => {
+                const isSelected = activeFilter === tab.id;
+                return (
+                  <TouchableOpacity
+                    key={tab.id}
+                    style={[styles.floatingFilterPill, isSelected && styles.floatingFilterPillActive]}
+                    onPress={() => setActiveFilter(tab.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.floatingFilterText, isSelected && styles.floatingFilterTextActive]}>
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+
+          {/* Floating Right Map Actions (Re-center location) */}
+          <View style={[styles.floatingRightActions, { top: insets.top + 116 }]}>
+            <TouchableOpacity
+              style={styles.floatingActionIcon}
+              onPress={() => filterByPincode(userPincode, userCity)}
+              activeOpacity={0.8}
+            >
+              <CrosshairTargetVector color="#111116" size={18} />
+            </TouchableOpacity>
+          </View>
+
+          {/* -------------------------------------------------------------
+              5. DRIBBLE NIXTIO STYLE BOTTOM FLOATING STUDIO PREVIEW CARD
+             ------------------------------------------------------------- */}
+          {selectedStudio && (
+            <View style={[styles.nixtioBottomCardContainer, { bottom: insets.bottom + 12 }]}>
+              <TouchableOpacity
+                style={styles.nixtioCardSurface}
+                onPress={() => setDetailModalOpen(true)}
+                activeOpacity={0.94}
+              >
+                {/* Drag Handle Indicator */}
+                <View style={styles.cardDragHandle} />
+
+                {/* Studio Header Row */}
+                <View style={styles.cardHeaderRow}>
+                  <View style={styles.cardAvatar}>
+                    <Text style={styles.cardAvatarText}>
+                      {selectedStudio.businessName.charAt(0)}
+                    </Text>
+                  </View>
+
+                  <View style={styles.cardInfoCol}>
+                    <View style={styles.cardTitleWrap}>
+                      <Text style={styles.cardTitleText} numberOfLines={1}>
+                        {selectedStudio.businessName}
+                      </Text>
+                      {selectedStudio.isPro ? (
+                        <View style={styles.proGoldBadge}>
+                          <CrownProVector color="#ffffff" size={9} />
+                          <Text style={styles.proGoldText}>PRO</Text>
+                        </View>
+                      ) : (
+                        <VerifiedBadgeVector color="#ff2d75" size={13} />
+                      )}
+                    </View>
+
+                    <Text style={styles.cardOwnerSub} numberOfLines={1}>
+                      By {selectedStudio.ownerName} · {selectedStudio.city}
+                    </Text>
+
+                    {/* Meta Indicators: Distance, Estimated Time, PIN match */}
+                    <View style={styles.cardMetaRow}>
+                      <View style={styles.distanceBadgePill}>
+                        <LocationPinVector color="#ff2d75" size={10} />
+                        <Text style={styles.distanceBadgeText}>{selectedStudio.distanceKm} km</Text>
+                      </View>
+
+                      <View style={styles.etaBadgePill}>
+                        <Text style={styles.etaBadgeText}>~{Math.max(2, Math.round(selectedStudio.distanceKm * 2.5))} min</Text>
+                      </View>
+
+                      <View style={[styles.pinBadgePill, selectedStudio.isExactPincode && styles.pinExactBadgePill]}>
+                        <Text style={[styles.pinBadgeText, selectedStudio.isExactPincode && styles.pinExactBadgeText]}>
+                          PIN {selectedStudio.pincode}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Real Services & Pricing Row */}
+                <View style={styles.cardServicesRow}>
+                  <View style={styles.chipsWrap}>
+                    {selectedStudio.services.slice(0, 2).map((srv, idx) => (
+                      <View key={`srv-${idx}`} style={styles.servicePill}>
+                        <Text style={styles.servicePillText} numberOfLines={1}>
+                          {srv}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                  <Text style={styles.priceHighlight}>
+                    From ₹{selectedStudio.startingPrice.toLocaleString('en-IN')}
+                  </Text>
+                </View>
+
+                {/* Action Buttons Row: Black Call, Green WhatsApp, Soft Pink Directions */}
+                <View style={styles.cardActionsRow}>
+                  <TouchableOpacity
+                    style={styles.actionBtnCall}
+                    onPress={() => handleCall(selectedStudio.phone)}
+                    activeOpacity={0.82}
+                  >
+                    <PhoneCallVector color="#ffffff" size={13} />
+                    <Text style={styles.actionBtnCallText}>Call</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.actionBtnWhatsApp}
+                    onPress={() => handleWhatsApp(selectedStudio)}
+                    activeOpacity={0.82}
+                  >
+                    <WhatsAppVector color="#ffffff" size={14} />
+                    <Text style={styles.actionBtnWhatsAppText}>WhatsApp</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.actionBtnDirections}
+                    onPress={() => handleOpenMaps(selectedStudio)}
+                    activeOpacity={0.82}
+                  >
+                    <MapNavigationVector color="#ff2d75" size={13} />
+                    <Text style={styles.actionBtnDirectionsText}>Directions</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      ) : (
+        // -------------------------------------------------------------
+        // 6. HIGH-DENSITY LIST VIEW (MATCHING WHITE & PINK THEME)
+        // -------------------------------------------------------------
+        <View style={[styles.screen, { paddingTop: insets.top }]}>
+          {/* List Top Bar */}
+          <View style={styles.listTopBar}>
+            <TouchableOpacity style={styles.floatingCircleBtn} onPress={onGoBack} activeOpacity={0.8}>
+              <BackArrowVector color="#111116" size={18} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.floatingLocationCapsule}
+              onPress={() => {
+                setManualPinInput(userPincode);
+                setPincodeModalOpen(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <LocationPinVector color="#ff2d75" size={14} />
+              <View style={styles.locationContentWrap}>
+                <Text style={styles.capsuleCityText} numberOfLines={1}>{userCity}</Text>
+                <View style={styles.capsuleDot} />
+                <Text style={styles.capsulePinText}>{userPincode}</Text>
+              </View>
+              <EditPencilVector color="#ff2d75" size={12} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.floatingCircleBtn, { backgroundColor: '#ff2d75' }]}
               onPress={() => setViewMode('map')}
               activeOpacity={0.8}
             >
-              <CompassVector color={viewMode === 'map' ? '#ffffff' : 'rgba(255,255,255,0.5)'} size={12} />
-              <Text style={[styles.toggleBtnText, viewMode === 'map' && styles.toggleBtnTextActive]}>Map</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.toggleBtn, viewMode === 'list' && styles.toggleBtnActive]}
-              onPress={() => setViewMode('list')}
-              activeOpacity={0.8}
-            >
-              <ListVector color={viewMode === 'list' ? '#ffffff' : 'rgba(255,255,255,0.5)'} size={12} />
-              <Text style={[styles.toggleBtnText, viewMode === 'list' && styles.toggleBtnTextActive]}>List</Text>
+              <CompassVector color="#ffffff" size={16} />
             </TouchableOpacity>
           </View>
-        </View>
 
-        {/* ----------------- Filter Chips Row ----------------- */}
-        <View style={styles.filterRowWrap}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-            {FILTER_TABS.map((tab) => {
-              const isSelected = activeFilter === tab.id;
-              return (
-                <TouchableOpacity
-                  key={tab.id}
-                  style={[styles.filterChip, isSelected && styles.filterChipActive]}
-                  onPress={() => setActiveFilter(tab.id)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.filterChipText, isSelected && styles.filterChipTextActive]}>
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* ----------------- MAIN VIEW CONTENT ----------------- */}
-        {viewMode === 'map' ? (
-          // ------------------ 3. GEOGRAPHIC MAP VIEW (WHITE, BLACK & PINK) ------------------
-          <View style={styles.mapCanvasContainer}>
-            {/* Custom SVG Map in White, Black, and Pink Theme */}
-            <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT * 0.72} style={StyleSheet.absoluteFill}>
-              <Defs>
-                <LinearGradient id="whiteMapBg" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <Stop offset="0%" stopColor="#f8f9fc" />
-                  <Stop offset="100%" stopColor="#ffffff" />
-                </LinearGradient>
-                <LinearGradient id="riverPinkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <Stop offset="0%" stopColor="#ffeef4" stopOpacity="0.8" />
-                  <Stop offset="100%" stopColor="#ffdce8" stopOpacity="0.5" />
-                </LinearGradient>
-              </Defs>
-
-              {/* Crisp White Map Base */}
-              <Rect width="100%" height="100%" fill="url(#whiteMapBg)" />
-
-              {/* Soft Pink River / Water Contour */}
-              <Path
-                d={`M0,${SCREEN_HEIGHT * 0.58} C${SCREEN_WIDTH * 0.35},${SCREEN_HEIGHT * 0.52} ${SCREEN_WIDTH * 0.65},${SCREEN_HEIGHT * 0.64} ${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.55} L${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.62} C${SCREEN_WIDTH * 0.65},${SCREEN_HEIGHT * 0.70} ${SCREEN_WIDTH * 0.35},${SCREEN_HEIGHT * 0.58} 0,${SCREEN_HEIGHT * 0.64} Z`}
-                fill="url(#riverPinkGrad)"
-              />
-
-              {/* Secondary Street Grid Network (Charcoal / Slate) */}
-              <Path
-                d={`M-40,${SCREEN_HEIGHT * 0.18} Q${SCREEN_WIDTH * 0.4},${SCREEN_HEIGHT * 0.12} ${SCREEN_WIDTH + 40},${SCREEN_HEIGHT * 0.22}`}
-                stroke="#e2e8f0"
-                strokeWidth={1.5}
-                fill="none"
-              />
-              <Path
-                d={`M-40,${SCREEN_HEIGHT * 0.32} Q${SCREEN_WIDTH * 0.3},${SCREEN_HEIGHT * 0.26} ${SCREEN_WIDTH + 40},${SCREEN_HEIGHT * 0.34}`}
-                stroke="#e2e8f0"
-                strokeWidth={1.5}
-                fill="none"
-              />
-              <Path
-                d={`M-40,${SCREEN_HEIGHT * 0.48} Q${SCREEN_WIDTH * 0.5},${SCREEN_HEIGHT * 0.42} ${SCREEN_WIDTH + 40},${SCREEN_HEIGHT * 0.50}`}
-                stroke="#e2e8f0"
-                strokeWidth={1.5}
-                fill="none"
-              />
-
-              {/* Primary Avenue Lines (Jet Black) */}
-              <Path
-                d={`M${SCREEN_WIDTH * 0.5},0 L${SCREEN_WIDTH * 0.5},${SCREEN_HEIGHT}`}
-                stroke="#1e293b"
-                strokeWidth={2.8}
-              />
-              <Path
-                d={`M0,${SCREEN_HEIGHT * 0.38} L${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.38}`}
-                stroke="#1e293b"
-                strokeWidth={2.4}
-              />
-
-              {/* Signature Shilpi Pink Arterial Route */}
-              <Path
-                d={`M-20,${SCREEN_HEIGHT * 0.14} L${SCREEN_WIDTH + 20},${SCREEN_HEIGHT * 0.50}`}
-                stroke="#ff2d75"
-                strokeWidth={2.2}
-                strokeOpacity={0.65}
-              />
-              <Path
-                d={`M${SCREEN_WIDTH * 0.18},${SCREEN_HEIGHT} L${SCREEN_WIDTH * 0.82},0`}
-                stroke="#ff2d75"
-                strokeWidth={1.8}
-                strokeOpacity={0.45}
-              />
-
-              {/* Intersection Node Dots */}
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Circle
-                  key={`node-${i}`}
-                  cx={SCREEN_WIDTH * (0.16 + i * 0.14)}
-                  cy={SCREEN_HEIGHT * 0.38}
-                  r={2.5}
-                  fill="#ff2d75"
-                />
-              ))}
-            </Svg>
-
-            {/* User GPS Beacon (Pink Pulsing Waves & Pin) */}
-            <View style={[styles.userGpsBeacon, { left: SCREEN_WIDTH * 0.5 - 20, top: SCREEN_HEIGHT * 0.38 - 20 }]}>
-              <Animated.View
-                style={[
-                  styles.userGpsWave,
-                  {
-                    transform: [{ scale: radarScale }],
-                    opacity: radarScale.interpolate({
-                      inputRange: [1, 2],
-                      outputRange: [0.65, 0],
-                    }),
-                  },
-                ]}
-              />
-              <View style={styles.userGpsCore}>
-                <View style={styles.userGpsInnerDot} />
-              </View>
-              <View style={styles.userGpsLabel}>
-                <Text style={styles.userGpsLabelText}>YOU ARE HERE ({userPincode})</Text>
-              </View>
-            </View>
-
-            {/* Makeover Markers on Top of the Map */}
-            {filteredStudios.map((studio, idx) => {
-              const posX = SCREEN_WIDTH * (studio.mapX || (0.25 + (idx * 0.25) % 0.6));
-              const posY = (SCREEN_HEIGHT * 0.52) * (studio.mapY || (0.2 + (idx * 0.3) % 0.5));
-              const isSelected = selectedStudio?.id === studio.id;
-
-              return (
-                <TouchableOpacity
-                  key={studio.id}
-                  style={[
-                    styles.mapPinAnchor,
-                    { left: posX - 28, top: posY - 45 },
-                    isSelected && styles.mapPinAnchorSelected,
-                  ]}
-                  onPress={() => handleSelectPin(studio)}
-                  activeOpacity={0.88}
-                >
-                  {/* Floating Studio Mini-Badge */}
-                  <View style={[styles.pinStudioBadge, isSelected && styles.pinStudioBadgeSelected]}>
-                    {studio.isPro && (
-                      <CrownProVector color="#f59e0b" size={11} />
-                    )}
-                    <Text style={[styles.pinStudioName, isSelected && styles.pinStudioNameSelected]} numberOfLines={1}>
-                      {studio.businessName}
-                    </Text>
-                  </View>
-
-                  {/* Pin Head Teardrop in Black & Pink */}
-                  <Animated.View
-                    style={[
-                      styles.pinHeadWrap,
-                      isSelected && {
-                        transform: [{ scale: pinSpring }],
-                        backgroundColor: '#ff2d75',
-                        borderColor: '#000000',
-                      },
-                    ]}
-                  >
-                    <View style={styles.pinAvatarCircle}>
-                      <Text style={[styles.pinAvatarInitial, isSelected && styles.pinAvatarInitialSelected]}>
-                        {studio.businessName.charAt(0)}
-                      </Text>
-                    </View>
-                  </Animated.View>
-
-                  {/* Pin Pointer Needle */}
-                  <View style={[styles.pinPointer, isSelected && { borderTopColor: '#ff2d75' }]} />
-                </TouchableOpacity>
-              );
-            })}
-
-            {/* ------------------ Bottom Floating Studio Preview Card (White, Black & Pink) ------------------ */}
-            {selectedStudio && (
-              <View style={styles.previewCardFloating}>
-                <TouchableOpacity
-                  style={styles.previewCardInner}
-                  onPress={() => setDetailModalOpen(true)}
-                  activeOpacity={0.92}
-                >
-                  {/* Header Row */}
-                  <View style={styles.previewHeaderRow}>
-                    <View style={styles.previewAvatar}>
-                      <Text style={styles.previewAvatarText}>
-                        {selectedStudio.businessName.charAt(0)}
-                      </Text>
-                    </View>
-
-                    <View style={styles.previewMainInfo}>
-                      <View style={styles.previewTitleRow}>
-                        <Text style={styles.previewStudioName} numberOfLines={1}>
-                          {selectedStudio.businessName}
-                        </Text>
-                        {selectedStudio.isPro ? (
-                          <View style={styles.proBadge}>
-                            <CrownProVector color="#ffffff" size={10} />
-                            <Text style={styles.proBadgeText}>PRO</Text>
-                          </View>
-                        ) : (
-                          <VerifiedBadgeVector color="#ff2d75" size={14} />
-                        )}
-                      </View>
-
-                      <Text style={styles.previewOwnerName} numberOfLines={1}>
-                        By {selectedStudio.ownerName} · {selectedStudio.city}
-                      </Text>
-
-                      {/* Responsive Meta Row (No overflow) */}
-                      <View style={styles.previewMetaRow}>
-                        <View style={styles.previewDistancePill}>
-                          <LocationPinVector color="#ff2d75" size={10} />
-                          <Text style={styles.previewDistanceVal}>{selectedStudio.distanceKm} km</Text>
-                        </View>
-
-                        <View style={[styles.previewPinMatchPill, selectedStudio.isExactPincode && styles.previewPinExactMatch]}>
-                          <Text style={[styles.previewPinMatchText, selectedStudio.isExactPincode && styles.previewPinExactMatchText]}>
-                            {selectedStudio.isExactPincode ? `PIN ${selectedStudio.pincode} (Exact)` : `PIN ${selectedStudio.pincode}`}
-                          </Text>
-                        </View>
-
-                        {selectedStudio.completedBookingsCount > 0 && (
-                          <View style={styles.previewOrdersPill}>
-                            <Text style={styles.previewOrdersText}>
-                              {selectedStudio.completedBookingsCount} Orders Done
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Real Services & Starting Price (Responsive single line) */}
-                  <View style={styles.previewServicesRow}>
-                    <View style={styles.servicesWrap}>
-                      {selectedStudio.services.slice(0, 2).map((srv, idx) => (
-                        <View key={`srv-${idx}`} style={styles.previewServiceChip}>
-                          <Text style={styles.previewServiceText} numberOfLines={1}>
-                            {srv}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                    <Text style={styles.previewPriceLabel}>
-                      From ₹{selectedStudio.startingPrice.toLocaleString('en-IN')}
-                    </Text>
-                  </View>
-
-                  {/* Action Buttons Row: Responsive Flex Sizing */}
-                  <View style={styles.previewActionsRow}>
-                    <TouchableOpacity
-                      style={styles.btnCall}
-                      onPress={() => handleCall(selectedStudio.phone)}
-                      activeOpacity={0.82}
-                    >
-                      <PhoneCallVector color="#ffffff" size={13} />
-                      <Text style={styles.btnCallText}>Call</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.btnWhatsApp}
-                      onPress={() => handleWhatsApp(selectedStudio)}
-                      activeOpacity={0.82}
-                    >
-                      <WhatsAppVector color="#ffffff" size={14} />
-                      <Text style={styles.btnWhatsAppText}>WhatsApp</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.btnDetails}
-                      onPress={() => setDetailModalOpen(true)}
-                      activeOpacity={0.82}
-                    >
-                      <Text style={styles.btnDetailsText}>Details</Text>
-                    </TouchableOpacity>
-                  </View>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        ) : (
-          // ------------------ 4. CLEAN LIST VIEW (WHITE & PINK) ------------------
+          {/* List Content */}
           <ScrollView contentContainerStyle={styles.listScrollContent} showsVerticalScrollIndicator={false}>
             <Text style={styles.listHeaderTitle}>
-              {filteredStudios.length} Registered Beauticians in {userCity}
+              {filteredStudios.length} Registered Beauticians Near {userCity}
             </Text>
 
             {filteredStudios.map((studio) => (
@@ -820,32 +875,32 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                   </View>
 
                   <View style={styles.listInfoWrap}>
-                    <View style={styles.previewTitleRow}>
+                    <View style={styles.cardTitleWrap}>
                       <Text style={styles.listStudioName} numberOfLines={1}>{studio.businessName}</Text>
                       {studio.isPro ? (
-                        <View style={styles.proBadge}>
-                          <CrownProVector color="#ffffff" size={9} />
-                          <Text style={styles.proBadgeText}>PRO</Text>
+                        <View style={styles.proGoldBadge}>
+                          <CrownProVector color="#ffffff" size={8} />
+                          <Text style={styles.proGoldText}>PRO</Text>
                         </View>
                       ) : (
-                        <VerifiedBadgeVector color="#ff2d75" size={14} />
+                        <VerifiedBadgeVector color="#ff2d75" size={13} />
                       )}
                     </View>
                     <Text style={styles.listOwnerName}>By {studio.ownerName}</Text>
                     <Text style={styles.listAddress} numberOfLines={1}>{studio.address}</Text>
 
                     <View style={styles.listBadgesRow}>
-                      <View style={styles.previewDistancePill}>
-                        <Text style={styles.previewDistanceVal}>{studio.distanceKm} km</Text>
+                      <View style={styles.distanceBadgePill}>
+                        <Text style={styles.distanceBadgeText}>{studio.distanceKm} km</Text>
                       </View>
-                      <View style={[styles.previewPinMatchPill, studio.isExactPincode && styles.previewPinExactMatch]}>
-                        <Text style={[styles.previewPinMatchText, studio.isExactPincode && styles.previewPinExactMatchText]}>
+                      <View style={[styles.pinBadgePill, studio.isExactPincode && styles.pinExactBadgePill]}>
+                        <Text style={[styles.pinBadgeText, studio.isExactPincode && styles.pinExactBadgeText]}>
                           PIN {studio.pincode}
                         </Text>
                       </View>
                       {studio.completedBookingsCount > 0 && (
-                        <View style={styles.previewOrdersPill}>
-                          <Text style={styles.previewOrdersText}>{studio.completedBookingsCount} Orders</Text>
+                        <View style={styles.ordersBadgePill}>
+                          <Text style={styles.ordersBadgeText}>{studio.completedBookingsCount} Orders</Text>
                         </View>
                       )}
                     </View>
@@ -886,320 +941,330 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             ))}
             <View style={{ height: 60 }} />
           </ScrollView>
-        )}
+        </View>
+      )}
 
-        {/* ----------------- 5. FULL STUDIO DETAILS MODAL (WHITE, BLACK & PINK) ----------------- */}
-        <Modal visible={detailModalOpen} transparent animationType="slide" onRequestClose={() => setDetailModalOpen(false)}>
-          <View style={styles.modalBackdrop}>
-            <View style={styles.modalSheetContainer}>
-              <View style={styles.modalSheetHandle} />
+      {/* -------------------------------------------------------------
+          7. FULL STUDIO DETAILS MODAL (WHITE, BLACK & PINK)
+         ------------------------------------------------------------- */}
+      <Modal visible={detailModalOpen} transparent animationType="slide" onRequestClose={() => setDetailModalOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheetContainer}>
+            <View style={styles.modalSheetHandle} />
 
-              <View style={styles.modalHeaderRow}>
-                <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={styles.modalStudioName} numberOfLines={1}>{selectedStudio?.businessName}</Text>
-                    {selectedStudio?.isPro && (
-                      <View style={styles.proBadge}>
-                        <CrownProVector color="#ffffff" size={10} />
-                        <Text style={styles.proBadgeText}>PRO</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.modalOwnerName}>By {selectedStudio?.ownerName} · Registered Beautician</Text>
-                </View>
-
-                <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setDetailModalOpen(false)}>
-                  <CloseVector color="#111116" size={16} />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: SCREEN_HEIGHT * 0.50 }}>
-                {/* Real Verified Information Card */}
-                <View style={styles.modalStatsCard}>
-                  <View style={styles.modalStatCol}>
-                    <Text style={styles.modalStatVal}>{selectedStudio?.distanceKm} km</Text>
-                    <Text style={styles.modalStatLabel}>Distance</Text>
-                  </View>
-
-                  <View style={styles.modalStatDivider} />
-
-                  <View style={styles.modalStatCol}>
-                    <Text style={styles.modalStatVal}>{selectedStudio?.pincode}</Text>
-                    <Text style={styles.modalStatLabel}>{selectedStudio?.isExactPincode ? 'Same PIN Code' : 'PIN Code'}</Text>
-                  </View>
-
-                  <View style={styles.modalStatDivider} />
-
-                  <View style={styles.modalStatCol}>
-                    <Text style={styles.modalStatVal}>
-                      {selectedStudio?.completedBookingsCount > 0 ? selectedStudio.completedBookingsCount : 'Active'}
-                    </Text>
-                    <Text style={styles.modalStatLabel}>Orders Completed</Text>
-                  </View>
-                </View>
-
-                {/* Studio Location with Google Maps Button */}
-                <View style={styles.modalSectionCard}>
-                  <Text style={styles.modalSectionHeading}>STUDIO ADDRESS</Text>
-                  <Text style={styles.modalAddressText}>{selectedStudio?.address}</Text>
-                  <TouchableOpacity
-                    style={styles.modalDirectionsBtn}
-                    onPress={() => selectedStudio && handleOpenMaps(selectedStudio)}
-                    activeOpacity={0.8}
-                  >
-                    <MapNavigationVector color="#ff2d75" size={14} />
-                    <Text style={styles.modalDirectionsText}>Open in Google Maps</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Real Services & Offerings from Database */}
-                <View style={styles.modalSectionCard}>
-                  <Text style={styles.modalSectionHeading}>SERVICES & PACKAGES</Text>
-                  {selectedStudio?.services.map((srv, idx) => (
-                    <View key={`pkg-${idx}`} style={styles.modalServiceRow}>
-                      <Text style={styles.modalServiceName} numberOfLines={1}>{srv}</Text>
-                      <Text style={styles.modalServicePrice}>
-                        ₹{(selectedStudio.startingPrice + idx * 1000).toLocaleString('en-IN')}
-                      </Text>
+            <View style={styles.modalHeaderRow}>
+              <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.modalStudioName} numberOfLines={1}>{selectedStudio?.businessName}</Text>
+                  {selectedStudio?.isPro && (
+                    <View style={styles.proGoldBadge}>
+                      <CrownProVector color="#ffffff" size={10} />
+                      <Text style={styles.proGoldText}>PRO</Text>
                     </View>
-                  ))}
+                  )}
                 </View>
-              </ScrollView>
-
-              {/* Bottom CTA Row */}
-              <View style={styles.modalFooterRow}>
-                <TouchableOpacity
-                  style={styles.modalCallBtn}
-                  onPress={() => selectedStudio && handleCall(selectedStudio.phone)}
-                  activeOpacity={0.82}
-                >
-                  <PhoneCallVector color="#ffffff" size={15} />
-                  <Text style={styles.modalCallBtnText}>Call</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.modalWaBtn}
-                  onPress={() => selectedStudio && handleWhatsApp(selectedStudio)}
-                  activeOpacity={0.82}
-                >
-                  <WhatsAppVector color="#ffffff" size={17} />
-                  <Text style={styles.modalWaBtnText}>WhatsApp</Text>
-                </TouchableOpacity>
+                <Text style={styles.modalOwnerName}>By {selectedStudio?.ownerName} · Registered Beautician</Text>
               </View>
+
+              <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setDetailModalOpen(false)}>
+                <CloseVector color="#111116" size={16} />
+              </TouchableOpacity>
             </View>
-          </View>
-        </Modal>
 
-        {/* ----------------- 6. PINCODE SEARCH MODAL (WHITE & PINK) ----------------- */}
-        <Modal visible={pincodeModalOpen} transparent animationType="fade" onRequestClose={() => setPincodeModalOpen(false)}>
-          <View style={styles.modalBackdrop}>
-            <View style={styles.pincodeModalCard}>
-              <View style={styles.modalHeaderRow}>
-                <Text style={styles.modalStudioName}>Enter 6-Digit PIN Code</Text>
-                <TouchableOpacity onPress={() => setPincodeModalOpen(false)}>
-                  <CloseVector color="#111116" size={16} />
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: SCREEN_HEIGHT * 0.50 }}>
+              {/* Real Verified Information Card */}
+              <View style={styles.modalStatsCard}>
+                <View style={styles.modalStatCol}>
+                  <Text style={styles.modalStatVal}>{selectedStudio?.distanceKm} km</Text>
+                  <Text style={styles.modalStatLabel}>Distance</Text>
+                </View>
+
+                <View style={styles.modalStatDivider} />
+
+                <View style={styles.modalStatCol}>
+                  <Text style={styles.modalStatVal}>{selectedStudio?.pincode}</Text>
+                  <Text style={styles.modalStatLabel}>{selectedStudio?.isExactPincode ? 'Same PIN Code' : 'PIN Code'}</Text>
+                </View>
+
+                <View style={styles.modalStatDivider} />
+
+                <View style={styles.modalStatCol}>
+                  <Text style={styles.modalStatVal}>
+                    {selectedStudio?.completedBookingsCount > 0 ? selectedStudio.completedBookingsCount : 'Active'}
+                  </Text>
+                  <Text style={styles.modalStatLabel}>Orders Completed</Text>
+                </View>
+              </View>
+
+              {/* Studio Location with Google Maps Button */}
+              <View style={styles.modalSectionCard}>
+                <Text style={styles.modalSectionHeading}>STUDIO ADDRESS</Text>
+                <Text style={styles.modalAddressText}>{selectedStudio?.address}</Text>
+                <TouchableOpacity
+                  style={styles.modalDirectionsBtn}
+                  onPress={() => selectedStudio && handleOpenMaps(selectedStudio)}
+                  activeOpacity={0.8}
+                >
+                  <MapNavigationVector color="#ff2d75" size={14} />
+                  <Text style={styles.modalDirectionsText}>Open in Google Maps</Text>
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.pincodePromptText}>
-                Filter registered beauticians by Indian postal PIN code:
-              </Text>
+              {/* Real Services & Offerings from Database */}
+              <View style={styles.modalSectionCard}>
+                <Text style={styles.modalSectionHeading}>SERVICES & PACKAGES</Text>
+                {selectedStudio?.services.map((srv, idx) => (
+                  <View key={`pkg-${idx}`} style={styles.modalServiceRow}>
+                    <Text style={styles.modalServiceName} numberOfLines={1}>{srv}</Text>
+                    <Text style={styles.modalServicePrice}>
+                      ₹{(selectedStudio.startingPrice + idx * 1000).toLocaleString('en-IN')}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
 
-              <TextInput
-                style={styles.pincodeInput}
-                keyboardType="number-pad"
-                placeholder="e.g. 641002, 628552, 600001"
-                placeholderTextColor="rgba(0, 0, 0, 0.4)"
-                value={manualPinInput}
-                onChangeText={setManualPinInput}
-                maxLength={6}
-              />
+            {/* Bottom CTA Row */}
+            <View style={styles.modalFooterRow}>
+              <TouchableOpacity
+                style={styles.modalCallBtn}
+                onPress={() => selectedStudio && handleCall(selectedStudio.phone)}
+                activeOpacity={0.82}
+              >
+                <PhoneCallVector color="#ffffff" size={15} />
+                <Text style={styles.modalCallBtnText}>Call</Text>
+              </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.applyPinBtn}
-                onPress={handleApplyManualPincode}
-                activeOpacity={0.85}
+                style={styles.modalWaBtn}
+                onPress={() => selectedStudio && handleWhatsApp(selectedStudio)}
+                activeOpacity={0.82}
               >
-                <Text style={styles.applyPinText}>SEARCH BEAUTICIANS</Text>
+                <WhatsAppVector color="#ffffff" size={17} />
+                <Text style={styles.modalWaBtnText}>WhatsApp Inquiry</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </Modal>
-      </View>
-    </SafeAreaView>
+        </View>
+      </Modal>
+
+      {/* -------------------------------------------------------------
+          8. PINCODE SEARCH MODAL (WHITE & PINK)
+         ------------------------------------------------------------- */}
+      <Modal visible={pincodeModalOpen} transparent animationType="fade" onRequestClose={() => setPincodeModalOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.pincodeModalCard}>
+            <View style={styles.modalHeaderRow}>
+              <Text style={styles.modalStudioName}>Enter 6-Digit PIN Code</Text>
+              <TouchableOpacity onPress={() => setPincodeModalOpen(false)}>
+                <CloseVector color="#111116" size={16} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.pincodePromptText}>
+              Locate registered makeover artists by postal PIN code:
+            </Text>
+
+            <TextInput
+              style={styles.pincodeInput}
+              keyboardType="number-pad"
+              placeholder="e.g. 641002, 628552, 600001"
+              placeholderTextColor="rgba(0, 0, 0, 0.4)"
+              value={manualPinInput}
+              onChangeText={setManualPinInput}
+              maxLength={6}
+            />
+
+            <TouchableOpacity
+              style={styles.applyPinBtn}
+              onPress={handleApplyManualPincode}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.applyPinText}>SEARCH BEAUTICIANS</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 };
 
 // -------------------------------------------------------------
-// 7. RESPONSIVE WHITE, BLACK & PINK STYLES
+// 9. DRIBBLE NIXTIO STYLE STYLESHEET
 // -------------------------------------------------------------
 
-const createStyles = (colors: ThemeColors) =>
+const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number }) =>
   StyleSheet.create({
-    safeArea: {
-      flex: 1,
-      backgroundColor: '#000000',
-    },
     screen: {
       flex: 1,
-      backgroundColor: '#f7f7fa',
+      backgroundColor: '#f8fafc',
     },
-    topBar: {
+    fullBleedMapContainer: {
+      flex: 1,
+      position: 'relative',
+      backgroundColor: '#f8fafc',
+    },
+    floatingTopBarWrap: {
+      position: 'absolute',
+      left: 14,
+      right: 14,
       flexDirection: 'row',
       alignItems: 'center',
-      paddingTop: Platform.OS === 'ios' ? 8 : 12,
-      paddingHorizontal: 12,
-      paddingBottom: 10,
-      backgroundColor: '#000000',
       gap: 8,
+      zIndex: 50,
     },
-    backBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 10,
-      backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    floatingCircleBtn: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: '#ffffff',
       justifyContent: 'center',
       alignItems: 'center',
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.10,
+      shadowRadius: 8,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: 'rgba(0, 0, 0, 0.05)',
       flexShrink: 0,
     },
-    locationPill: {
+    floatingLocationCapsule: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#16161a',
-      paddingVertical: 7,
-      paddingHorizontal: 10,
-      borderRadius: 18,
+      backgroundColor: '#ffffff',
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 22,
       borderWidth: 1.5,
-      borderColor: '#ff2d75',
+      borderColor: '#ffd6e4',
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 10,
+      elevation: 4,
       minWidth: 0, // CRITICAL FOR TEXT OVERFLOW
-      overflow: 'hidden',
       gap: 6,
     },
-    locationTextWrap: {
+    locationContentWrap: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       minWidth: 0,
       gap: 4,
     },
-    locationCityText: {
+    capsuleCityText: {
       fontSize: 12,
       fontWeight: '700',
-      color: '#ffffff',
+      color: '#111116',
       flexShrink: 1,
     },
-    pinDot: {
+    capsuleDot: {
       width: 3,
       height: 3,
       borderRadius: 1.5,
-      backgroundColor: 'rgba(255, 255, 255, 0.4)',
+      backgroundColor: 'rgba(0, 0, 0, 0.3)',
       flexShrink: 0,
     },
-    locationPinText: {
-      fontSize: 11.5,
+    capsulePinText: {
+      fontSize: 12,
       fontWeight: '800',
       color: '#ff2d75',
-      flexShrink: 0, // PIN code is never truncated
-    },
-    viewToggleContainer: {
-      flexDirection: 'row',
-      backgroundColor: 'rgba(255, 255, 255, 0.12)',
-      borderRadius: 10,
-      padding: 2,
       flexShrink: 0,
     },
-    toggleBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 3,
-      paddingVertical: 5,
-      paddingHorizontal: 8,
-      borderRadius: 8,
+    floatingFilterChipsRow: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      zIndex: 49,
     },
-    toggleBtnActive: {
-      backgroundColor: '#ff2d75',
-    },
-    toggleBtnText: {
-      fontSize: 10.5,
-      fontWeight: '700',
-      color: 'rgba(255, 255, 255, 0.6)',
-    },
-    toggleBtnTextActive: {
-      color: '#ffffff',
-    },
-    filterRowWrap: {
-      backgroundColor: '#ffffff',
-      paddingVertical: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: '#ebecef',
-    },
-    filterScroll: {
+    filterChipsScroll: {
       paddingHorizontal: 14,
       gap: 6,
     },
-    filterChip: {
-      paddingVertical: 5,
-      paddingHorizontal: 11,
-      borderRadius: 12,
-      backgroundColor: '#f3f4f6',
+    floatingFilterPill: {
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 16,
+      backgroundColor: '#ffffff',
       borderWidth: 1,
-      borderColor: '#e5e7eb',
+      borderColor: 'rgba(0, 0, 0, 0.06)',
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 5,
+      elevation: 3,
     },
-    filterChipActive: {
-      backgroundColor: '#fff0f5',
+    floatingFilterPillActive: {
+      backgroundColor: '#ff2d75',
       borderColor: '#ff2d75',
     },
-    filterChipText: {
+    floatingFilterText: {
       fontSize: 11,
-      fontWeight: '600',
-      color: '#4b5563',
+      fontWeight: '700',
+      color: '#334155',
     },
-    filterChipTextActive: {
-      color: '#ff2d75',
-      fontWeight: '800',
+    floatingFilterTextActive: {
+      color: '#ffffff',
     },
-    mapCanvasContainer: {
-      flex: 1,
-      position: 'relative',
+    floatingRightActions: {
+      position: 'absolute',
+      right: 14,
+      zIndex: 48,
+    },
+    floatingActionIcon: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
       backgroundColor: '#ffffff',
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.10,
+      shadowRadius: 8,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: 'rgba(0, 0, 0, 0.05)',
     },
     userGpsBeacon: {
       position: 'absolute',
-      width: 40,
-      height: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    userGpsWave: {
-      position: 'absolute',
       width: 44,
       height: 44,
-      borderRadius: 22,
-      backgroundColor: 'rgba(255, 45, 117, 0.25)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 10,
     },
-    userGpsCore: {
-      width: 16,
-      height: 16,
-      borderRadius: 8,
+    userGpsSonarWave: {
+      position: 'absolute',
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: 'rgba(255, 45, 117, 0.22)',
+    },
+    userGpsCorePoint: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
       backgroundColor: '#ff2d75',
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 2.5,
+      borderWidth: 3,
       borderColor: '#ffffff',
       shadowColor: '#ff2d75',
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.4,
+      shadowOpacity: 0.45,
       shadowRadius: 4,
-      elevation: 3,
+      elevation: 4,
     },
-    userGpsInnerDot: {
-      width: 5,
-      height: 5,
-      borderRadius: 2.5,
+    userGpsWhiteCenter: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
       backgroundColor: '#ffffff',
     },
-    userGpsLabel: {
+    userGpsTag: {
       position: 'absolute',
       bottom: -18,
       backgroundColor: '#ffffff',
@@ -1214,83 +1279,102 @@ const createStyles = (colors: ThemeColors) =>
       shadowRadius: 2,
       elevation: 2,
     },
-    userGpsLabelText: {
+    userGpsTagText: {
       fontSize: 8,
       fontWeight: '800',
       letterSpacing: 0.4,
       color: '#ff2d75',
     },
-    mapPinAnchor: {
+    nixtioPinAnchor: {
       position: 'absolute',
       alignItems: 'center',
-      zIndex: 10,
+      zIndex: 20,
     },
-    mapPinAnchorSelected: {
+    nixtioPinAnchorSelected: {
       zIndex: 99,
     },
-    pinStudioBadge: {
+    nixtioPinPill: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
       backgroundColor: '#ffffff',
-      paddingHorizontal: 7,
-      paddingVertical: 3,
-      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 3.5,
+      borderRadius: 12,
       borderWidth: 1.2,
       borderColor: '#e2e8f0',
       marginBottom: 3,
       shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-      maxWidth: 110,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.12,
+      shadowRadius: 6,
+      elevation: 4,
+      maxWidth: 120,
     },
-    pinStudioBadgeSelected: {
+    nixtioPinPillSelected: {
       borderColor: '#ff2d75',
       backgroundColor: '#fff0f5',
     },
-    pinStudioName: {
+    proMiniBadge: {
+      flexShrink: 0,
+    },
+    nixtioPinPillText: {
       fontSize: 9.5,
       fontWeight: '700',
       color: '#111116',
       flexShrink: 1,
     },
-    pinStudioNameSelected: {
+    nixtioPinPillTextSelected: {
       color: '#ff2d75',
     },
-    pinHeadWrap: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: '#000000',
+    pinDistDot: {
+      width: 2.5,
+      height: 2.5,
+      borderRadius: 1.25,
+      backgroundColor: 'rgba(0, 0, 0, 0.25)',
+      flexShrink: 0,
+    },
+    pinDistText: {
+      fontSize: 9,
+      fontWeight: '800',
+      color: '#ff2d75',
+      flexShrink: 0,
+    },
+    nixtioPinHead: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: '#111116',
       borderWidth: 2,
       borderColor: '#ff2d75',
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: '#ff2d75',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.35,
-      shadowRadius: 4,
-      elevation: 4,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.25,
+      shadowRadius: 5,
+      elevation: 5,
     },
-    pinAvatarCircle: {
-      width: 22,
-      height: 22,
-      borderRadius: 11,
+    nixtioPinInner: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
       backgroundColor: '#ffffff',
       justifyContent: 'center',
       alignItems: 'center',
     },
-    pinAvatarInitial: {
-      fontSize: 11,
-      fontWeight: '800',
-      color: '#000000',
+    nixtioPinInnerSelected: {
+      backgroundColor: '#ffffff',
     },
-    pinAvatarInitialSelected: {
+    nixtioPinChar: {
+      fontSize: 11,
+      fontWeight: '900',
+      color: '#111116',
+    },
+    nixtioPinCharSelected: {
       color: '#ff2d75',
     },
-    pinPointer: {
+    nixtioPinTip: {
       width: 0,
       height: 0,
       borderLeftWidth: 4,
@@ -1298,35 +1382,42 @@ const createStyles = (colors: ThemeColors) =>
       borderTopWidth: 5,
       borderLeftColor: 'transparent',
       borderRightColor: 'transparent',
-      borderTopColor: '#000000',
+      borderTopColor: '#111116',
     },
-    previewCardFloating: {
+    nixtioBottomCardContainer: {
       position: 'absolute',
-      bottom: Platform.OS === 'ios' ? 20 : 12,
-      left: 12,
-      right: 12,
-      zIndex: 100,
+      left: 14,
+      right: 14,
+      zIndex: 60,
     },
-    previewCardInner: {
+    nixtioCardSurface: {
       backgroundColor: '#ffffff',
-      borderRadius: 20,
-      padding: 14,
+      borderRadius: 24,
+      padding: 16,
       borderWidth: 1.5,
       borderColor: '#ffd6e4',
-      shadowColor: '#121216',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 12,
-      elevation: 6,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 20,
+      elevation: 8,
     },
-    previewHeaderRow: {
+    cardDragHandle: {
+      width: 34,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: '#e2e8f0',
+      alignSelf: 'center',
+      marginBottom: 12,
+    },
+    cardHeaderRow: {
       flexDirection: 'row',
-      gap: 10,
+      gap: 12,
     },
-    previewAvatar: {
-      width: 44,
-      height: 44,
-      borderRadius: 14,
+    cardAvatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 16,
       backgroundColor: '#fff0f5',
       borderWidth: 1.5,
       borderColor: '#ff2d75',
@@ -1334,181 +1425,197 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       flexShrink: 0,
     },
-    previewAvatarText: {
-      fontSize: 17,
+    cardAvatarText: {
+      fontSize: 19,
       fontWeight: '800',
       color: '#ff2d75',
     },
-    previewMainInfo: {
+    cardInfoCol: {
       flex: 1,
-      minWidth: 0, // CRITICAL FOR INNER TEXT OVERFLOW
+      minWidth: 0,
     },
-    previewTitleRow: {
+    cardTitleWrap: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
       minWidth: 0,
     },
-    previewStudioName: {
-      fontSize: 14,
+    cardTitleText: {
+      fontSize: 15,
       fontWeight: '800',
       color: '#111116',
-      letterSpacing: -0.2,
+      letterSpacing: -0.3,
       flexShrink: 1,
     },
-    proBadge: {
+    proGoldBadge: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 2,
+      gap: 2.5,
       backgroundColor: '#f59e0b',
       paddingVertical: 2,
-      paddingHorizontal: 5,
-      borderRadius: 5,
+      paddingHorizontal: 6,
+      borderRadius: 6,
       flexShrink: 0,
     },
-    proBadgeText: {
+    proGoldText: {
       fontSize: 8.5,
       fontWeight: '900',
       color: '#ffffff',
       letterSpacing: 0.5,
     },
-    previewOwnerName: {
+    cardOwnerSub: {
       fontSize: 11,
       color: 'rgba(17, 17, 22, 0.6)',
       marginTop: 2,
     },
-    previewMetaRow: {
+    cardMetaRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      marginTop: 5,
+      marginTop: 6,
       flexWrap: 'wrap',
     },
-    previewDistancePill: {
+    distanceBadgePill: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 2,
+      gap: 3,
       backgroundColor: '#fff0f5',
       paddingVertical: 2,
       paddingHorizontal: 6,
       borderRadius: 6,
     },
-    previewDistanceVal: {
+    distanceBadgeText: {
       fontSize: 10,
       fontWeight: '700',
       color: '#ff2d75',
     },
-    previewPinMatchPill: {
-      backgroundColor: '#f3f4f6',
+    etaBadgePill: {
+      backgroundColor: '#f1f5f9',
       paddingVertical: 2,
       paddingHorizontal: 6,
       borderRadius: 6,
     },
-    previewPinMatchText: {
+    etaBadgeText: {
       fontSize: 9.5,
       fontWeight: '700',
-      color: '#4b5563',
+      color: '#475569',
     },
-    previewPinExactMatch: {
+    pinBadgePill: {
+      backgroundColor: '#f8fafc',
+      paddingVertical: 2,
+      paddingHorizontal: 6,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+    },
+    pinBadgeText: {
+      fontSize: 9.5,
+      fontWeight: '700',
+      color: '#64748b',
+    },
+    pinExactBadgePill: {
       backgroundColor: '#ecfdf5',
+      borderColor: '#a7f3d0',
     },
-    previewPinExactMatchText: {
+    pinExactBadgeText: {
       color: '#059669',
     },
-    previewOrdersPill: {
-      backgroundColor: '#eff6ff',
-      paddingVertical: 2,
-      paddingHorizontal: 6,
-      borderRadius: 6,
-    },
-    previewOrdersText: {
-      fontSize: 9.5,
-      fontWeight: '700',
-      color: '#2563eb',
-    },
-    previewServicesRow: {
+    cardServicesRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginTop: 10,
-      paddingTop: 8,
+      marginTop: 12,
+      paddingTop: 10,
       borderTopWidth: 1,
-      borderTopColor: '#f1f1f4',
+      borderTopColor: '#f1f5f9',
       gap: 8,
     },
-    servicesWrap: {
+    chipsWrap: {
       flex: 1,
       flexDirection: 'row',
       gap: 5,
       minWidth: 0,
       overflow: 'hidden',
     },
-    previewServiceChip: {
-      backgroundColor: '#f4f4f7',
-      paddingVertical: 3,
-      paddingHorizontal: 6,
+    servicePill: {
+      backgroundColor: '#f1f5f9',
+      paddingVertical: 3.5,
+      paddingHorizontal: 7,
       borderRadius: 6,
-      maxWidth: 110,
+      maxWidth: 115,
     },
-    previewServiceText: {
+    servicePillText: {
       fontSize: 9.5,
-      color: '#333333',
+      fontWeight: '600',
+      color: '#334155',
     },
-    previewPriceLabel: {
-      fontSize: 11,
+    priceHighlight: {
+      fontSize: 12,
       fontWeight: '800',
       color: '#ff2d75',
       flexShrink: 0,
     },
-    previewActionsRow: {
+    cardActionsRow: {
       flexDirection: 'row',
-      gap: 6,
-      marginTop: 10,
+      gap: 8,
+      marginTop: 12,
     },
-    btnCall: {
+    actionBtnCall: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#000000',
-      paddingVertical: 9,
-      borderRadius: 10,
-      gap: 4,
+      backgroundColor: '#0f172a',
+      paddingVertical: 10,
+      borderRadius: 12,
+      gap: 5,
     },
-    btnCallText: {
-      fontSize: 11,
+    actionBtnCallText: {
+      fontSize: 11.5,
       fontWeight: '700',
       color: '#ffffff',
     },
-    btnWhatsApp: {
-      flex: 1.3,
+    actionBtnWhatsApp: {
+      flex: 1.4,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: '#25D366',
-      paddingVertical: 9,
-      borderRadius: 10,
-      gap: 4,
+      paddingVertical: 10,
+      borderRadius: 12,
+      gap: 5,
     },
-    btnWhatsAppText: {
-      fontSize: 11,
+    actionBtnWhatsAppText: {
+      fontSize: 11.5,
       fontWeight: '800',
       color: '#ffffff',
     },
-    btnDetails: {
-      flex: 0.9,
-      justifyContent: 'center',
+    actionBtnDirections: {
+      flex: 1.1,
+      flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'center',
       backgroundColor: '#fff0f5',
-      borderRadius: 10,
+      borderRadius: 12,
       borderWidth: 1,
       borderColor: '#ffd6e4',
-      paddingVertical: 9,
+      paddingVertical: 10,
+      gap: 4,
     },
-    btnDetailsText: {
-      fontSize: 11,
+    actionBtnDirectionsText: {
+      fontSize: 11.5,
       fontWeight: '700',
       color: '#ff2d75',
+    },
+    listTopBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      gap: 8,
+      backgroundColor: '#ffffff',
+      borderBottomWidth: 1,
+      borderBottomColor: '#ebecef',
     },
     listScrollContent: {
       padding: 14,
@@ -1518,12 +1625,12 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 11.5,
       fontWeight: '700',
       letterSpacing: 0.5,
-      color: '#6b7280',
+      color: '#64748b',
       marginBottom: 2,
     },
     listCard: {
       backgroundColor: '#ffffff',
-      borderRadius: 16,
+      borderRadius: 18,
       padding: 14,
       borderWidth: 1.5,
       borderColor: '#ffd6e4',
@@ -1538,9 +1645,9 @@ const createStyles = (colors: ThemeColors) =>
       gap: 10,
     },
     listAvatar: {
-      width: 42,
-      height: 42,
-      borderRadius: 12,
+      width: 44,
+      height: 44,
+      borderRadius: 14,
       backgroundColor: '#fff0f5',
       borderWidth: 1.5,
       borderColor: '#ff2d75',
@@ -1549,7 +1656,7 @@ const createStyles = (colors: ThemeColors) =>
       flexShrink: 0,
     },
     listAvatarText: {
-      fontSize: 15,
+      fontSize: 16,
       fontWeight: '800',
       color: '#ff2d75',
     },
@@ -1564,7 +1671,7 @@ const createStyles = (colors: ThemeColors) =>
       flexShrink: 1,
     },
     listOwnerName: {
-      fontSize: 10.5,
+      fontSize: 11,
       color: 'rgba(17, 17, 22, 0.6)',
       marginTop: 1,
     },
@@ -1580,9 +1687,20 @@ const createStyles = (colors: ThemeColors) =>
       marginTop: 6,
       flexWrap: 'wrap',
     },
+    ordersBadgePill: {
+      backgroundColor: '#eff6ff',
+      paddingVertical: 2,
+      paddingHorizontal: 6,
+      borderRadius: 6,
+    },
+    ordersBadgeText: {
+      fontSize: 9.5,
+      fontWeight: '700',
+      color: '#2563eb',
+    },
     listCardDivider: {
       height: 1,
-      backgroundColor: '#f1f1f4',
+      backgroundColor: '#f1f5f9',
       marginVertical: 10,
     },
     listActionsRow: {
@@ -1594,7 +1712,7 @@ const createStyles = (colors: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#000000',
+      backgroundColor: '#0f172a',
       paddingVertical: 8,
       borderRadius: 8,
       gap: 4,
@@ -1678,7 +1796,7 @@ const createStyles = (colors: ThemeColors) =>
       width: 30,
       height: 30,
       borderRadius: 15,
-      backgroundColor: '#f3f4f6',
+      backgroundColor: '#f1f5f9',
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -1686,12 +1804,12 @@ const createStyles = (colors: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-around',
-      backgroundColor: '#f8f9fa',
+      backgroundColor: '#f8fafc',
       borderRadius: 14,
       paddingVertical: 12,
       marginBottom: 14,
       borderWidth: 1,
-      borderColor: '#e5e7eb',
+      borderColor: '#e2e8f0',
     },
     modalStatCol: {
       alignItems: 'center',
@@ -1709,15 +1827,15 @@ const createStyles = (colors: ThemeColors) =>
     modalStatDivider: {
       width: 1,
       height: 24,
-      backgroundColor: '#e5e7eb',
+      backgroundColor: '#e2e8f0',
     },
     modalSectionCard: {
-      backgroundColor: '#fcfcfd',
+      backgroundColor: '#f8fafc',
       borderRadius: 14,
       padding: 12,
       marginBottom: 12,
       borderWidth: 1,
-      borderColor: '#f1f1f4',
+      borderColor: '#f1f5f9',
     },
     modalSectionHeading: {
       fontSize: 9.5,
@@ -1728,7 +1846,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     modalAddressText: {
       fontSize: 11.5,
-      color: '#333333',
+      color: '#334155',
       lineHeight: 16,
     },
     modalDirectionsBtn: {
@@ -1748,7 +1866,7 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       paddingVertical: 7,
       borderBottomWidth: 1,
-      borderBottomColor: '#f1f1f4',
+      borderBottomColor: '#f1f5f9',
     },
     modalServiceName: {
       fontSize: 11.5,
@@ -1768,14 +1886,14 @@ const createStyles = (colors: ThemeColors) =>
       marginTop: 12,
       paddingTop: 10,
       borderTopWidth: 1,
-      borderTopColor: '#f1f1f4',
+      borderTopColor: '#f1f5f9',
     },
     modalCallBtn: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#000000',
+      backgroundColor: '#0f172a',
       paddingVertical: 12,
       borderRadius: 12,
       gap: 6,
@@ -1815,12 +1933,12 @@ const createStyles = (colors: ThemeColors) =>
     },
     pincodePromptText: {
       fontSize: 11.5,
-      color: '#4b5563',
+      color: '#475569',
       lineHeight: 16,
       marginBottom: 12,
     },
     pincodeInput: {
-      backgroundColor: '#f8f9fa',
+      backgroundColor: '#f8fafc',
       borderRadius: 10,
       paddingHorizontal: 12,
       paddingVertical: 10,
