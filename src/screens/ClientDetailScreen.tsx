@@ -14,9 +14,17 @@ import {
   Platform,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
+import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 import { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
-import { Client, fmt, first, normalizePhoneKey } from '../data/prototypeData';
+import { Client, Booking, fmt, first, normalizePhoneKey } from '../data/prototypeData';
+import { ClearDueModal } from '../components/ClearDueModal';
+import { PhotoPickerModal } from '../components/PhotoPickerModal';
+import {
+  openWhatsAppDirect,
+  getPaymentReminderMessage,
+} from '../utils/whatsappHelper';
 
 const PhoneVectorIcon = ({ color = '#121212' }: { color?: string }) => (
   <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
@@ -28,11 +36,11 @@ const PhoneVectorIcon = ({ color = '#121212' }: { color?: string }) => (
   </Svg>
 );
 
-const ChatVectorIcon = ({ color  }: { color?: string }) => {
+const ChatVectorIcon = ({ color, size = 14 }: { color?: string; size?: number }) => {
   const { colors } = useTheme();
   const resolvedColor = color ?? colors.accent;
   return (
-  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={resolvedColor} strokeWidth={2}>
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={resolvedColor} strokeWidth={2}>
     <Path
       d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
       strokeLinecap="round"
@@ -88,9 +96,17 @@ const StatusToggleIcon = ({ makeActive }: { makeActive: boolean }) => (
   </Svg>
 );
 
+const CameraBadgeIcon = ({ size = 12, color = '#ffffff' }: { size?: number; color?: string }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+    <Path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+    <Circle cx="12" cy="13" r="4" />
+  </Svg>
+);
+
 interface ClientDetailScreenProps {
   client: Client | null;
   allClients?: Client[];
+  bookings?: Booking[];
   onGoBack: () => void;
   onOpenWhatsAppSheet: (clientName: string, phone: string) => void;
   onNewBookingForClient?: (clientName: string) => void;
@@ -100,17 +116,27 @@ interface ClientDetailScreenProps {
     payload: { name: string; phone: string; notes: string }
   ) => Promise<boolean> | boolean;
   onToggleActive?: (clientId: number | string, nextActive: boolean) => void;
+  onUpdatePhoto?: (clientId: number | string, photoUri: string) => Promise<void> | void;
+  onRecordPayment?: (
+    orderId: string,
+    amount: number,
+    paymentMode?: string,
+    notes?: string
+  ) => Promise<boolean | void> | boolean | void;
 }
 
 export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
   client,
   allClients = [],
+  bookings = [],
   onGoBack,
   onOpenWhatsAppSheet,
   onNewBookingForClient,
   onToggleVip,
   onUpdateClient,
   onToggleActive,
+  onUpdatePhoto,
+  onRecordPayment,
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -120,6 +146,91 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
   const [editPhone, setEditPhone] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [curPhotoUri, setCurPhotoUri] = useState<string | undefined>(client?.photoUri);
+  const [targetPaymentBooking, setTargetPaymentBooking] = useState<Booking | null>(null);
+  const [clearDueModalOpen, setClearDueModalOpen] = useState<boolean>(false);
+  const [isPhotoPickerVisible, setIsPhotoPickerVisible] = useState<boolean>(false);
+
+  const clientBookings = useMemo(() => {
+    if (!client) return [];
+    return (bookings || []).filter(
+      (b) => (b.clientId && String(b.clientId) === String(client.id)) || b.client === client.name
+    );
+  }, [bookings, client]);
+
+  const { totalDue, pendingBookings } = useMemo(() => {
+    let sum = 0;
+    const list: Array<{ booking: Booking; total: number; advance: number; due: number }> = [];
+    clientBookings.forEach((b) => {
+      const bTotal = b.items.reduce((s, it) => s + it.price, 0) + (b.travel || 0);
+      const bDue = Math.max(0, bTotal - (b.advance || 0));
+      if (bDue > 0) {
+        sum += bDue;
+        list.push({ booking: b, total: bTotal, advance: b.advance || 0, due: bDue });
+      }
+    });
+    return { totalDue: sum, pendingBookings: list };
+  }, [clientBookings]);
+
+  useEffect(() => {
+    setCurPhotoUri(client?.photoUri);
+  }, [client?.photoUri]);
+
+  const handlePickFromCamera = async () => {
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('Camera Permission Needed', 'Please allow camera access to take a photo of your client.');
+        return;
+      }
+      const res = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+      if (!res.canceled && res.assets[0]?.uri) {
+        const picked = res.assets[0].uri;
+        setCurPhotoUri(picked);
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+        if (onUpdatePhoto && client) {
+          onUpdatePhoto(client.id, picked);
+        }
+      }
+    } catch {
+      Alert.alert('Camera Error', 'Could not open camera.');
+    }
+  };
+
+  const handlePickFromGallery = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('Permission Needed', 'Please allow gallery access to pick a photo for your client.');
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+      if (!res.canceled && res.assets[0]?.uri) {
+        const picked = res.assets[0].uri;
+        setCurPhotoUri(picked);
+        try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch {}
+        if (onUpdatePhoto && client) {
+          onUpdatePhoto(client.id, picked);
+        }
+      }
+    } catch {
+      Alert.alert('Gallery Error', 'Could not open photo gallery.');
+    }
+  };
+
+  const handleOpenPhotoOptions = () => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+    setIsPhotoPickerVisible(true);
+  };
 
   useEffect(() => {
     if (client) {
@@ -248,13 +359,23 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
           </View>
         )}
 
-        <View style={styles.avatarGradient}>
-          {client.photoUri ? (
-            <Image source={{ uri: client.photoUri }} style={styles.avatarPhoto} />
-          ) : (
-            <Text style={styles.avatarLetter}>{initial}</Text>
-          )}
-        </View>
+        <TouchableOpacity
+          style={styles.avatarTouchWrap}
+          onPress={handleOpenPhotoOptions}
+          activeOpacity={0.85}
+          accessibilityLabel="Add or update client photo"
+        >
+          <View style={styles.avatarGradient}>
+            {curPhotoUri ? (
+              <Image source={{ uri: curPhotoUri }} style={styles.avatarPhoto} />
+            ) : (
+              <Text style={styles.avatarLetter}>{initial}</Text>
+            )}
+          </View>
+          <View style={styles.cameraBadge}>
+            <CameraBadgeIcon size={12} color="#ffffff" />
+          </View>
+        </TouchableOpacity>
 
         <View style={styles.nameContainer}>
           <Text
@@ -343,6 +464,55 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
         </View>
       </View>
 
+      {/* 3c. Compact Due Banner (Only shown if customer has an outstanding due) */}
+      {totalDue > 0 ? (
+        <View style={styles.compactDueCard}>
+          <View style={styles.compactDueLeft}>
+            <View style={styles.compactDueDot} />
+            <View style={styles.compactDueInfo}>
+              <Text style={styles.compactDueLabel}>PENDING DUE</Text>
+              <Text style={styles.compactDueAmount}>{fmt(totalDue)}</Text>
+            </View>
+          </View>
+
+          <View style={styles.compactDueActionsRow}>
+            <TouchableOpacity
+              style={styles.compactRemindDueBtn}
+              onPress={() => {
+                const dueMsg = getPaymentReminderMessage({
+                  clientName: client.name,
+                  dueAmount: totalDue,
+                  artistName: 'Artist',
+                  studioName: 'Shilpi Studio',
+                });
+                openWhatsAppDirect(client.phone, dueMsg);
+              }}
+              activeOpacity={0.8}
+              accessibilityLabel={`Send due reminder to ${client.name} on WhatsApp`}
+            >
+              <ChatVectorIcon color="#ffffff" size={13} />
+              <Text style={styles.compactRemindDueBtnText}>Remind</Text>
+            </TouchableOpacity>
+
+            {onRecordPayment && (
+              <TouchableOpacity
+                style={styles.compactClearDueBtn}
+                onPress={() => {
+                  if (pendingBookings[0]) {
+                    setTargetPaymentBooking(pendingBookings[0].booking);
+                    setClearDueModalOpen(true);
+                  }
+                }}
+                activeOpacity={0.85}
+                accessibilityLabel={`Clear due amount ${fmt(totalDue)}`}
+              >
+                <Text style={styles.compactClearDueBtnText}>Clear Due</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      ) : null}
+
       {/* 3b. Client Notes */}
       {client.notes ? (
         <View style={styles.notesCard}>
@@ -353,11 +523,52 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
 
       {/* 4. Booking History List */}
       <View style={styles.historyHeader}>
-        <Text style={styles.historyTitle}>BOOKING HISTORY</Text>
+        <Text style={styles.historyTitle}>
+          BOOKING HISTORY ({clientBookings.length > 0 ? clientBookings.length : client.history.length})
+        </Text>
       </View>
 
       <View style={styles.historyList}>
-        {client.history.length > 0 ? (
+        {clientBookings.length > 0 ? (
+          clientBookings.map((b, i) => {
+            const bTotal = b.items.reduce((s, it) => s + it.price, 0) + (b.travel || 0);
+            const bDue = Math.max(0, bTotal - (b.advance || 0));
+            return (
+              <View key={b.id || i} style={styles.historyItem}>
+                <View style={styles.historyDateBox}>
+                  <Text style={styles.historyDateText}>
+                    {b.day && b.month ? `${b.day} ${b.month}` : String(b.bookingDate || '').split('T')[0]}
+                  </Text>
+                </View>
+
+                <View style={styles.historyPkgInfo}>
+                  <Text style={styles.historyPkgName}>{b.items[0]?.name || 'Booking'}</Text>
+                  <Text style={[styles.historyStatus, { color: bDue > 0 ? '#ef4444' : '#16a34a' }]}>
+                    {bDue > 0 ? `Due: ${fmt(bDue)}` : 'Fully Paid ✓'}
+                  </Text>
+                </View>
+
+                <View style={styles.historyAmountBox}>
+                  <Text style={styles.historyAmountText}>{fmt(bTotal)}</Text>
+                  {bDue > 0 && onRecordPayment ? (
+                    <TouchableOpacity
+                      style={[styles.historyPayBtn, { borderColor: colors.accent }]}
+                      onPress={() => {
+                        setTargetPaymentBooking(b);
+                        setClearDueModalOpen(true);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.historyPayBtnText, { color: colors.accent }]}>Clear Due</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Text style={styles.historyPaidLabel}>BOOKED</Text>
+                  )}
+                </View>
+              </View>
+            );
+          })
+        ) : client.history.length > 0 ? (
           client.history.map((h, i) => (
             <View key={i} style={styles.historyItem}>
               <View style={styles.historyDateBox}>
@@ -525,6 +736,45 @@ export const ClientDetailScreen: React.FC<ClientDetailScreenProps> = ({
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      <PhotoPickerModal
+        visible={isPhotoPickerVisible}
+        title="Client Photo"
+        subtitle="Add or update client profile picture"
+        hasExistingPhoto={!!curPhotoUri}
+        onClose={() => setIsPhotoPickerVisible(false)}
+        onSelectCamera={() => {
+          setIsPhotoPickerVisible(false);
+          handlePickFromCamera();
+        }}
+        onSelectGallery={() => {
+          setIsPhotoPickerVisible(false);
+          handlePickFromGallery();
+        }}
+        onRemovePhoto={() => {
+          setIsPhotoPickerVisible(false);
+          setCurPhotoUri(undefined);
+          try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+          if (onUpdatePhoto && client) {
+            onUpdatePhoto(client.id, '');
+          }
+        }}
+      />
+
+      <ClearDueModal
+        visible={clearDueModalOpen}
+        booking={targetPaymentBooking}
+        clientName={client?.name}
+        onClose={() => {
+          setClearDueModalOpen(false);
+          setTargetPaymentBooking(null);
+        }}
+        onConfirmPayment={async (bId, amount, mode, notes) => {
+          if (onRecordPayment) {
+            await onRecordPayment(bId, amount, mode, notes);
+          }
+        }}
+      />
     </ScrollView>
   );
 };
@@ -558,6 +808,29 @@ const createStyles = (colors: ThemeColors) =>
     alignItems: 'center',
     borderBottomLeftRadius: 10,
     overflow: 'hidden',
+  },
+  avatarTouchWrap: {
+    position: 'relative',
+    marginRight: 0,
+    flexShrink: 0,
+  },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.accent,
+    borderWidth: 2,
+    borderColor: '#1e293b',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 3,
+    elevation: 4,
   },
   avatarGradient: {
     width: 60,
@@ -735,6 +1008,109 @@ const createStyles = (colors: ThemeColors) =>
     padding: 14,
     borderWidth: 1,
     borderColor: 'rgba(18, 18, 18, 0.06)',
+  },
+  compactDueCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    backgroundColor: '#fff1f2',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.25)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#ef4444',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  compactDueLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  compactDueDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ef4444',
+  },
+  compactDueInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  compactDueLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#dc2626',
+    letterSpacing: 0.8,
+  },
+  compactDueAmount: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#b91c1c',
+    letterSpacing: 0.2,
+  },
+  compactDueActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  compactRemindDueBtn: {
+    backgroundColor: '#25D366',
+    paddingVertical: 7,
+    paddingHorizontal: 11,
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    shadowColor: '#25D366',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  compactRemindDueBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  compactClearDueBtn: {
+    backgroundColor: '#121212',
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  compactClearDueBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+  },
+  historyPayBtn: {
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    borderRadius: 6,
+    borderWidth: 1,
+    backgroundColor: '#ffffff',
+    marginTop: 3,
+  },
+  historyPayBtnText: {
+    fontSize: 9.5,
+    fontWeight: '700',
   },
   notesLabel: {
     fontSize: 9.5,

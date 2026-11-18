@@ -27,6 +27,7 @@ import Svg, { Path, Circle, Rect, Line } from 'react-native-svg';
 import { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { Client, normalizePhoneKey } from '../data/prototypeData';
+import { PhotoPickerModal } from '../components/PhotoPickerModal';
 
 interface NewClientScreenProps {
   existingClients?: Client[];
@@ -181,6 +182,7 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [isPhotoPickerOpen, setIsPhotoPickerOpen] = useState(false);
   const [validationError, setValidationError] = useState<'' | 'name' | 'phone' | 'duplicate'>('');
   const [duplicateOwnerName, setDuplicateOwnerName] = useState('');
 
@@ -225,60 +227,49 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
   }, []);
 
   const handlePickPhoto = () => {
-    Alert.alert(
-      'Profile Photo',
-      'Choose source for client profile picture:',
-      [
-        {
-          text: 'Camera',
-          onPress: async () => {
-            const { status } = await ImagePicker.requestCameraPermissionsAsync();
-            if (status !== 'granted') {
-              Alert.alert('Permission needed', 'Camera permission is required.');
-              return;
-            }
-            const res = await ImagePicker.launchCameraAsync({
-              allowsEditing: true,
-              aspect: [1, 1],
-              quality: 0.2,
-              base64: true,
-            });
-            if (!res.canceled && res.assets && res.assets[0]) {
-              const asset = res.assets[0];
-              setPhotoUri(
-                asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri
-              );
-            }
-          },
-        },
-        {
-          text: 'Choose from Gallery',
-          onPress: async () => {
-            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (status !== 'granted') {
-              Alert.alert('Permission needed', 'Gallery permission is required.');
-              return;
-            }
-            const res = await ImagePicker.launchImageLibraryAsync({
-              allowsEditing: true,
-              aspect: [1, 1],
-              quality: 0.2,
-              base64: true,
-            });
-            if (!res.canceled && res.assets && res.assets[0]) {
-              const asset = res.assets[0];
-              setPhotoUri(
-                asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri
-              );
-            }
-          },
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ]
-    );
+    setIsPhotoPickerOpen(true);
+  };
+
+  const handleSelectCamera = async () => {
+    setIsPhotoPickerOpen(false);
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Camera permission is required.');
+      return;
+    }
+    const res = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.2,
+      base64: true,
+    });
+    if (!res.canceled && res.assets && res.assets[0]) {
+      const asset = res.assets[0];
+      setPhotoUri(
+        asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri
+      );
+    }
+  };
+
+  const handleSelectGallery = async () => {
+    setIsPhotoPickerOpen(false);
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Gallery permission is required.');
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.2,
+      base64: true,
+    });
+    if (!res.canceled && res.assets && res.assets[0]) {
+      const asset = res.assets[0];
+      setPhotoUri(
+        asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri
+      );
+    }
   };
 
   const handleOpenContactsPicker = async () => {
@@ -835,6 +826,21 @@ export const NewClientScreen: React.FC<NewClientScreenProps> = ({
           </View>
         </View>
       </Modal>
+
+      {/* Themed Photo Picker Modal */}
+      <PhotoPickerModal
+        visible={isPhotoPickerOpen}
+        title="Client Photo"
+        subtitle="Choose source for client profile picture"
+        hasExistingPhoto={!!photoUri}
+        onClose={() => setIsPhotoPickerOpen(false)}
+        onSelectCamera={handleSelectCamera}
+        onSelectGallery={handleSelectGallery}
+        onRemovePhoto={() => {
+          setIsPhotoPickerOpen(false);
+          setPhotoUri(null);
+        }}
+      />
     </KeyboardAvoidingView>
   );
 };

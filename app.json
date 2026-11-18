@@ -19,9 +19,17 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0f172a"
       },
-      "package": "com.shilpi.studio"
+      "package": "com.shilpi.studio",
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS"
+      ]
     },
     "plugins": [
+      "./plugins/withCleartextTraffic.js",
       [
         "expo-camera",
         {
@@ -35,6 +43,11 @@
         }
       ],
       "expo-sharing"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "31692297-243d-4c12-87d3-95d04776b65a"
+      }
+    }
   }
 }

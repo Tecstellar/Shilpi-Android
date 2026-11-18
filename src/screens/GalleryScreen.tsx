@@ -23,6 +23,7 @@ import Svg, { Path, Circle, Line } from 'react-native-svg';
 import { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { apiClient } from '../services/apiClient';
+import { PhotoPickerModal } from '../components/PhotoPickerModal';
 
 // ----------------- Bespoke SVG Icons ----------------- //
 
@@ -216,6 +217,12 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   const [shareInstaUrl, setShareInstaUrl] = useState('');
   const [isSharingPoster, setIsSharingPoster] = useState(false);
   const [menuLook, setMenuLook] = useState<GalleryLook | null>(null);
+  const [photoPickerTarget, setPhotoPickerTarget] = useState<{
+    look: GalleryLook;
+    slotIndex: number;
+    label: string;
+    hasExisting: boolean;
+  } | null>(null);
   const posterShotRef = useRef<any>(null);
 
   const cacheKey = beauticianId ? `@shilpi_gallery_${beauticianId}` : null;
@@ -435,20 +442,7 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
   };
 
   const handleTapSlot = (look: GalleryLook, slotIndex: number, label: string, hasExisting: boolean) => {
-    const buttons: any[] = [
-      { text: 'Take Photo (Camera)', onPress: () => pickImageFromSource('camera', look, slotIndex) },
-      { text: 'Choose from Gallery', onPress: () => pickImageFromSource('gallery', look, slotIndex) },
-    ];
-    if (hasExisting) {
-      buttons.push({
-        text: 'Remove Photo',
-        style: 'destructive',
-        onPress: () => removeSlotPhoto(look, slotIndex),
-      });
-    }
-    buttons.push({ text: 'Cancel', style: 'cancel' });
-
-    Alert.alert(label, 'Add or update photo using Camera or Gallery:', buttons);
+    setPhotoPickerTarget({ look, slotIndex, label, hasExisting });
   };
 
   const handleOpenShareModal = (look: GalleryLook) => {
@@ -1236,6 +1230,33 @@ export const GalleryScreen: React.FC<GalleryScreenProps> = ({
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Modal 4: Custom Themed Photo Picker */}
+      <PhotoPickerModal
+        visible={Boolean(photoPickerTarget)}
+        title={photoPickerTarget?.label || 'Portfolio Photo'}
+        subtitle="Add or update photo from Camera or Gallery"
+        hasExistingPhoto={Boolean(photoPickerTarget?.hasExisting)}
+        onClose={() => setPhotoPickerTarget(null)}
+        onSelectCamera={() => {
+          if (!photoPickerTarget) return;
+          const { look, slotIndex } = photoPickerTarget;
+          setPhotoPickerTarget(null);
+          pickImageFromSource('camera', look, slotIndex);
+        }}
+        onSelectGallery={() => {
+          if (!photoPickerTarget) return;
+          const { look, slotIndex } = photoPickerTarget;
+          setPhotoPickerTarget(null);
+          pickImageFromSource('gallery', look, slotIndex);
+        }}
+        onRemovePhoto={() => {
+          if (!photoPickerTarget) return;
+          const { look, slotIndex } = photoPickerTarget;
+          setPhotoPickerTarget(null);
+          removeSlotPhoto(look, slotIndex);
+        }}
+      />
     </View>
   );
 };

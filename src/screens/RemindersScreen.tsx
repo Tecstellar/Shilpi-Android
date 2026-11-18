@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,34 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
 import { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { Booking, ReminderRecord, first } from '../data/prototypeData';
+import {
+  openWhatsAppDirect,
+  getGeneralReminderMessage,
+} from '../utils/whatsappHelper';
+
+const WhatsAppIcon = ({ color = '#25D366', size = 16 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M20.5 11.8A8.5 8.5 0 0 1 7.9 19.3L3.5 20.5l1.3-4.3A8.5 8.5 0 1 1 20.5 11.8z"
+      stroke={color}
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M9.5 8.5c-.3 0-.7.1-.9.4-.4.4-.9 1.1-.9 2.2 0 1.2.9 2.4 1.1 2.6.2.2 1.7 2.7 4.2 3.7 2 .8 2.5.7 2.9.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2-.1-.1-.3-.2-.7-.4s-2.1-1-2.4-1.2c-.3-.1-.5-.2-.7.2-.2.3-.8 1-.9 1.2-.2.2-.3.2-.7 0-.4-.2-1.6-.6-3-1.9-1.1-1-1.9-2.2-2.1-2.6-.2-.4 0-.6.2-.8.2-.2.4-.4.5-.6.2-.2.2-.4.3-.6.1-.2 0-.4 0-.6-.1-.2-.8-1.9-1.1-2.6z"
+      fill={color}
+    />
+  </Svg>
+);
 
 const SHORT_MONTHS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -54,6 +76,202 @@ const CheckVectorIcon = () => (
     <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
+
+const animStyles = StyleSheet.create({
+  touchArea: {
+    padding: 4,
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  boxContainer: {
+    width: 26,
+    height: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  box: {
+    width: 21,
+    height: 21,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.8,
+  },
+  boxPending: {
+    borderColor: 'rgba(18, 18, 18, 0.28)',
+    backgroundColor: '#ffffff',
+  },
+  boxDone: {
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+});
+
+interface UniqueReminderCheckboxProps {
+  isDone: boolean;
+  onToggle: () => void;
+  accentColor: string;
+}
+
+const UniqueReminderCheckbox: React.FC<UniqueReminderCheckboxProps> = ({
+  isDone,
+  onToggle,
+  accentColor,
+}) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const checkScaleAnim = useRef(new Animated.Value(isDone ? 1 : 0)).current;
+  const [internalDone, setInternalDone] = useState(isDone);
+  const isFirstRender = useRef(true);
+  const isSelfAnimating = useRef(false);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (isDone && !internalDone && !isSelfAnimating.current) {
+      // Triggered externally (e.g. from 3-dots menu "Mark as Done")
+      // Automatic shrink then marked as done animation
+      Animated.timing(scaleAnim, {
+        toValue: 0.58,
+        duration: 160,
+        useNativeDriver: true,
+      }).start(() => {
+        setInternalDone(true);
+        checkScaleAnim.setValue(0.2);
+        Animated.parallel([
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            friction: 4,
+            tension: 190,
+            useNativeDriver: true,
+          }),
+          Animated.spring(checkScaleAnim, {
+            toValue: 1,
+            friction: 4.5,
+            tension: 200,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      });
+    } else if (!isDone) {
+      setInternalDone(false);
+      checkScaleAnim.setValue(0);
+    }
+  }, [isDone, internalDone]);
+
+  const handlePress = () => {
+    if (isSelfAnimating.current) return;
+
+    if (!internalDone) {
+      // 1. Automatic shrink first!
+      isSelfAnimating.current = true;
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch {}
+
+      Animated.timing(scaleAnim, {
+        toValue: 0.58,
+        duration: 170,
+        useNativeDriver: true,
+      }).start(() => {
+        // 2. Once shrunk, mark as done!
+        setInternalDone(true);
+        checkScaleAnim.setValue(0.2);
+        try {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch {}
+
+        // 3. Spring expand back to normal scale with checkmark populated
+        Animated.parallel([
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            friction: 4,
+            tension: 190,
+            useNativeDriver: true,
+          }),
+          Animated.spring(checkScaleAnim, {
+            toValue: 1,
+            friction: 4.5,
+            tension: 200,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          isSelfAnimating.current = false;
+        });
+
+        onToggle();
+      });
+    } else {
+      // Tapping to un-check
+      isSelfAnimating.current = true;
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch {}
+
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 0.8,
+          duration: 90,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 5,
+          tension: 180,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setInternalDone(false);
+        checkScaleAnim.setValue(0);
+        isSelfAnimating.current = false;
+      });
+
+      onToggle();
+    }
+  };
+
+  const displayedDone = internalDone;
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={handlePress}
+      style={animStyles.touchArea}
+    >
+      <View style={animStyles.boxContainer}>
+        {/* Core Animated Checkbox Body */}
+        <Animated.View
+          style={[
+            animStyles.box,
+            displayedDone
+              ? [animStyles.boxDone, { backgroundColor: accentColor, borderColor: accentColor }]
+              : animStyles.boxPending,
+            { transform: [{ scale: scaleAnim }] },
+          ]}
+        >
+          {displayedDone && (
+            <Animated.View style={{ transform: [{ scale: checkScaleAnim }] }}>
+              <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M20 6L9 17l-5-5"
+                  stroke="#ffffff"
+                  strokeWidth={3.2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+            </Animated.View>
+          )}
+        </Animated.View>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 const MoreVerticalIcon = () => (
   <Svg width={16} height={16} viewBox="0 0 24 24" fill="rgba(18, 18, 18, 0.45)">
@@ -175,6 +393,61 @@ export const RemindersScreen: React.FC<RemindersScreenProps> = ({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const [modalOpen, setModalOpen] = useState(false);
+  const [toastText, setToastText] = useState<string>('');
+  const [lastToggledId, setLastToggledId] = useState<string | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const toastAnim = useRef(new Animated.Value(0)).current;
+
+  const handleToggleReminderWithCelebration = (reminderId: string, currentDone: boolean, text: string) => {
+    const nextDone = !currentDone;
+    if (nextDone) {
+      setToastText(text);
+      setLastToggledId(reminderId);
+      setShowToast(true);
+      toastAnim.setValue(0);
+
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {}
+
+      Animated.sequence([
+        Animated.spring(toastAnim, {
+          toValue: 1,
+          friction: 6,
+          tension: 110,
+          useNativeDriver: true,
+        }),
+        Animated.delay(3200),
+        Animated.timing(toastAnim, {
+          toValue: 0,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setShowToast(false);
+      });
+    } else {
+      Animated.timing(toastAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
+        setShowToast(false);
+      });
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch {}
+    }
+    onToggleReminder(reminderId);
+  };
+
+  const handleUndoToast = () => {
+    if (lastToggledId) {
+      onToggleReminder(lastToggledId);
+      Animated.timing(toastAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
+        setShowToast(false);
+      });
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch {}
+    }
+  };
   const [editingItem, setEditingItem] = useState<ReminderRecord | null>(null);
   const [menuItem, setMenuItem] = useState<ReminderRecord | null>(null);
 
@@ -402,6 +675,37 @@ export const RemindersScreen: React.FC<RemindersScreenProps> = ({
     ]);
   };
 
+  const handleSendReminderOnWhatsApp = (item: ReminderRecord) => {
+    const linkedBooking = item.bookingId ? bookingLookup[item.bookingId] : undefined;
+    let clientName: string | undefined = linkedBooking ? linkedBooking.client : undefined;
+    let clientPhone: string | undefined;
+
+    if (!clientName && bookings && bookings.length > 0) {
+      for (const b of bookings) {
+        if (b.client && item.text.toLowerCase().includes(b.client.toLowerCase())) {
+          clientName = b.client;
+          const match = `${b.notes || ''} ${b.address || ''}`.match(/(?:\+91|0)?[6-9]\d{9}/);
+          if (match) clientPhone = match[0];
+          break;
+        }
+      }
+    }
+
+    if (linkedBooking) {
+      const match = `${linkedBooking.notes || ''} ${linkedBooking.address || ''}`.match(/(?:\+91|0)?[6-9]\d{9}/);
+      if (match) clientPhone = match[0];
+    }
+
+    const msg = getGeneralReminderMessage({
+      clientName,
+      reminderText: item.text,
+      artistName: 'Artist',
+      studioName: 'Shilpi Studio',
+    });
+
+    openWhatsAppDirect(clientPhone, msg);
+  };
+
   const formattedTimeLabel = `${pickerHour}:${String(pickerMinute).padStart(2, '0')} ${pickerPeriod}`;
 
   return (
@@ -458,42 +762,63 @@ export const RemindersScreen: React.FC<RemindersScreenProps> = ({
                         idx === group.items.length - 1 && styles.reminderRowLast,
                       ]}
                     >
-                      <TouchableOpacity
-                        style={styles.reminderToggleArea}
-                        onPress={() => onToggleReminder(item.id)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[styles.checkBox, isDone && styles.checkBoxDone]}>
-                          {isDone && <CheckVectorIcon />}
-                        </View>
+                      <View style={styles.reminderToggleArea}>
+                        <UniqueReminderCheckbox
+                          isDone={isDone}
+                          onToggle={() => handleToggleReminderWithCelebration(item.id, isDone, item.text)}
+                          accentColor={colors.accent}
+                        />
 
-                        <View style={styles.reminderDetails}>
-                          <Text
-                            style={[
-                              styles.reminderText,
-                              isDone && styles.reminderTextDone,
-                            ]}
-                          >
-                            {item.text}
-                          </Text>
+                        <TouchableOpacity
+                          style={styles.reminderDetails}
+                          onPress={() => handleToggleReminderWithCelebration(item.id, isDone, item.text)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                            <Text
+                              style={[
+                                styles.reminderText,
+                                isDone && styles.reminderTextDone,
+                              ]}
+                            >
+                              {item.text}
+                            </Text>
+                            {isDone && (
+                              <View style={[styles.doneBadge, { backgroundColor: colors.accent + '20' }]}>
+                                <Text style={[styles.doneBadgeText, { color: colors.accent }]}>DONE</Text>
+                              </View>
+                            )}
+                          </View>
                           <Text style={styles.reminderMeta}>
                             {datePart}
                             {timePart ? `${timePart} · ` : ''}
                             {item.kind || 'General'}
                             {linkedBooking ? ` · ${first(linkedBooking.client)}` : ''}
                           </Text>
-                        </View>
-                      </TouchableOpacity>
+                        </TouchableOpacity>
+                      </View>
 
-                      <TouchableOpacity
-                        style={styles.moreBtn}
-                        onPress={() => setMenuItem(item)}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        accessibilityLabel={`Options for ${item.text}`}
-                        activeOpacity={0.7}
-                      >
-                        <MoreVerticalIcon />
-                      </TouchableOpacity>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <TouchableOpacity
+                          style={styles.moreBtn}
+                          onPress={() => handleSendReminderOnWhatsApp(item)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityLabel={`Send reminder on WhatsApp`}
+                          activeOpacity={0.7}
+                        >
+                          <WhatsAppIcon color="#25D366" size={17} />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.moreBtn}
+                          onPress={() => setMenuItem(item)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityLabel={`Options for ${item.text}`}
+                          activeOpacity={0.7}
+                        >
+                          <MoreVerticalIcon />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   );
                 })}
@@ -512,6 +837,61 @@ export const RemindersScreen: React.FC<RemindersScreenProps> = ({
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Floating Celebratory Toast */}
+      {showToast && (
+        <Animated.View
+          pointerEvents="box-none"
+          style={[
+            styles.celebrationToastWrap,
+            {
+              bottom: Math.max(insets.bottom + 16, 24),
+              transform: [
+                {
+                  translateY: toastAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [100, 0],
+                  }),
+                },
+                {
+                  scale: toastAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.85, 1],
+                  }),
+                },
+              ],
+              opacity: toastAnim,
+            },
+          ]}
+        >
+          <View style={[styles.celebrationToast, { borderColor: colors.accent + '40' }]}>
+            <View style={[styles.toastCheckCircle, { backgroundColor: colors.accent }]}>
+              <Svg width={13} height={13} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M20 6L9 17l-5-5"
+                  stroke="#ffffff"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+            </View>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={styles.toastTitle}>Marked as Done</Text>
+              <Text style={styles.toastSubtitle} numberOfLines={1}>
+                {toastText}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.toastUndoButton, { borderColor: colors.accent }]}
+              onPress={handleUndoToast}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.toastUndoText, { color: colors.accent }]}>Undo</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
 
       {/* Row Action Menu Modal */}
       <Modal
@@ -542,13 +922,32 @@ export const RemindersScreen: React.FC<RemindersScreenProps> = ({
                   onPress={() => {
                     const target = menuItem;
                     setMenuItem(null);
-                    onToggleReminder(target.id);
+                    if (target) {
+                      handleToggleReminderWithCelebration(target.id, !!target.isCompleted, target.text);
+                    }
                   }}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.menuOptionText}>
                     {menuItem.isCompleted ? 'Mark as Pending' : 'Mark as Done'}
                   </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.menuOptionBtn}
+                  onPress={() => {
+                    const target = menuItem;
+                    setMenuItem(null);
+                    if (target) {
+                      handleSendReminderOnWhatsApp(target);
+                    }
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <WhatsAppIcon color="#25D366" size={16} />
+                    <Text style={styles.menuOptionText}>Send on WhatsApp</Text>
+                  </View>
                 </TouchableOpacity>
 
                 {onUpdateReminder && (
@@ -1484,5 +1883,66 @@ const createStyles = (colors: ThemeColors) =>
     fontWeight: '700',
     letterSpacing: 0.8,
     color: '#ffffff',
+  },
+  doneBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+  },
+  doneBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  celebrationToastWrap: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    zIndex: 9999,
+    alignItems: 'center',
+  },
+  celebrationToast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 10,
+    width: '100%',
+  },
+  toastCheckCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  toastTitle: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  toastSubtitle: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 11,
+    marginTop: 1,
+  },
+  toastUndoButton: {
+    paddingVertical: 5,
+    paddingHorizontal: 11,
+    borderRadius: 10,
+    borderWidth: 1.2,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  toastUndoText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });

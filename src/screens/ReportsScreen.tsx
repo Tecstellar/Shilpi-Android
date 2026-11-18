@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,15 +12,21 @@ import {
   Modal,
   TouchableWithoutFeedback,
   Linking,
+  Platform,
 } from 'react-native';
 import Svg, { Path, Rect, Circle, Line, Polyline } from 'react-native-svg';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import * as Print from 'expo-print';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { Booking, ExpenseRecord, fmt } from '../data/prototypeData';
+import {
+  openWhatsAppDirect,
+  getPaymentReminderMessage,
+} from '../utils/whatsappHelper';
 
 interface ReportsScreenProps {
   bookings?: Booking[];
@@ -74,6 +80,28 @@ function parseExpenseDayLocal(e: ExpenseRecord, fallbackYear: number): Date | nu
 
 function bookingTotalAmount(b: Booking): number {
   return b.items.reduce((s, item) => s + (item.price || 0), 0) + (b.travel || 0);
+}
+
+function formatBookingDisplayDate(b: Booking, fallbackYear?: number): string {
+  if (b.day && b.month) {
+    const yr = b.year || fallbackYear || '';
+    return `${b.day} ${b.month}${yr ? ` ${yr}` : ''}`.trim();
+  }
+  const raw = String(b.bookingDate || '');
+  if (raw) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+    if (m) {
+      const yr = Number(m[1]);
+      const mIdx = Number(m[2]) - 1;
+      const day = Number(m[3]);
+      return `${day} ${MONTH_SHORT_ARR[mIdx] || ''} ${yr}`;
+    }
+    return raw.split('T')[0];
+  }
+  if (b.dateLong) {
+    return b.dateLong.split('T')[0];
+  }
+  return '—';
 }
 
 // Premium Vector Icons
@@ -172,7 +200,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
       const parsed = new Date(registeredAt);
       if (!Number.isNaN(parsed.getTime())) return parsed;
     }
-    return new Date(currentYear, currentMonthIdx - 11, 1);
+    return new Date(currentYear, currentMonthIdx, 1);
   }, [registeredAt, currentYear, currentMonthIdx]);
 
   const minSerial = toMonthSerial(regDate.getFullYear(), regDate.getMonth());
@@ -182,17 +210,25 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
   const [topTab, setTopTab] = useState<'Monthly' | 'Summary'>('Monthly');
 
   // Month Slider State for Monthly View
-  const [selectedSerial, setSelectedSerial] = useState<number>(currentSerial);
+  const [selectedSerial, setSelectedSerial] = useState<number>(() => Math.max(minSerial, currentSerial));
+
+  useEffect(() => {
+    setSelectedSerial((prev) => Math.max(minSerial, prev));
+  }, [minSerial]);
 
   // SUB-TAB inside Monthly View: 'Overview' vs 'DayWise'
   const [monthlySubTab, setMonthlySubTab] = useState<'Overview' | 'DayWise'>('Overview');
 
-  // Summary Slider State: Year expansion and active month expansion
-  const [summaryYearExpanded, setSummaryYearExpanded] = useState<boolean>(true);
-  const [expandedSummaryMonth, setExpandedSummaryMonth] = useState<number | null>(currentMonthIdx);
+  // Summary Slider State: Year expansion and active month expansion (defaultly collapsed / hidden)
+  const [summaryYearExpanded, setSummaryYearExpanded] = useState<boolean>(false);
+  const [expandedSummaryMonth, setExpandedSummaryMonth] = useState<number | null>(null);
 
   // Preview Modal
   const [previewOpen, setPreviewOpen] = useState(false);
+
+  // Debounce/Lock states for exports to prevent concurrent sharing rejection
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
 
   // Animated Month Slider
   const slideOffset = useRef(new Animated.Value(0)).current;
@@ -389,22 +425,50 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
 
   // Annual Summary for the "Summary" slider (All Years / 2026 -> Months -> Date/Item Details)
   const annualSummary = useMemo(() => {
+    const regYear = regDate.getFullYear();
+    const regMonthIdx = regDate.getMonth();
+
     const yearBookings = bookings.filter((b) => {
       const dt = parseBookingDayLocal(b, selectedYear);
-      return dt.getFullYear() === selectedYear;
+      if (dt.getFullYear() !== selectedYear) return false;
+      // Do not include dates before registration
+      if (selectedYear === regYear && dt.getMonth() < regMonthIdx) return false;
+      if (selectedYear < regYear) return false;
+      return true;
     });
 
     const yearTotalSales = yearBookings.reduce((sum, b) => sum + bookingTotalAmount(b), 0);
     const yearExpenses = expenses
       .filter((e) => {
         const dt = parseExpenseDayLocal(e, selectedYear);
-        return dt && dt.getFullYear() === selectedYear;
+        if (!dt || dt.getFullYear() !== selectedYear) return false;
+        if (selectedYear === regYear && dt.getMonth() < regMonthIdx) return false;
+        if (selectedYear < regYear) return false;
+        return true;
       })
       .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
 
     const yearProfit = yearTotalSales - yearExpenses;
 
-    const months = Array.from({ length: 12 }, (_, mIdx) => {
+    // Determine the start month for the year
+    // If selectedYear is the registration year, start STRICTLY from regMonthIdx (e.g. November)
+    // If selectedYear is before registration year, no months should exist
+    // If selectedYear is after registration year, start from January (0)
+    const startMonthIdx = selectedYear === regYear ? regMonthIdx : selectedYear > regYear ? 0 : 12;
+
+    const months: Array<{
+      monthIdx: number;
+      monthName: string;
+      monthShort: string;
+      billsCount: number;
+      sales: number;
+      expenses: number;
+      profit: number;
+      grandTotal: number;
+      bookings: Booking[];
+    }> = [];
+
+    for (let mIdx = startMonthIdx; mIdx < 12; mIdx++) {
       const mBookings = yearBookings.filter((b) => {
         const dt = parseBookingDayLocal(b, selectedYear);
         return dt.getMonth() === mIdx;
@@ -420,7 +484,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
 
       const mProfit = mSales - mExp;
 
-      return {
+      months.push({
         monthIdx: mIdx,
         monthName: MONTH_LONG_ARR[mIdx],
         monthShort: MONTH_SHORT_ARR[mIdx],
@@ -430,8 +494,8 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
         profit: mProfit,
         grandTotal: mSales,
         bookings: mBookings,
-      };
-    });
+      });
+    }
 
     return {
       year: selectedYear,
@@ -441,70 +505,534 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
       yearProfit,
       months,
     };
-  }, [bookings, expenses, selectedYear]);
+  }, [bookings, expenses, selectedYear, regDate]);
 
-  // Export CSV Helpers
-  const generateMonthCsv = (targetMonthName: string, targetYear: number, bList: Booking[]) => {
-    let csv = `Date,Client Name,Items,Amount (INR),Status\n`;
-    bList.forEach((b) => {
-      const itemsList = b.items.map((i) => i.name).join(' + ');
-      csv += `"${b.bookingDate || `${b.day} ${b.month}`}","${b.client}","${itemsList}",${bookingTotalAmount(b)},"${b.status}"\n`;
+  // Export Report Helpers (Native PDF & Native Excel .xls)
+  const generateReportHtml = (
+    mName: string,
+    targetYear: number,
+    sales: number,
+    exp: number,
+    profit: number,
+    dues: number,
+    bList: Booking[],
+    studio: string
+  ) => {
+    const dateStr = new Date().toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
     });
-    return csv;
+
+    const ordersRows = bList.length > 0 ? bList.map((b, idx) => {
+      const itemsList = b.items.map((i) => i.name).join(', ') || 'Photography / Video Service';
+      const total = bookingTotalAmount(b);
+      const paid = (b as any).paidAmount !== undefined ? (b as any).paidAmount : (b.advance || 0);
+      const due = Math.max(0, total - paid);
+      return `
+        <tr style="border-bottom: 1px solid #E2E8F0;">
+          <td style="padding: 10px 12px; font-size: 13px; color: #64748B; font-weight: 600;">#${idx + 1}</td>
+          <td style="padding: 10px 12px; font-size: 13px; color: #1E293B; font-weight: 600;">${formatBookingDisplayDate(b, targetYear)}</td>
+          <td style="padding: 10px 12px; font-size: 13px; color: #0F172A; font-weight: 700;">${b.client}</td>
+          <td style="padding: 10px 12px; font-size: 13px; color: #334155;">${itemsList}</td>
+          <td style="padding: 10px 12px; font-size: 13px; text-align: right; font-weight: 700; color: #0F172A;">₹${total.toLocaleString('en-IN')}</td>
+          <td style="padding: 10px 12px; font-size: 13px; text-align: right; font-weight: 600; color: ${due > 0 ? '#DC2626' : '#16A34A'};">
+            ${due > 0 ? `₹${due.toLocaleString('en-IN')}` : '₹0'}
+          </td>
+          <td style="padding: 10px 12px; font-size: 12px; text-align: center;">
+            <span style="display: inline-block; padding: 4px 10px; border-radius: 999px; background: #F1F5F9; color: #334155; font-weight: 700; text-transform: uppercase; font-size: 11px;">${b.status}</span>
+          </td>
+        </tr>
+      `;
+    }).join('') : `
+      <tr>
+        <td colspan="7" style="padding: 24px; text-align: center; color: #94A3B8; font-size: 14px;">No transactions recorded for this period.</td>
+      </tr>
+    `;
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Shilpi Studio Report - ${mName} ${targetYear}</title>
+          <style>
+            @page {
+              margin: 15mm;
+              size: A4 portrait;
+            }
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              color: #0F172A;
+              background: #FFFFFF;
+              margin: 0;
+              padding: 0;
+              line-height: 1.5;
+            }
+            .header-box {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              border-bottom: 2px solid #0F172A;
+              padding-bottom: 16px;
+              margin-bottom: 24px;
+            }
+            .brand-name {
+              font-size: 24px;
+              font-weight: 900;
+              letter-spacing: -0.5px;
+              color: #0F172A;
+              margin: 0;
+              text-transform: uppercase;
+            }
+            .brand-subtitle {
+              font-size: 12px;
+              color: #64748B;
+              font-weight: 600;
+              letter-spacing: 0.5px;
+              margin-top: 4px;
+            }
+            .period-title {
+              font-size: 20px;
+              font-weight: 800;
+              color: #FF2E93;
+              text-align: right;
+              margin: 0;
+            }
+            .generated-date {
+              font-size: 11px;
+              color: #64748B;
+              text-align: right;
+              margin-top: 4px;
+            }
+            .kpi-container {
+              display: flex;
+              gap: 12px;
+              margin-bottom: 28px;
+            }
+            .kpi-card {
+              flex: 1;
+              padding: 14px;
+              border-radius: 10px;
+              background: #F8FAFC;
+              border: 1px solid #E2E8F0;
+            }
+            .kpi-label {
+              font-size: 10px;
+              font-weight: 700;
+              color: #64748B;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin-bottom: 6px;
+            }
+            .kpi-value {
+              font-size: 18px;
+              font-weight: 900;
+              color: #0F172A;
+            }
+            .table-heading {
+              font-size: 14px;
+              font-weight: 800;
+              color: #0F172A;
+              margin-bottom: 12px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 24px;
+            }
+            thead th {
+              background-color: #0F172A;
+              color: #FFFFFF;
+              font-size: 11px;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              padding: 10px 12px;
+              text-align: left;
+            }
+            .footer-box {
+              margin-top: 24px;
+              border-top: 1px solid #E2E8F0;
+              padding-top: 12px;
+              display: flex;
+              justify-content: space-between;
+              font-size: 11px;
+              color: #94A3B8;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header-box">
+            <div>
+              <h1 class="brand-name">${studio || 'SHILPI STUDIO'}</h1>
+              <div class="brand-subtitle">MONTHLY BUSINESS PERFORMANCE REPORT</div>
+            </div>
+            <div>
+              <div class="period-title">${mName} ${targetYear}</div>
+              <div class="generated-date">Exported on ${dateStr}</div>
+            </div>
+          </div>
+
+          <div class="kpi-container">
+            <div class="kpi-card">
+              <div class="kpi-label">Total Sales</div>
+              <div class="kpi-value">₹${sales.toLocaleString('en-IN')}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Expenses</div>
+              <div class="kpi-value">₹${exp.toLocaleString('en-IN')}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Net Profit</div>
+              <div class="kpi-value" style="color: ${profit >= 0 ? '#16A34A' : '#DC2626'};">₹${profit.toLocaleString('en-IN')}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Pending Dues</div>
+              <div class="kpi-value" style="color: ${dues > 0 ? '#D97706' : '#16A34A'};">₹${dues.toLocaleString('en-IN')}</div>
+            </div>
+          </div>
+
+          <div class="table-heading">Bookings & Orders List (${bList.length})</div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 35px;">#</th>
+                <th>Date</th>
+                <th>Client</th>
+                <th>Services / Items</th>
+                <th style="text-align: right;">Total Amount</th>
+                <th style="text-align: right;">Pending Due</th>
+                <th style="text-align: center;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${ordersRows}
+            </tbody>
+          </table>
+
+          <div class="footer-box">
+            <div>Generated by Shilpi Studio Management ERP</div>
+            <div>Official Business Document</div>
+          </div>
+        </body>
+      </html>
+    `;
+  };
+
+  const generateMonthExcel = (
+    mName: string,
+    targetYear: number,
+    sales: number,
+    exp: number,
+    profit: number,
+    dues: number,
+    bList: Booking[],
+    studio: string
+  ) => {
+    const dateStr = new Date().toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+
+    const esc = (val: any) => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const lines: string[] = [];
+
+    // Header & Studio Metadata
+    lines.push(`${esc(studio || 'SHILPI STUDIO')}`);
+    lines.push(`${esc(`Monthly Business Performance Report — ${mName} ${targetYear}`)}`);
+    lines.push(`${esc(`Report Generated: ${dateStr}`)}`);
+    lines.push('');
+
+    // Financial KPI Summary Block
+    lines.push(`${esc('FINANCIAL KPI OVERVIEW')},${esc('AMOUNT (INR)')},${esc('REMARKS')}`);
+    lines.push(`${esc('Total Gross Sales')},${sales},${esc('Gross revenue from client bookings')}`);
+    lines.push(`${esc('Total Studio Expenses')},${exp},${esc('Studio operational and staff expenses')}`);
+    lines.push(`${esc('Net Profit')},${profit},${esc(profit >= 0 ? 'Operating Profit' : 'Operating Deficit')}`);
+    lines.push(`${esc('Pending Client Dues')},${dues},${esc('Uncollected customer balance dues')}`);
+    lines.push('');
+
+    // Booking Details Section
+    lines.push(`${esc('BOOKING TRANSACTIONS BREAKDOWN')}`);
+    lines.push(
+      [
+        esc('#'),
+        esc('Date'),
+        esc('Client Name'),
+        esc('Contact Number'),
+        esc('Services / Items'),
+        esc('Payment Mode'),
+        esc('Total Amount (INR)'),
+        esc('Paid Amount (INR)'),
+        esc('Balance Due (INR)'),
+        esc('Status'),
+      ].join(',')
+    );
+
+    if (bList.length === 0) {
+      lines.push(`${esc('No bookings recorded for this month.')},,,,,,,,,`);
+    } else {
+      bList.forEach((b, idx) => {
+        const itemsList = b.items.map((i) => i.name).join(' + ') || 'Service';
+        const total = bookingTotalAmount(b);
+        const paid = (b as any).paidAmount !== undefined ? (b as any).paidAmount : (b.advance || 0);
+        const due = Math.max(0, total - paid);
+        const phone = (b as any).phone || (b as any).clientPhone || '';
+        const payMethod = (b as any).paymentMethod || (b as any).mode || (paid >= total ? 'Full' : 'Partial');
+
+        lines.push(
+          [
+            esc(idx + 1),
+            esc(formatBookingDisplayDate(b, targetYear)),
+            esc(b.client),
+            esc(phone),
+            esc(itemsList),
+            esc(payMethod),
+            total,
+            paid,
+            due,
+            esc(b.status),
+          ].join(',')
+        );
+      });
+
+      const totOrdersAmount = bList.reduce((acc, b) => acc + bookingTotalAmount(b), 0);
+      const totPaidAmount = bList.reduce(
+        (acc, b) => acc + ((b as any).paidAmount !== undefined ? (b as any).paidAmount : (b.advance || 0)),
+        0
+      );
+      const totDueAmount = Math.max(0, totOrdersAmount - totPaidAmount);
+      lines.push('');
+      lines.push(
+        [
+          esc('TOTAL'),
+          esc(''),
+          esc(`${bList.length} Bookings`),
+          esc(''),
+          esc(''),
+          esc(''),
+          totOrdersAmount,
+          totPaidAmount,
+          totDueAmount,
+          esc(''),
+        ].join(',')
+      );
+    }
+
+    // Prepend UTF-8 Byte Order Mark so Excel Mobile / Desktop, Google Sheets & Numbers parse as UTF-8
+    return '\uFEFF' + lines.join('\r\n');
   };
 
   const handleDownloadExcel = async (customMonthName?: string, customBookings?: Booking[]) => {
+    if (isExportingExcel) return;
+    setIsExportingExcel(true);
     try {
       const mName = customMonthName || selectedMonthLong;
-      const bList = customBookings || monthData.monthBookings;
-      const csv = generateMonthCsv(mName, selectedYear, bList);
-      const fileName = `Shilpi_Report_${mName}_${selectedYear}.csv`;
-      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
-      await FileSystem.writeAsStringAsync(fileUri, csv, { encoding: FileSystem.EncodingType.UTF8 });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'text/csv',
-          dialogTitle: `Download ${fileName}`,
-          UTI: 'public.comma-separated-values-text',
-        });
-      } else {
-        Alert.alert('Report Ready', `Saved report to ${fileName}`);
+      const bList =
+        customBookings ||
+        (customMonthName
+          ? annualSummary.months.find((x: any) => x.monthName === customMonthName)?.bookings || []
+          : monthData.monthBookings);
+
+      let sales = monthData.totalSales;
+      let exp = monthData.totalExpense;
+      let profit = monthData.profit;
+      let dues = monthData.pendingDues;
+      if (customMonthName) {
+        const foundM = annualSummary.months.find((x: any) => x.monthName === customMonthName);
+        if (foundM) {
+          sales = foundM.sales;
+          exp = foundM.expenses;
+          profit = foundM.profit;
+          dues = bList.reduce((acc: number, b: Booking) => {
+            const tot = bookingTotalAmount(b);
+            const pd = (b as any).paidAmount !== undefined ? (b as any).paidAmount : (b.advance || 0);
+            return acc + Math.max(0, tot - pd);
+          }, 0);
+        }
       }
-    } catch {
-      Alert.alert('Export Notice', 'Excel CSV format prepared.');
+
+      const csvContent = generateMonthExcel(mName, selectedYear, sales, exp, profit, dues, bList, studioName || '');
+      const fileName = `Shilpi_Report_${mName}_${selectedYear}.csv`;
+      const targetUri = `${FileSystem.cacheDirectory}${fileName}`;
+
+      try {
+        const info = await FileSystem.getInfoAsync(targetUri);
+        if (info.exists) {
+          await FileSystem.deleteAsync(targetUri, { idempotent: true });
+        }
+      } catch (checkErr) {
+        console.warn('File existence check warning:', checkErr);
+      }
+
+      await FileSystem.writeAsStringAsync(targetUri, csvContent, { encoding: FileSystem.EncodingType.UTF8 });
+
+      let shareableUri = targetUri;
+      if (Platform.OS === 'android') {
+        try {
+          shareableUri = await FileSystem.getContentUriAsync(targetUri);
+        } catch (contentErr) {
+          console.warn('Could not resolve content URI for CSV:', contentErr);
+          shareableUri = targetUri;
+        }
+      }
+
+      if (await Sharing.isAvailableAsync()) {
+        try {
+          await Sharing.shareAsync(shareableUri, {
+            mimeType: 'text/csv',
+            dialogTitle: `Download ${fileName}`,
+            UTI: 'public.comma-separated-values-text',
+          });
+        } catch (shareErr) {
+          console.warn('Excel share error or dismiss:', shareErr);
+          Alert.alert('Report Ready', `Spreadsheet created as ${fileName}`);
+        }
+      } else {
+        Alert.alert('Report Ready', `Saved spreadsheet to ${fileName}`);
+      }
+    } catch (error) {
+      console.error('Error generating Excel export:', error);
+      Alert.alert('Export Notice', 'Could not generate Excel spreadsheet. Please try again.');
+    } finally {
+      setIsExportingExcel(false);
     }
   };
 
-  const handleDownloadPdf = async (customMonthName?: string, customSales?: number, customExp?: number, customProfit?: number) => {
+  const handleDownloadPdf = async (
+    customMonthName?: string,
+    customSales?: number,
+    customExp?: number,
+    customProfit?: number,
+    customBookings?: Booking[]
+  ) => {
+    if (isExportingPdf) return;
+    setIsExportingPdf(true);
     try {
       const mName = customMonthName || selectedMonthLong;
+      const bList =
+        customBookings ||
+        (customMonthName
+          ? annualSummary.months.find((x: any) => x.monthName === customMonthName)?.bookings || []
+          : monthData.monthBookings);
       const sales = customSales !== undefined ? customSales : monthData.totalSales;
       const exp = customExp !== undefined ? customExp : monthData.totalExpense;
       const profit = customProfit !== undefined ? customProfit : monthData.profit;
+      const dues = bList.reduce((acc: number, b: Booking) => {
+        const tot = bookingTotalAmount(b);
+        const pd = (b as any).paidAmount !== undefined ? (b as any).paidAmount : (b.advance || 0);
+        return acc + Math.max(0, tot - pd);
+      }, 0);
 
-      const summaryText = `SHILPI STUDIO REPORT\n${mName} ${selectedYear}\n${studioName}\n\nTotal Sales: ${fmt(sales)}\nTotal Expenses: ${fmt(exp)}\nNet Profit: ${fmt(profit)}\nPending Dues: ${fmt(monthData.pendingDues)}\nBest Day: ${monthData.bestDayStr}\nBookings Count: ${monthData.monthBookings.length}`;
-      const fileName = `Shilpi_Report_${mName}_${selectedYear}.txt`;
-      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
-      await FileSystem.writeAsStringAsync(fileUri, summaryText, { encoding: FileSystem.EncodingType.UTF8 });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'text/plain',
-          dialogTitle: `Shilpi Studio Report PDF / Document`,
-        });
-      } else {
-        Alert.alert('Report Generated', `Generated for ${mName} ${selectedYear}`);
+      const html = generateReportHtml(mName, selectedYear, sales, exp, profit, dues, bList, studioName || '');
+
+      // 1. Generate PDF file via expo-print
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+
+      // 2. Put file in cacheDirectory with official report filename
+      const fileName = `Shilpi_Report_${mName}_${selectedYear}.pdf`;
+      const targetUri = `${FileSystem.cacheDirectory}${fileName}`;
+
+      let localUri = uri;
+      try {
+        const info = await FileSystem.getInfoAsync(targetUri);
+        if (info.exists) {
+          await FileSystem.deleteAsync(targetUri, { idempotent: true });
+        }
+        await FileSystem.copyAsync({ from: uri, to: targetUri });
+        localUri = targetUri;
+      } catch (copyErr) {
+        console.warn('Could not copy PDF to cache target, using print cache URI:', copyErr);
+        localUri = uri;
       }
-    } catch {
-      Alert.alert('Report Notice', 'Report document generated.');
+
+      // 3. Resolve Android content URI for FileProvider compatibility
+      let shareableUri = localUri;
+      if (Platform.OS === 'android') {
+        try {
+          shareableUri = await FileSystem.getContentUriAsync(localUri);
+        } catch (contentErr) {
+          console.warn('Could not resolve content URI for PDF:', contentErr);
+          shareableUri = localUri;
+        }
+      }
+
+      // 4. Try native sharing first, gracefully catch if rejected or dismissed
+      let shareSucceeded = false;
+      if (await Sharing.isAvailableAsync()) {
+        try {
+          await Sharing.shareAsync(shareableUri, {
+            mimeType: 'application/pdf',
+            dialogTitle: `Download ${fileName}`,
+            UTI: '.pdf',
+          });
+          shareSucceeded = true;
+        } catch (shareErr) {
+          console.warn('Sharing.shareAsync rejected or dismissed, opening Print fallback:', shareErr);
+        }
+      }
+
+      // 5. Permanent, 100% reliable fallback: Native OS Print / Save as PDF dialog
+      if (!shareSucceeded) {
+        await Print.printAsync({ html });
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      Alert.alert('Report Notice', 'Could not generate PDF report. Please try again.');
+    } finally {
+      setIsExportingPdf(false);
     }
   };
 
   const handleSendWhatsApp = () => {
     const text = `📊 *SHILPI STUDIO MONTHLY REPORT*\n*${selectedMonthLong} ${selectedYear}*\nStudio: ${studioName}\n\n💰 *Total Sales:* ${fmt(monthData.totalSales)}\n📉 *Total Expenses:* ${fmt(monthData.totalExpense)}\n💎 *Net Profit:* ${fmt(monthData.profit)}\n⏳ *Pending Balance:* ${fmt(monthData.pendingDues)}\n🏆 *Best Day:* ${monthData.bestDayStr}\n📋 *Orders:* ${monthData.monthBookings.length}\n\n— Generated with Shilpi ERP`;
-    const url = `whatsapp://send?text=${encodeURIComponent(text)}`;
-    Linking.openURL(url).catch(() => {
-      Share.share({ message: text });
+    openWhatsAppDirect(undefined, text);
+  };
+
+  const handleSendDueReminders = () => {
+    const unpaid = monthData.monthBookings.filter((b) => {
+      const total = bookingTotalAmount(b);
+      const paid = (b as any).paidAmount !== undefined ? (b as any).paidAmount : (b.advance || 0);
+      return total - paid > 0;
     });
+
+    if (unpaid.length === 0) {
+      Alert.alert('No Dues', 'All client balances are settled for this month.');
+      return;
+    }
+
+    const target = unpaid[0];
+    const targetTotal = bookingTotalAmount(target);
+    const targetPaid = (target as any).paidAmount !== undefined ? (target as any).paidAmount : (target.advance || 0);
+    const targetDue = Math.max(0, targetTotal - targetPaid);
+    const serviceNames = target.items.map((i) => i.name).join(' + ') || 'Styling';
+
+    const match = `${(target as any).phone || (target as any).clientPhone || ''} ${target.notes || ''} ${target.address || ''}`.match(/(?:\+91|0)?[6-9]\d{9}/);
+    const phone = match ? match[0] : undefined;
+
+    const msg = getPaymentReminderMessage({
+      clientName: target.client,
+      dateLong: target.dateLong,
+      serviceNames,
+      dueAmount: targetDue,
+      artistName: artistName || 'Artist',
+      studioName: studioName || 'Shilpi Studio',
+    });
+
+    openWhatsAppDirect(phone, msg);
   };
 
   const maxWeekly = Math.max(1, ...monthData.weeksData.map((w) => Math.max(w.sales, w.expenses)));
@@ -828,7 +1356,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                   <Text style={styles.pendingDuesKicker}>PENDING CLIENT DUES</Text>
                   <Text style={styles.pendingDuesAmount}>{fmt(monthData.pendingDues)}</Text>
                 </View>
-                <TouchableOpacity style={styles.remindBtn} onPress={handleSendWhatsApp} activeOpacity={0.8}>
+                <TouchableOpacity style={styles.remindBtn} onPress={handleSendDueReminders} activeOpacity={0.8}>
                   <WhatsAppIcon color="#ffffff" size={14} />
                   <Text style={styles.remindBtnText}>SEND REMINDERS</Text>
                 </TouchableOpacity>
@@ -1057,7 +1585,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                             <View key={b.id || bIdx} style={styles.detailedBookingRow}>
                               <View style={{ flex: 1, paddingRight: 8 }}>
                                 <Text style={styles.detailedBookingDate}>
-                                  {b.bookingDate || `${b.day} ${b.month}`}
+                                  {formatBookingDisplayDate(b, annualSummary.year)}
                                 </Text>
                                 <Text style={styles.detailedBookingClient}>{b.client}</Text>
                                 <Text style={styles.detailedBookingItems}>
@@ -1075,7 +1603,7 @@ export const ReportsScreen: React.FC<ReportsScreenProps> = ({
                         <View style={styles.monthDownloadBtnRow}>
                           <TouchableOpacity
                             style={styles.monthDownloadBtn}
-                            onPress={() => handleDownloadPdf(m.monthName, m.sales, m.expenses, m.profit)}
+                            onPress={() => handleDownloadPdf(m.monthName, m.sales, m.expenses, m.profit, m.bookings)}
                             activeOpacity={0.8}
                           >
                             <PdfDocumentIcon color="#121212" size={15} />

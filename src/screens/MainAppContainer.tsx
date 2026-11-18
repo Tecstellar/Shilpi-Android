@@ -1,9 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Platform, Alert } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { View, StyleSheet, TouchableOpacity, Text, Platform, Alert, BackHandler } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient } from '../services/apiClient';
 import { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
+import {
+  requestNotificationPermissions,
+  scheduleReminderNotification,
+  cancelReminderNotification,
+} from '../services/notificationService';
 import {
   INITIAL_PKG_GROUPS,
   Client,
@@ -21,6 +26,14 @@ import { TopHeader } from '../components/TopHeader';
 import { BottomTabBar, TabType } from '../components/BottomTabBar';
 import { DrawerMenu } from '../components/DrawerMenu';
 import { ActionBottomSheet, ActionSheetData } from '../components/ActionBottomSheet';
+import { ExitConfirmModal } from '../components/ExitConfirmModal';
+import {
+  openWhatsAppDirect,
+  getBookingConfirmationMessage,
+  getBookingReminderMessage,
+  getPaymentReminderMessage,
+  getClientDirectMessage,
+} from '../utils/whatsappHelper';
 
 import { HomeScreen } from './HomeScreen';
 import { ClientsScreen } from './ClientsScreen';
@@ -63,6 +76,8 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   // Drawer & Sheet States
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeSheet, setActiveSheet] = useState<ActionSheetData | null>(null);
+  const [isExitModalVisible, setIsExitModalVisible] = useState(false);
+  const screenHistoryRef = useRef<string[]>([]);
 
   // App Data State — Strictly scoped to authenticated studio (beauticianId)
   const [beauticianId, setBeauticianId] = useState<string | null>(null);
@@ -80,6 +95,8 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
   const [studioCity, setStudioCity] = useState<string>('');
   const [studioRole, setStudioRole] = useState<string>('Bridal Makeup Artist');
   const [registeredAt, setRegisteredAt] = useState<string | undefined>();
+  const [subscriptionTier, setSubscriptionTier] = useState<string>('free');
+  const isPremium = subscriptionTier === 'pro_monthly' || subscriptionTier === 'pro_annual' || subscriptionTier === 'enterprise';
 
   // Load storage data on mount & hydrate live studio data from AWS RDS PostgreSQL
   useEffect(() => {
@@ -116,12 +133,18 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           if (parsed.createdAt) {
             setRegisteredAt(parsed.createdAt);
           }
+          if (parsed.subscriptionTier) {
+            setSubscriptionTier(parsed.subscriptionTier);
+          }
         }
 
         const storedPackages = await AsyncStorage.getItem('@shilpi_packages');
         if (storedPackages) {
           setPackageGroups(JSON.parse(storedPackages));
         }
+
+        // Request device notification permissions for outside-app reminders
+        requestNotificationPermissions().catch(() => {});
 
         // Hydrate live studio identity from backend (/auth/me)
         try {
@@ -132,6 +155,8 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             if (b.createdAt) {
               setRegisteredAt(b.createdAt);
             }
+            const tierVal = b.subscription?.tier || 'free';
+            setSubscriptionTier(tierVal);
             await AsyncStorage.setItem('@shilpi_beautician_id', b.id);
             await AsyncStorage.setItem(
               '@shilpi_profile',
@@ -146,6 +171,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
                 phone: b.phone || '',
                 logoUri: b.profilePhotoUrl,
                 createdAt: b.createdAt,
+                subscriptionTier: tierVal,
               })
             );
             if (b.ownerName?.trim()) {
@@ -451,7 +477,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
                 ref: `Booking #${String(b.id).slice(0, 4).toUpperCase()}`,
                 client: b.client?.name || 'Client',
                 clientId: b.clientId,
-                bookingDate: b.bookingDate,
+                bookingDate: typeof b.bookingDate === 'string' ? b.bookingDate.split('T')[0] : `${yr}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dNum).padStart(2, '0')}`,
                 day: dNum,
                 month: mShort,
                 year: yr,
@@ -542,16 +568,33 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     settings: 'Settings',
   };
 
+  const navigateTo = (nextScreen: string) => {
+    if (nextScreen !== currentScreen) {
+      screenHistoryRef.current.push(currentScreen);
+      setCurrentScreen(nextScreen);
+    }
+  };
+
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
-    if (tab === 'earnings') {
-      setCurrentScreen('payments');
-    } else {
-      setCurrentScreen(tab);
+    const target = tab === 'earnings' ? 'payments' : tab;
+    if (target !== currentScreen) {
+      screenHistoryRef.current.push(currentScreen);
+      setCurrentScreen(target);
     }
   };
 
   const handleGoBack = () => {
+    if (screenHistoryRef.current.length > 0) {
+      const prev = screenHistoryRef.current.pop();
+      if (prev) {
+        setCurrentScreen(prev);
+        if (['home', 'clients', 'orders', 'payments'].includes(prev)) {
+          setActiveTab(prev === 'payments' ? 'earnings' : (prev as TabType));
+        }
+        return;
+      }
+    }
     // Return to the current active tab or home
     if (currentScreen === 'payments' && activeTab === 'earnings') {
       setActiveTab('home');
@@ -563,13 +606,65 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
 
   const handleOpenClient = (clientId: number | string) => {
     setSelectedClientId(clientId);
-    setCurrentScreen('client');
+    navigateTo('client');
   };
 
   const handleOpenBooking = (bookingId: string) => {
     setSelectedOrderId(bookingId);
-    setCurrentScreen('order');
+    navigateTo('order');
   };
+
+  // Hardware/System Back Button Navigation & Exit Confirmation
+  useEffect(() => {
+    const handleHardwareBackPress = () => {
+      // Priority 1: If exit modal is open, close it
+      if (isExitModalVisible) {
+        setIsExitModalVisible(false);
+        return true;
+      }
+
+      // Priority 2: If drawer is open, close it
+      if (isDrawerOpen) {
+        setIsDrawerOpen(false);
+        return true;
+      }
+
+      // Priority 3: If active action sheet is open, close it
+      if (activeSheet) {
+        setActiveSheet(null);
+        return true;
+      }
+
+      // Priority 4: If on any sub-screen or tab other than 'home'
+      if (currentScreen !== 'home') {
+        if (screenHistoryRef.current.length > 0) {
+          const prev = screenHistoryRef.current.pop();
+          if (prev) {
+            setCurrentScreen(prev);
+            if (['home', 'clients', 'orders', 'payments'].includes(prev)) {
+              setActiveTab(prev === 'payments' ? 'earnings' : (prev as TabType));
+            }
+            return true;
+          }
+        }
+        // Fallback: If no history, return to home root
+        setActiveTab('home');
+        setCurrentScreen('home');
+        return true;
+      }
+
+      // Priority 5: User is on Home root screen -> prompt custom themed exit modal
+      setIsExitModalVisible(true);
+      return true; // Prevents default Android app kill
+    };
+
+    const backSub = BackHandler.addEventListener(
+      'hardwareBackPress',
+      handleHardwareBackPress
+    );
+
+    return () => backSub.remove();
+  }, [isExitModalVisible, isDrawerOpen, activeSheet, currentScreen]);
 
   const handleUpdateBookingStatus = (
     orderId: string,
@@ -626,18 +721,39 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
       AsyncStorage.setItem(`@shilpi_bookings_${beauticianId}`, JSON.stringify(updated)).catch(() => {});
     }
 
-    setCurrentScreen('orders');
+    navigateTo('orders');
     setActiveTab('orders');
 
     // Trigger WhatsApp confirmation sheet with client's name immediately
     const total = newBooking.items.reduce((s, i) => s + i.price, 0) + newBooking.travel;
     const balance = Math.max(0, total - newBooking.advance);
+    const serviceNames = newBooking.items.map((i) => i.name).join(' + ') || 'Bridal Look';
+    const targetPhone = matchedClient?.phone || getClientPhoneForBooking(newBooking);
+
+    const confirmationMsg = getBookingConfirmationMessage({
+      clientName: newBooking.client,
+      dateLong: newBooking.dateLong,
+      time: newBooking.time,
+      meridiem: newBooking.meridiem,
+      serviceNames,
+      venue: newBooking.venue,
+      total,
+      advance: newBooking.advance,
+      balance,
+      notes: newBooking.notes,
+      artistName,
+      studioName,
+    });
+
     setActiveSheet({
       kicker: 'BOOKING SAVED',
       title: `Send confirmation to ${first(newBooking.client)}?`,
-      message: `Hi ${first(newBooking.client)}, your booking is confirmed.\n\n${newBooking.dateLong} · ${newBooking.time} ${newBooking.meridiem}\n${newBooking.items.map((i) => i.name).join(' + ')}\n${newBooking.venue}\n\nTotal ${fmt(total)} · Advance ${fmt(newBooking.advance)} · Balance ${fmt(balance)}${newBooking.notes ? `\nNotes: ${newBooking.notes}` : ''}\n\n— ${artistName}, Shilpi`,
+      message: confirmationMsg,
       cta: 'Send on WhatsApp',
       logoUri: studioLogo,
+      onConfirm: () => {
+        openWhatsAppDirect(targetPhone, confirmationMsg);
+      },
     });
 
     // Persist booking to AWS RDS PostgreSQL when client has a DB UUID
@@ -770,9 +886,9 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
 
     if (thenCreateBooking) {
       setBookingClientName(newClient.name);
-      setCurrentScreen('newbooking');
+      navigateTo('newbooking');
     } else {
-      setCurrentScreen('clients');
+      navigateTo('clients');
       setActiveTab('clients');
     }
   };
@@ -829,7 +945,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
       }
 
       if (imported.length > 0) {
-        setCurrentScreen('clients');
+        navigateTo('clients');
         setActiveTab('clients');
       }
     } catch (err: any) {
@@ -892,17 +1008,48 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     AsyncStorage.setItem('@shilpi_packages', JSON.stringify(updated)).catch(() => {});
   };
 
-  // WhatsApp Confirm Sheet Trigger
+  // Resolves a client phone number from booking record or client database
+  const getClientPhoneForBooking = (order: Booking): string => {
+    if (order.clientId) {
+      const byId = clients.find((c) => String(c.id) === String(order.clientId));
+      if (byId && byId.phone) return byId.phone;
+    }
+    const cleanName = (order.client || '').trim().toLowerCase();
+    const byName = clients.find((c) => (c.name || '').trim().toLowerCase() === cleanName);
+    if (byName && byName.phone) return byName.phone;
+
+    // Check notes or address for a phone number
+    const combined = `${order.notes || ''} ${order.address || ''}`;
+    const match = combined.match(/(?:\+91|0)?[6-9]\d{9}/);
+    if (match) return match[0];
+
+    return '';
+  };
+
+  // WhatsApp Confirm Sheet / Direct Chat Trigger
   const handleOpenConfirmSheet = (order: Booking) => {
-    const total = order.items.reduce((s, i) => s + i.price, 0) + order.travel;
-    const balance = total - order.advance;
-    setActiveSheet({
-      kicker: 'WHATSAPP · ORDER CONFIRMATION',
-      title: `Send to ${order.client}?`,
-      message: `Hi ${first(order.client)}, your booking is confirmed.\n\n${order.dateLong} · ${order.time} ${order.meridiem}\n${order.items.map((i) => i.name).join(' + ')}\n${order.venue}\n\nTotal ${fmt(total)} · Advance ${fmt(order.advance)} · Balance ${fmt(balance)}\n\n— ${artistName}, Shilpi`,
-      cta: 'Send Message',
-      logoUri: studioLogo,
+    const total = order.items.reduce((s, i) => s + i.price, 0) + (order.travel || 0);
+    const balance = Math.max(0, total - (order.advance || 0));
+    const serviceNames = order.items.map((i) => i.name).join(' + ') || 'Bridal Styling';
+    const clientPhone = getClientPhoneForBooking(order);
+
+    const message = getBookingConfirmationMessage({
+      clientName: order.client,
+      dateLong: order.dateLong,
+      time: order.time,
+      meridiem: order.meridiem,
+      serviceNames,
+      venue: order.venue,
+      total,
+      advance: order.advance || 0,
+      balance,
+      notes: order.notes,
+      artistName,
+      studioName,
     });
+
+    // Directly open client's WhatsApp chat with prefilled template
+    openWhatsAppDirect(clientPhone, message);
   };
 
   // Close Booking Sheet Trigger
@@ -919,67 +1066,86 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
       })
       .catch(() => {});
 
+    const clientPhone = getClientPhoneForBooking(order);
+    const thankYouMsg = `Thank you *${first(order.client)}*! It was lovely styling you with *${studioName}*. ✨\n\nIf you loved your look, a photo or review would mean the world to us! Looking forward to styling you again soon.\n\nWarm regards,\n*${artistName}*\n*${studioName}*`;
+
     setActiveSheet({
       kicker: 'WHATSAPP · ORDER CLOSED',
       title: `Thank ${order.client} and ask for review?`,
-      message: `Thank you ${first(order.client)}! It was lovely working with you.\n\nIf you liked the look, a photo or a review would mean a lot — I would love to add it to my portfolio.\n\n— ${artistName}, Shilpi`,
-      cta: 'Open My Gallery & Drop Photos',
+      message: thankYouMsg,
+      cta: 'Send Thank You Note',
       logoUri: studioLogo,
       onConfirm: () => {
-        setCurrentScreen('gallery');
+        openWhatsAppDirect(clientPhone, thankYouMsg);
       },
     });
   };
 
-  // WhatsApp Direct Client Sheet
+  // WhatsApp Direct Client Trigger
   const handleOpenWhatsAppSheet = (clientName: string, phone: string) => {
-    setActiveSheet({
-      kicker: 'WHATSAPP DIRECT',
-      title: `Message ${clientName}?`,
-      message: `Hi ${first(clientName)}, hope you are doing well! Let me know if you have any upcoming dates — happy to block them for you.\n\n— ${artistName}, Shilpi`,
-      cta: 'Open WhatsApp',
+    const message = getClientDirectMessage({
+      clientName,
+      artistName,
+      studioName,
     });
+
+    // Directly open client's WhatsApp chat with prefilled template
+    openWhatsAppDirect(phone, message);
   };
 
-  // Mark Booking Fully Paid (clears due in To Collect & records payment in PostgreSQL)
-  const handleMarkFullyPaid = async (orderId: string) => {
+  // Record Partial or Full Due Payment (clears due & records payment in PostgreSQL)
+  const handleRecordPayment = async (
+    orderId: string,
+    amount: number,
+    paymentMode: string = 'upi',
+    notes?: string
+  ): Promise<boolean> => {
     const target = bookings.find((b) => b.id === orderId);
-    if (!target) return;
+    if (!target) return false;
 
     const total = target.items.reduce((s, i) => s + i.price, 0) + (target.travel || 0);
-    const paidDiff = Math.max(0, total - (target.advance || 0));
+    const currentAdvance = target.advance || 0;
+    const currentDue = Math.max(0, total - currentAdvance);
+    const payAmount = Math.min(amount, currentDue);
+    if (payAmount <= 0) return false;
+
+    const newAdvance = currentAdvance + payAmount;
+    const remainingDue = Math.max(0, total - newAdvance);
 
     const updated = bookings.map((b) =>
-      b.id === orderId ? { ...b, advance: total } : b
+      b.id === orderId ? { ...b, advance: newAdvance } : b
     );
     setBookings(updated);
     if (beauticianId) {
       AsyncStorage.setItem(`@shilpi_bookings_${beauticianId}`, JSON.stringify(updated)).catch(() => {});
     }
 
-    if (paidDiff > 0) {
-      const payNotif: NotificationItem = {
-        id: `pay-${orderId}-${Date.now()}`,
-        glyph: '₹',
-        title: `Payment received — ${fmt(paidDiff)}`,
-        body: `${target.client} settled full balance for ${target.day} ${target.month}.`,
-        time: 'Just now',
-        to: 'orders',
-      };
-      setNotifications((prev) => {
-        const next = [payNotif, ...prev];
-        if (beauticianId) {
-          AsyncStorage.setItem(`@shilpi_notifs_${beauticianId}`, JSON.stringify(next)).catch(() => {});
-        }
-        return next;
-      });
-    }
+    const payNotif: NotificationItem = {
+      id: `pay-${orderId}-${Date.now()}`,
+      glyph: '₹',
+      title: `Payment received — ${fmt(payAmount)}`,
+      body: `${target.client} paid ${fmt(payAmount)}.${
+        remainingDue > 0
+          ? ` Remaining due: ${fmt(remainingDue)}.`
+          : ' Full balance settled!'
+      }`,
+      time: 'Just now',
+      to: 'orders',
+    };
+    setNotifications((prev) => {
+      const next = [payNotif, ...prev];
+      if (beauticianId) {
+        AsyncStorage.setItem(`@shilpi_notifs_${beauticianId}`, JSON.stringify(next)).catch(() => {});
+      }
+      return next;
+    });
 
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(orderId)) {
       try {
         const res = await apiClient.post(`/bookings/${orderId}/pay`, {
-          markFullyPaid: true,
-          paymentMode: 'upi',
+          amountPaise: Math.round(payAmount * 100),
+          paymentMode: paymentMode.toLowerCase(),
+          notes: notes || `Payment received: ₹${payAmount}`,
         });
         if (res.data?.success && res.data?.data) {
           const syncedAdvance = Math.round(Number(res.data.data.advancePaidPaise || 0) / 100);
@@ -992,24 +1158,52 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           });
         }
       } catch (err) {
-        console.warn('Mark fully paid sync warning:', err);
+        console.warn('Record payment sync warning:', err);
       }
     }
 
-    Alert.alert('Fully Paid', `${target.client}'s balance is now marked as fully paid.`);
+    Alert.alert(
+      remainingDue === 0 ? 'Full Balance Cleared 🎉' : 'Payment Recorded',
+      `Collected ${fmt(payAmount)} for ${target.client}.${
+        remainingDue > 0
+          ? ` Remaining due: ${fmt(remainingDue)}.`
+          : ' All dues are fully settled!'
+      }`
+    );
+
+    return true;
   };
 
-  // Personalized Booking Reminder Sheet (from Home Calendar or Order)
+  // Mark Booking Fully Paid (clears due in To Collect & records payment in PostgreSQL)
+  const handleMarkFullyPaid = async (orderId: string) => {
+    const target = bookings.find((b) => b.id === orderId);
+    if (!target) return;
+    const total = target.items.reduce((s, i) => s + i.price, 0) + (target.travel || 0);
+    const balance = Math.max(0, total - (target.advance || 0));
+    await handleRecordPayment(orderId, balance, 'upi', 'Full balance settled');
+  };
+
+  // Personalized Booking Reminder (Direct to WhatsApp chat with template)
   const handleSendBookingReminder = (order: Booking) => {
     const total = order.items.reduce((s, i) => s + i.price, 0) + (order.travel || 0);
     const balance = Math.max(0, total - (order.advance || 0));
-    setActiveSheet({
-      kicker: 'WHATSAPP · BOOKING REMINDER',
-      title: `Send reminder to ${first(order.client)}?`,
-      message: `Hi ${first(order.client)}, a gentle reminder for your appointment on ${order.dateLong} at ${order.time} ${order.meridiem}.\n\nService: ${order.items.map((i) => i.name).join(' + ')}\nVenue: ${order.venue}${balance > 0 ? `\nBalance due: ${fmt(balance)}` : '\nPayment status: Fully Paid'}\n\nLooking forward to styling you!\n— ${artistName}, ${studioName}`,
-      cta: 'Send Reminder',
-      logoUri: studioLogo,
+    const serviceNames = order.items.map((i) => i.name).join(' + ') || 'Bridal Appointment';
+    const clientPhone = getClientPhoneForBooking(order);
+
+    const message = getBookingReminderMessage({
+      clientName: order.client,
+      dateLong: order.dateLong,
+      time: order.time,
+      meridiem: order.meridiem,
+      serviceNames,
+      venue: order.venue,
+      balance,
+      artistName,
+      studioName,
     });
+
+    // Directly open client's WhatsApp chat with prefilled reminder template
+    openWhatsAppDirect(clientPhone, message);
   };
 
   // Toggle Client VIP status (heart icon in Clients list or Client Detail header)
@@ -1118,6 +1312,25 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         await apiClient.patch(`/clients/${clientId}/status`, { isActive: nextActive });
       } catch (err) {
         console.warn('Client active toggle sync warning:', err);
+      }
+    }
+  };
+
+  const handleUpdateClientPhoto = async (clientId: number | string, photoUri: string) => {
+    const activeShopId = beauticianId || (await AsyncStorage.getItem('@shilpi_beautician_id'));
+    const updated = clients.map((c) =>
+      String(c.id) === String(clientId) ? { ...c, photoUri } : c
+    );
+    setClients(updated);
+    if (activeShopId) {
+      AsyncStorage.setItem(`@shilpi_clients_${activeShopId}`, JSON.stringify(updated)).catch(() => {});
+    }
+
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(String(clientId))) {
+      try {
+        await apiClient.patch(`/clients/${clientId}`, { profilePhotoUrl: photoUri });
+      } catch (err) {
+        console.warn('Client photo sync warning:', err);
       }
     }
   };
@@ -1273,6 +1486,18 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     if (beauticianId) {
       AsyncStorage.setItem(`@shilpi_reminders_${beauticianId}`, JSON.stringify(next)).catch(() => {});
     }
+
+    // Schedule system notification outside of the app
+    scheduleReminderNotification({
+      id: created.id,
+      text: created.text,
+      kind: created.kind,
+      remindAt: created.remindAt,
+    }).then((notifId) => {
+      if (notifId) {
+        AsyncStorage.setItem(`@shilpi_notif_${created.id}`, notifId).catch(() => {});
+      }
+    });
   };
 
   const handleToggleReminder = async (reminderId: string) => {
@@ -1288,6 +1513,27 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     }
     if (/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(reminderId)) {
       await apiClient.patch(`/reminders/${reminderId}`, { isCompleted: nextCompleted }).catch(() => {});
+    }
+
+    // Sync device notification state
+    if (nextCompleted) {
+      AsyncStorage.getItem(`@shilpi_notif_${reminderId}`).then((notifId) => {
+        if (notifId) {
+          cancelReminderNotification(notifId);
+          AsyncStorage.removeItem(`@shilpi_notif_${reminderId}`).catch(() => {});
+        }
+      });
+    } else {
+      scheduleReminderNotification({
+        id: target.id,
+        text: target.text,
+        kind: target.kind,
+        remindAt: target.remindAt,
+      }).then((notifId) => {
+        if (notifId) {
+          AsyncStorage.setItem(`@shilpi_notif_${target.id}`, notifId).catch(() => {});
+        }
+      });
     }
   };
 
@@ -1328,9 +1574,33 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     if (beauticianId) {
       AsyncStorage.setItem(`@shilpi_reminders_${beauticianId}`, JSON.stringify(next)).catch(() => {});
     }
+
+    // Refresh scheduled notification
+    AsyncStorage.getItem(`@shilpi_notif_${reminderId}`).then((notifId) => {
+      if (notifId) {
+        cancelReminderNotification(notifId);
+      }
+      scheduleReminderNotification({
+        id: updated.id,
+        text: updated.text,
+        kind: updated.kind,
+        remindAt: updated.remindAt,
+      }).then((newNotifId) => {
+        if (newNotifId) {
+          AsyncStorage.setItem(`@shilpi_notif_${updated.id}`, newNotifId).catch(() => {});
+        }
+      });
+    });
   };
 
   const handleDeleteReminder = async (reminderId: string) => {
+    // Cancel scheduled notification
+    AsyncStorage.getItem(`@shilpi_notif_${reminderId}`).then((notifId) => {
+      if (notifId) {
+        cancelReminderNotification(notifId);
+        AsyncStorage.removeItem(`@shilpi_notif_${reminderId}`).catch(() => {});
+      }
+    });
     const next = reminders.filter((r) => r.id !== reminderId);
     setReminders(next);
     if (beauticianId) {
@@ -1341,7 +1611,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     }
   };
 
-  // Payments Reminder Sheet (built from real unpaid bookings)
+  // Payments Reminder (Direct to WhatsApp chat with template)
   const handleOpenRemindSheet = (pendingList?: Booking[]) => {
     const unpaid = (pendingList && pendingList.length > 0 ? pendingList : bookings).filter((b) => {
       const total = b.items.reduce((s, i) => s + (i.price || 0), 0) + (b.travel || 0);
@@ -1349,47 +1619,28 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     });
 
     if (unpaid.length === 0) {
-      setActiveSheet({
-        kicker: 'WHATSAPP · PAYMENT REMINDER',
-        title: 'All balances are settled',
-        message: 'No pending client balances right now.',
-        cta: 'Got It',
-      });
+      Alert.alert('All Settled', 'All client balances are settled right now.');
       return;
     }
-
-    const lines = unpaid.slice(0, 6).map((b) => {
-      const total = b.items.reduce((s, i) => s + (i.price || 0), 0) + (b.travel || 0);
-      const due = Math.max(0, total - (b.advance || 0));
-      return `• ${first(b.client)} (${b.day} ${b.month}) — ${fmt(due)}`;
-    });
 
     const firstTarget = unpaid[0];
     const firstTotal =
       firstTarget.items.reduce((s, i) => s + (i.price || 0), 0) + (firstTarget.travel || 0);
     const firstDue = Math.max(0, firstTotal - (firstTarget.advance || 0));
-    const totalPendingAll = unpaid.reduce((sum, b) => {
-      const t = b.items.reduce((s, i) => s + (i.price || 0), 0) + (b.travel || 0);
-      return sum + Math.max(0, t - (b.advance || 0));
-    }, 0);
+    const firstPhone = getClientPhoneForBooking(firstTarget);
+    const serviceNames = firstTarget.items.map((i) => i.name).join(' + ') || 'Styling Session';
 
-    const uniqueNamesCount = new Set(unpaid.map((b) => b.client.trim().toLowerCase())).size;
-
-    const previewMsg =
-      unpaid.length === 1
-        ? `Hi ${first(firstTarget.client)}, a gentle reminder — a balance of ${fmt(firstDue)} is pending for your booking on ${firstTarget.dateLong}. You can pay by UPI.\n\nThank you!\n— ${artistName}, ${studioName}`
-        : `Hi ${first(firstTarget.client)}, a gentle reminder — a balance of ${fmt(firstDue)} is pending for your booking on ${firstTarget.dateLong}. You can pay by UPI.\n\nPending summary (${fmt(totalPendingAll)} total):\n${lines.join('\n')}\n\n— ${artistName}, ${studioName}`;
-
-    setActiveSheet({
-      kicker: 'WHATSAPP · PAYMENT REMINDER',
-      title:
-        uniqueNamesCount === 1
-          ? `Remind ${first(firstTarget.client)} about ${fmt(totalPendingAll)}?`
-          : `Remind ${uniqueNamesCount} clients about ${fmt(totalPendingAll)}?`,
-      message: previewMsg,
-      cta: unpaid.length === 1 ? 'Send Reminder' : `Send ${uniqueNamesCount} Reminders`,
-      logoUri: studioLogo,
+    const reminderMsg = getPaymentReminderMessage({
+      clientName: firstTarget.client,
+      dateLong: firstTarget.dateLong,
+      serviceNames,
+      dueAmount: firstDue,
+      artistName,
+      studioName,
     });
+
+    // Directly open client's WhatsApp chat with prefilled payment reminder template
+    openWhatsAppDirect(firstPhone, reminderMsg);
   };
 
   // Subscription UPI Sheet
@@ -1400,7 +1651,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
       message: `Shilpi Premium · ${planMonths} months\n${fmt(total / planMonths)} / month (incl. GST)\n\nPlan total ${fmt(total)}\nGST (18%) included ${fmt(Math.round(total - total / 1.18))}\n\nA GST invoice is emailed immediately after UPI payment.`,
       cta: 'Pay by UPI',
       onConfirm: () => {
-        setCurrentScreen('settings');
+        navigateTo('settings');
       },
     });
   };
@@ -1411,7 +1662,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
     setBookingInitialDate(undefined);
     setBookingInitialMonth(undefined);
     setBookingInitialYear(undefined);
-    setCurrentScreen('newbooking');
+    navigateTo('newbooking');
   };
 
   // Real sidebar metrics synced with active studio bookings & month
@@ -1465,7 +1716,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         hasUnread={notifications.length > 0}
         onOpenMenu={() => setIsDrawerOpen(true)}
         onGoBack={handleGoBack}
-        onOpenNotifications={() => setCurrentScreen('notifications')}
+        onOpenNotifications={() => navigateTo('notifications')}
       />
 
       {/* 2. Active Screen Content */}
@@ -1485,7 +1736,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
               setBookingInitialMonth(month);
               setBookingInitialYear(year);
               setBookingClientName(undefined);
-              setCurrentScreen('newbooking');
+              navigateTo('newbooking');
             }}
           />
         )}
@@ -1495,7 +1746,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             clients={enrichedClients}
             onOpenClient={handleOpenClient}
             onToggleVip={handleToggleClientVip}
-            onStartNewClient={() => setCurrentScreen('newclient')}
+            onStartNewClient={() => navigateTo('newclient')}
           />
         )}
 
@@ -1503,17 +1754,20 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
           <ClientDetailScreen
             client={selectedClient}
             allClients={enrichedClients}
+            bookings={bookings}
             onGoBack={handleGoBack}
             onOpenWhatsAppSheet={handleOpenWhatsAppSheet}
             onToggleVip={handleToggleClientVip}
             onUpdateClient={handleUpdateClient}
             onToggleActive={handleToggleClientActive}
+            onUpdatePhoto={handleUpdateClientPhoto}
+            onRecordPayment={handleRecordPayment}
             onNewBookingForClient={(clientName) => {
               setBookingClientName(clientName);
               setBookingInitialDate(undefined);
               setBookingInitialMonth(undefined);
               setBookingInitialYear(undefined);
-              setCurrentScreen('newbooking');
+              navigateTo('newbooking');
             }}
           />
         )}
@@ -1527,7 +1781,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
               setBookingInitialDate(undefined);
               setBookingInitialMonth(undefined);
               setBookingInitialYear(undefined);
-              setCurrentScreen('newbooking');
+              navigateTo('newbooking');
             }}
           />
         )}
@@ -1540,6 +1794,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             onOpenConfirmSheet={handleOpenConfirmSheet}
             onCloseBooking={handleCloseBooking}
             onMarkFullyPaid={handleMarkFullyPaid}
+            onRecordPayment={handleRecordPayment}
           />
         )}
 
@@ -1554,7 +1809,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             initialClientName={bookingClientName}
             onSaveBooking={handleSaveBooking}
             onGoBack={handleGoBack}
-            onStartNewClient={() => setCurrentScreen('newclient')}
+            onStartNewClient={() => navigateTo('newclient')}
           />
         )}
 
@@ -1600,7 +1855,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         {currentScreen === 'notifications' && (
           <NotificationsScreen
             notifications={notifications}
-            onNavigate={(screen) => setCurrentScreen(screen)}
+            onNavigate={(screen) => navigateTo(screen)}
             onGoBack={handleGoBack}
           />
         )}
@@ -1651,6 +1906,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
             studioPhone={studioPhone}
             studioCity={studioCity}
             studioRole={studioRole}
+            isPremium={isPremium}
             usage={{
               orders: bookings.length,
               clients: enrichedClients.length,
@@ -1658,7 +1914,7 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
               reminders: reminders.length,
               closes: bookings.filter((b) => b.status === 'Closed').length,
             }}
-            onGoToSubscription={() => setCurrentScreen('subscription')}
+            onGoToSubscription={() => navigateTo('subscription')}
             onLogout={onLogout}
             onGoBack={handleGoBack}
             onUpdateProfile={(updated) => {
@@ -1687,16 +1943,17 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         onNavigate={(screen) => {
+          setIsDrawerOpen(false);
           if (screen === 'qr_scanner') {
             onOpenQrScanner();
-          } else if (screen === 'payments') {
+          } else if (screen === 'payments' || screen === 'earnings') {
             setActiveTab('earnings');
-            setCurrentScreen('payments');
+            navigateTo('payments');
           } else if (screen === 'home' || screen === 'clients' || screen === 'orders') {
             setActiveTab(screen);
-            setCurrentScreen(screen);
+            navigateTo(screen);
           } else {
-            setCurrentScreen(screen);
+            navigateTo(screen);
           }
         }}
         onLogout={onLogout}
@@ -1706,6 +1963,17 @@ export const MainAppContainer: React.FC<MainAppContainerProps> = ({
         toCollectAmount={sidebarToCollectAmount}
         unreadNotificationsCount={notifications.length}
         todayBookingsCount={sidebarTodayBookingsCount}
+        isPremium={isPremium}
+      />
+
+      {/* 5. Custom Themed Exit Confirmation Modal */}
+      <ExitConfirmModal
+        visible={isExitModalVisible}
+        onCancel={() => setIsExitModalVisible(false)}
+        onConfirmExit={() => {
+          setIsExitModalVisible(false);
+          BackHandler.exitApp();
+        }}
       />
 
       {/* 6. Action Bottom Sheet */}

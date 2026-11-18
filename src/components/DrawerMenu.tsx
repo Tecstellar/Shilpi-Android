@@ -32,6 +32,7 @@ interface DrawerMenuProps {
   toCollectAmount?: number;
   unreadNotificationsCount?: number;
   todayBookingsCount?: number;
+  isPremium?: boolean;
 }
 
 // ----------------- Bespoke Luxury Vector SVG Icons ----------------- //
@@ -210,6 +211,7 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
   toCollectAmount = 0,
   unreadNotificationsCount = 0,
   todayBookingsCount = 0,
+  isPremium = false,
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -450,12 +452,18 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                   </Text>
                 )}
 
-                <View style={styles.premiumBadge}>
-                  <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={2.4} style={{ marginRight: 3 }}>
-                    <Path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z" strokeLinecap="round" strokeLinejoin="round" />
-                  </Svg>
-                  <Text style={styles.premiumText}>PREMIUM</Text>
-                </View>
+                {isPremium ? (
+                  <View style={styles.premiumBadge}>
+                    <Svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth={2.4} style={{ marginRight: 3 }}>
+                      <Path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z" strokeLinecap="round" strokeLinejoin="round" />
+                    </Svg>
+                    <Text style={styles.premiumText}>PRO</Text>
+                  </View>
+                ) : (
+                  <View style={styles.freeBadge}>
+                    <Text style={styles.freeBadgeText}>FREE PLAN</Text>
+                  </View>
+                )}
               </View>
             </View>
 
@@ -654,7 +662,9 @@ export const DrawerMenu: React.FC<DrawerMenuProps> = ({
                 </View>
                 <Text style={styles.menuRowText}>Subscription</Text>
               </View>
-              <Text style={styles.premiumTextRight}>Premium</Text>
+              <Text style={isPremium ? styles.premiumTextRight : styles.freeTextRight}>
+                {isPremium ? 'Pro' : 'Free Plan'}
+              </Text>
             </TouchableOpacity>
 
             {/* Link Web Terminal */}
@@ -878,6 +888,24 @@ const createStyles = (colors: ThemeColors) =>
     fontWeight: '700',
     letterSpacing: 0.8,
   },
+  freeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 999,
+    alignSelf: 'flex-start',
+    marginTop: 2,
+  },
+  freeBadgeText: {
+    color: 'rgba(255, 255, 255, 0.65)',
+    fontSize: 8.5,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
   profileCardDivider: {
     height: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
@@ -1030,6 +1058,12 @@ const createStyles = (colors: ThemeColors) =>
     color: colors.accent,
     fontSize: 11.5,
     fontWeight: '700',
+  },
+  freeTextRight: {
+    color: 'rgba(255, 255, 255, 0.45)',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
   },
 
   // Bottom Utility Row

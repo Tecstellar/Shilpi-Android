@@ -19,6 +19,7 @@ import Svg, { Path, Circle, Polyline } from 'react-native-svg';
 import { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { Booking, fmt } from '../data/prototypeData';
+import { ClearDueModal } from '../components/ClearDueModal';
 
 const ScalePressable: React.FC<{
   onPress: () => void;
@@ -93,6 +94,12 @@ interface OrderDetailScreenProps {
   onOpenConfirmSheet: (order: Booking) => void;
   onCloseBooking: (order: Booking) => void;
   onMarkFullyPaid?: (orderId: string) => void;
+  onRecordPayment?: (
+    orderId: string,
+    amount: number,
+    paymentMode?: string,
+    notes?: string
+  ) => Promise<boolean | void> | boolean | void;
 }
 
 export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
@@ -102,6 +109,7 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
   onOpenConfirmSheet,
   onCloseBooking,
   onMarkFullyPaid,
+  onRecordPayment,
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -112,6 +120,7 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
 
   const [profile, setProfile] = useState<{ businessName?: string; logoUri?: string; ownerName?: string }>({});
   const [paying, setPaying] = useState(false);
+  const [clearDueModalOpen, setClearDueModalOpen] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -186,14 +195,15 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
   };
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={[
-        styles.scrollContent,
-        { paddingBottom: Math.max(insets.bottom, 24) + 96 },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
+    <>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 24) + 96 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
       {/* 1. Black Ink Booking Pass Card with Studio Logo */}
       <View style={styles.inkHeaderCard}>
         <View style={styles.responsiveInner}>
@@ -283,12 +293,11 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
           </Text>
         </View>
 
-        {balance > 0 && onMarkFullyPaid && (
+        {balance > 0 && (
           <ScalePressable
             style={styles.markPaidBtn}
-            onPress={handleMarkPaidPress}
-            disabled={paying}
-            accessibilityLabel={`Mark as fully paid ${fmt(balance)}`}
+            onPress={() => setClearDueModalOpen(true)}
+            accessibilityLabel={`Clear due amount ${fmt(balance)}`}
           >
             <CheckCircleIcon color="#ffffff" size={16} />
             <Text
@@ -297,7 +306,7 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
               adjustsFontSizeToFit
               minimumFontScale={0.85}
             >
-              {paying ? 'RECORDING PAYMENT...' : `MARK AS FULLY PAID (${fmt(balance)})`}
+              CLEAR DUE / RECORD PAYMENT ({fmt(balance)})
             </Text>
           </ScalePressable>
         )}
@@ -350,80 +359,80 @@ export const OrderDetailScreen: React.FC<OrderDetailScreenProps> = ({
         </>
       ) : null}
 
-      {/* 5. Action Buttons — Adaptive Layout (Stacked full-width pills on phones, split grid on wider screens) */}
-      <View style={styles.ctaRow}>
+      {/* 5. Action Buttons — 3 Buttons in One Responsive Row */}
+      <View style={styles.actionRowThree}>
         <ScalePressable
-          style={styles.whatsAppBtn}
+          containerStyle={styles.actionBtnFlex}
+          style={styles.actionBtnWhatsApp}
           onPress={() => onOpenConfirmSheet(order)}
           accessibilityLabel="Send WhatsApp confirmation"
         >
-          <MessageIcon color="#ffffff" size={17} />
+          <MessageIcon color="#ffffff" size={15} />
           <Text
-            style={styles.whatsAppBtnText}
+            style={styles.actionBtnTextWhite}
             numberOfLines={1}
             adjustsFontSizeToFit
-            minimumFontScale={0.85}
+            minimumFontScale={0.8}
           >
-            SEND WHATSAPP CONFIRMATION
+            WhatsApp
           </Text>
         </ScalePressable>
 
-        {canMarkCompleted && canCloseBooking ? (
-          <View style={[styles.secondaryActionGroup, isWideActionRow && styles.secondaryActionRow]}>
-            <ScalePressable
-              containerStyle={isWideActionRow ? styles.flex1Col : undefined}
-              style={styles.markCompletedBtn}
-              onPress={() => onUpdateStatus(order.id, 'Completed')}
-              accessibilityLabel="Mark booking completed"
-            >
-              <CheckCircleIcon color="#121212" size={17} />
-              <Text
-                style={styles.markCompletedBtnText}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.85}
-              >
-                MARK COMPLETED
-              </Text>
-            </ScalePressable>
-
-            <ScalePressable
-              containerStyle={isWideActionRow ? styles.flex1Col : undefined}
-              style={styles.closePhotosBtn}
-              onPress={() => onCloseBooking(order)}
-              accessibilityLabel="Close booking and add photos"
-            >
-              <CameraIcon color="#ffffff" size={17} />
-              <Text
-                style={styles.closePhotosBtnText}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.85}
-              >
-                {isWideActionRow ? 'CLOSE · ADD PHOTOS' : 'CLOSE BOOKING · ADD PHOTOS'}
-              </Text>
-            </ScalePressable>
-          </View>
-        ) : canCloseBooking ? (
+        {canMarkCompleted ? (
           <ScalePressable
-            style={styles.closePhotosBtn}
+            containerStyle={styles.actionBtnFlex}
+            style={styles.actionBtnComplete}
+            onPress={() => onUpdateStatus(order.id, 'Completed')}
+            accessibilityLabel="Mark booking completed"
+          >
+            <CheckCircleIcon color="#121212" size={15} />
+            <Text
+              style={styles.actionBtnTextDark}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
+              Complete
+            </Text>
+          </ScalePressable>
+        ) : null}
+
+        {canCloseBooking ? (
+          <ScalePressable
+            containerStyle={styles.actionBtnFlex}
+            style={styles.actionBtnClose}
             onPress={() => onCloseBooking(order)}
             accessibilityLabel="Close booking and add photos"
           >
-            <CameraIcon color="#ffffff" size={17} />
+            <CameraIcon color="#ffffff" size={15} />
             <Text
-              style={styles.closePhotosBtnText}
+              style={styles.actionBtnTextWhite}
               numberOfLines={1}
               adjustsFontSizeToFit
-              minimumFontScale={0.85}
+              minimumFontScale={0.8}
             >
-              CLOSE BOOKING · ADD PHOTOS
+              Close
             </Text>
           </ScalePressable>
         ) : null}
       </View>
       </View>
     </ScrollView>
+
+      <ClearDueModal
+        visible={clearDueModalOpen}
+        booking={order}
+        clientName={order.client}
+        onClose={() => setClearDueModalOpen(false)}
+        onConfirmPayment={async (bId, amount, mode, notes) => {
+          if (onRecordPayment) {
+            await onRecordPayment(bId, amount, mode, notes);
+          } else if (onMarkFullyPaid) {
+            onMarkFullyPaid(bId);
+          }
+        }}
+      />
+    </>
   );
 };
 
@@ -766,6 +775,84 @@ const createStyles = (colors: ThemeColors) =>
     paddingHorizontal: 16,
     paddingTop: 20,
     gap: 10,
+  },
+  actionRowThree: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 24,
+    gap: 8,
+    width: '100%',
+  },
+  actionBtnFlex: {
+    flex: 1,
+    minWidth: 0,
+  },
+  actionBtnWhatsApp: {
+    width: '100%',
+    minHeight: 46,
+    backgroundColor: '#25D366',
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 6,
+    shadowColor: '#25D366',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.22,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  actionBtnComplete: {
+    width: '100%',
+    minHeight: 46,
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(18, 18, 18, 0.14)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 6,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  actionBtnClose: {
+    width: '100%',
+    minHeight: 46,
+    backgroundColor: '#121212',
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 6,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  actionBtnTextWhite: {
+    color: '#ffffff',
+    fontSize: 11.5,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    textAlign: 'center',
+  },
+  actionBtnTextDark: {
+    color: '#121212',
+    fontSize: 11.5,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    textAlign: 'center',
   },
   whatsAppBtn: {
     minHeight: 52,

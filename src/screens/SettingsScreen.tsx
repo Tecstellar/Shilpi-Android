@@ -22,6 +22,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
+import { apiClient } from '../services/apiClient';
+import { PhotoPickerModal } from '../components/PhotoPickerModal';
 
 export interface SettingsUsageCounts {
   orders: number;
@@ -291,6 +293,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onGoToSubscription,
   onLogout,
   onUpdateProfile,
+  onDeleteAccount,
 }) => {
   const insets = useSafeAreaInsets();
   const { themeName, colors, themes, setTheme } = useTheme();
@@ -367,6 +370,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   // Interactive Theme State
   const [themePickerOpen, setThemePickerOpen] = useState(false);
   const [quotasExpanded, setQuotasExpanded] = useState(false);
+  const [isLogoPickerVisible, setIsLogoPickerVisible] = useState(false);
 
   // Edit Modals State
   const [editArtistModalOpen, setEditArtistModalOpen] = useState(false);
@@ -429,27 +433,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
       // Sync with backend API
       try {
-        const token = await AsyncStorage.getItem('@shilpi_token');
-        if (token) {
-          await fetch('http://localhost:4000/api/v1/auth/me', {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              ownerName: nextProfile.ownerName,
-              businessName: nextProfile.businessName,
-              businessTypes: nextProfile.businessTypes,
-              city: nextProfile.city,
-              address: nextProfile.address,
-              pincode: nextProfile.pincode,
-              phone: nextProfile.phone,
-              logoUri: nextProfile.logoUri,
-            }),
-          });
-        }
-      } catch {}
+        await apiClient.patch('/auth/me', {
+          ownerName: nextProfile.ownerName,
+          businessName: nextProfile.businessName,
+          businessTypes: nextProfile.businessTypes,
+          city: nextProfile.city,
+          address: nextProfile.address,
+          pincode: nextProfile.pincode,
+          phone: nextProfile.phone,
+          logoUri: nextProfile.logoUri,
+        });
+      } catch (err) {
+        console.warn('Backend sync profile failed:', err);
+      }
 
       try {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -465,7 +461,38 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   };
 
   // Pick Logo / Photo with ImagePicker
-  const handlePickLogo = async () => {
+  const handlePickLogo = () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    setIsLogoPickerVisible(true);
+  };
+
+  const handlePickLogoCamera = async () => {
+    setIsLogoPickerVisible(false);
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('Permission Needed', 'Please allow camera access to take a photo.');
+        return;
+      }
+      const res = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!res.canceled && res.assets[0]?.uri) {
+        const pickedUri = res.assets[0].uri;
+        setCurStudioLogo(pickedUri);
+        await saveProfileData({ studioLogo: pickedUri });
+      }
+    } catch {
+      Alert.alert('Camera Notice', 'Could not open camera.');
+    }
+  };
+
+  const handlePickLogoGallery = async () => {
+    setIsLogoPickerVisible(false);
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
@@ -486,6 +513,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     } catch {
       Alert.alert('Picker Notice', 'Could not open photo gallery.');
     }
+  };
+
+  const handleRemoveLogo = async () => {
+    setIsLogoPickerVisible(false);
+    setCurStudioLogo(undefined);
+    await saveProfileData({ studioLogo: '' });
   };
 
   // Logout Confirmation Handler
@@ -540,23 +573,19 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             try {
               setIsDeleting(true);
 
-              // Call backend delete endpoint if reachable
+              // Call backend delete endpoint
               try {
-                const token = await AsyncStorage.getItem('@shilpi_token');
-                if (token) {
-                  await fetch('http://localhost:4000/api/v1/auth/account', {
-                    method: 'DELETE',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({
-                      reason: selectedReason,
-                      feedback: feedbackText,
-                    }),
+                if (onDeleteAccount) {
+                  await onDeleteAccount(selectedReason, feedbackText);
+                } else {
+                  await apiClient.delete('/auth/account', {
+                    reason: selectedReason,
+                    feedback: feedbackText,
                   });
                 }
-              } catch {}
+              } catch (delErr) {
+                console.warn('Backend deleteAccount failed:', delErr);
+              }
 
               // Clear all stored local data
               await AsyncStorage.multiRemove([
@@ -1644,6 +1673,18 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      {/* Custom Themed Studio Logo / Photo Picker Modal */}
+      <PhotoPickerModal
+        visible={isLogoPickerVisible}
+        title="Studio Logo / Photo"
+        subtitle="Choose a source for your studio brand image"
+        hasExistingPhoto={!!curStudioLogo}
+        onClose={() => setIsLogoPickerVisible(false)}
+        onSelectCamera={handlePickLogoCamera}
+        onSelectGallery={handlePickLogoGallery}
+        onRemovePhoto={handleRemoveLogo}
+      />
     </ScrollView>
   );
 };
