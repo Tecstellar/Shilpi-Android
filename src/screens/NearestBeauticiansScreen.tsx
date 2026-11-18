@@ -13,6 +13,7 @@ import {
   Dimensions,
   Alert,
   FlatList,
+  Easing,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -234,7 +235,6 @@ export interface RegisteredMakeover {
   mapY: number;
 }
 
-// Exactly the registered studios from the Shilpi database
 const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
   {
     id: '2c704aa6-5642-4b9e-8b8a-3be33a4e53f2',
@@ -346,7 +346,6 @@ const POPULAR_LOCATIONS = [
   { pin: '625001', city: 'Madurai', area: 'Town Center, Madurai' },
 ];
 
-// Area map profile definition to dynamically tailor roads, labels, and landmarks
 interface AreaMapProfile {
   cityName: string;
   primaryArea: string;
@@ -441,6 +440,11 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors, insets), [colors, insets]);
 
+  // 3-Second Loading Animation States
+  const [isScanning, setIsScanning] = useState(true);
+  const [scanStatusText, setScanStatusText] = useState('Requesting satellite GPS coordinates...');
+  const [scanStepIndex, setScanStepIndex] = useState(1);
+
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
   const [loading, setLoading] = useState(false);
   const [userPincode, setUserPincode] = useState<string>('641002');
@@ -461,7 +465,19 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
   const pinSpring = useRef(new Animated.Value(1)).current;
   const cardListRef = useRef<FlatList>(null);
 
-  // Radar Pulse Animation
+  // Enterprise Loading Animation values
+  const scanFadeAnim = useRef(new Animated.Value(1)).current;
+  const radarSweepRotate = useRef(new Animated.Value(0)).current;
+  const sonarWave1 = useRef(new Animated.Value(0.5)).current;
+  const sonarWave2 = useRef(new Animated.Value(0.5)).current;
+  const sonarWave3 = useRef(new Animated.Value(0.5)).current;
+  const avatarPop1 = useRef(new Animated.Value(0)).current;
+  const avatarPop2 = useRef(new Animated.Value(0)).current;
+  const avatarPop3 = useRef(new Animated.Value(0)).current;
+  const avatarPop4 = useRef(new Animated.Value(0)).current;
+  const progressBarAnim = useRef(new Animated.Value(0)).current;
+
+  // Radar Pulse Animation for the Map Beacon
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -479,9 +495,95 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
     ).start();
   }, [radarScale]);
 
-  // GPS Location Detection on mount: captures precise PIN code and address
+  // -------------------------------------------------------------
+  // 4. HIGH-CRAFT 3-SECOND LOCATION SCANNING ANIMATION PIPELINE
+  // -------------------------------------------------------------
   useEffect(() => {
     let isMounted = true;
+
+    // Start 360-degree radar rotation
+    Animated.loop(
+      Animated.timing(radarSweepRotate, {
+        toValue: 1,
+        duration: 2200,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    // Start multi-tier expanding sonar waves
+    const createSonar = (val: Animated.Value, delay: number) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.parallel([
+            Animated.timing(val, {
+              toValue: 2.6,
+              duration: 2000,
+              easing: Easing.out(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.timing(val, {
+            toValue: 0.5,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+    };
+
+    createSonar(sonarWave1, 0).start();
+    createSonar(sonarWave2, 600).start();
+    createSonar(sonarWave3, 1200).start();
+
+    // Progress bar from 0% to 100% over 3 seconds
+    Animated.timing(progressBarAnim, {
+      toValue: 1,
+      duration: 3000,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: false,
+    }).start();
+
+    // Staggered pop-in for beautician avatars found in area
+    setTimeout(() => {
+      if (isMounted) {
+        setScanStepIndex(2);
+        setScanStatusText('Extracting postal PIN code & territory...');
+        Animated.spring(avatarPop1, { toValue: 1, friction: 4.5, tension: 50, useNativeDriver: true }).start();
+        Animated.spring(avatarPop2, { toValue: 1, friction: 4.5, tension: 50, useNativeDriver: true }).start();
+      }
+    }, 1100);
+
+    setTimeout(() => {
+      if (isMounted) {
+        setScanStepIndex(3);
+        setScanStatusText('Matching verified bridal studios...');
+        Animated.spring(avatarPop3, { toValue: 1, friction: 4.5, tension: 50, useNativeDriver: true }).start();
+        Animated.spring(avatarPop4, { toValue: 1, friction: 4.5, tension: 50, useNativeDriver: true }).start();
+        try {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch {}
+      }
+    }, 2100);
+
+    // Conclude 3-second scanning animation and reveal Google Map
+    const timer = setTimeout(() => {
+      if (isMounted) {
+        Animated.timing(scanFadeAnim, {
+          toValue: 0,
+          duration: 400,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }).start(() => {
+          if (isMounted) {
+            setIsScanning(false);
+          }
+        });
+      }
+    }, 3100);
+
+    // Ask for location and reverse geocode
     async function locateCustomer() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
@@ -517,8 +619,10 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
     }
 
     locateCustomer();
+
     return () => {
       isMounted = false;
+      clearTimeout(timer);
     };
   }, []);
 
@@ -545,12 +649,10 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
         return;
       }
     } catch {
-      // Fallback: match from local real registered studios
+      // Fallback
     }
 
-    // STRICT GEOGRAPHIC LOCALIZATION:
-    // Only show beauticians that actually belong to this city or PIN code!
-    // E.g. Kalugumalai will ONLY show Kalugumalai makeovers.
+    // STRICT GEOGRAPHIC LOCALIZATION
     const cityClean = city.toLowerCase().trim();
     const isKalugumalai = cityClean.includes('kalugumalai') || pincode === '628552';
     const isCoimbatore = cityClean.includes('coimbatore') || pincode.startsWith('641');
@@ -565,11 +667,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
       pool = [...REAL_REGISTERED_STUDIOS];
     }
 
-    // Sort order:
-    // 1. Pro Subscribers first (Vector Diamond)
-    // 2. Orders completed volume descending
-    // 3. Exact Pincode match
-    // 4. Distance proximity
+    // Sort order: Pro Subscribers first (Vector Diamond), Bookings, Exact PIN, Distance
     const matched = pool.sort((a, b) => {
       if (a.isPro !== b.isPro) return a.isPro ? -1 : 1;
       if (b.completedBookingsCount !== a.completedBookingsCount) {
@@ -620,7 +718,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
     } catch {}
     setSelectedStudio(studio);
 
-    // Spring animation on selected pin
     pinSpring.setValue(0.7);
     Animated.spring(pinSpring, {
       toValue: 1,
@@ -628,7 +725,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
       useNativeDriver: true,
     }).start();
 
-    // Scroll carousel to the selected studio
     const idx = filteredStudios.findIndex((s) => s.id === studio.id);
     if (idx !== -1 && cardListRef.current) {
       cardListRef.current.scrollToIndex({ index: idx, animated: true });
@@ -725,12 +821,211 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
   const midX = (userMapX + targetX) / 2;
   const midY = (userMapY + targetY) / 2 - 25;
 
+  const spinInterpolation = radarSweepRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
   return (
     <View style={styles.screen}>
+      {/* -------------------------------------------------------------
+          5. ENTERPRISE 3-SECOND RADAR SCANNING & AVATAR FETCHING OVERLAY
+         ------------------------------------------------------------- */}
+      {isScanning && (
+        <Animated.View style={[styles.scanOverlay, { opacity: scanFadeAnim }]}>
+          {/* Top Bar on Scan Screen */}
+          <View style={[styles.scanTopRow, { top: insets.top + 10 }]}>
+            <TouchableOpacity style={styles.floatingCircleBtn} onPress={onGoBack} activeOpacity={0.82}>
+              <BackArrowVector color="#0f172a" size={18} />
+            </TouchableOpacity>
+            <View style={styles.scanHeaderTitleWrap}>
+              <Text style={styles.scanHeaderTitle}>LOCATING BEAUTICIANS</Text>
+              <Text style={styles.scanHeaderSub}>High-Precision Territory Scan</Text>
+            </View>
+            <View style={{ width: 44 }} />
+          </View>
+
+          {/* Central Radar Stage */}
+          <View style={styles.radarCenterStage}>
+            {/* Concentric Expanding Sonar Waves */}
+            <Animated.View
+              style={[
+                styles.sonarRing,
+                {
+                  transform: [{ scale: sonarWave1 }],
+                  opacity: sonarWave1.interpolate({ inputRange: [0.5, 2.6], outputRange: [0.45, 0] }),
+                },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.sonarRing,
+                {
+                  transform: [{ scale: sonarWave2 }],
+                  opacity: sonarWave2.interpolate({ inputRange: [0.5, 2.6], outputRange: [0.35, 0] }),
+                },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.sonarRing,
+                {
+                  transform: [{ scale: sonarWave3 }],
+                  opacity: sonarWave3.interpolate({ inputRange: [0.5, 2.6], outputRange: [0.25, 0] }),
+                },
+              ]}
+            />
+
+            {/* Rotating Radar Sweep Beam */}
+            <Animated.View style={[styles.radarSweepBeam, { transform: [{ rotate: spinInterpolation }] }]}>
+              <View style={styles.radarLaserLine} />
+              <View style={styles.radarSweepSector} />
+            </Animated.View>
+
+            {/* Center User Beacon */}
+            <View style={styles.scanUserCore}>
+              <View style={styles.scanUserCoreInner} />
+            </View>
+            <View style={styles.scanUserTag}>
+              <Text style={styles.scanUserTagText}>GPS FIXED</Text>
+            </View>
+
+            {/* Orbiting Beautician Avatar 1: Shilpi Makeovers (Top Right) */}
+            <Animated.View
+              style={[
+                styles.orbitingAvatarNode,
+                {
+                  top: -65,
+                  right: -55,
+                  transform: [{ scale: avatarPop1 }],
+                },
+              ]}
+            >
+              <View style={[styles.avatarBubble, styles.avatarBubblePro]}>
+                <Text style={styles.avatarBubbleText}>S</Text>
+                <View style={styles.avatarDiamondBadge}>
+                  <DiamondVector color="#ffffff" size={8} />
+                </View>
+              </View>
+              <View style={styles.avatarCalloutTag}>
+                <Text style={styles.avatarCalloutName}>Shilpi Makeovers</Text>
+                <Text style={styles.avatarCalloutDist}>0.8 km</Text>
+              </View>
+            </Animated.View>
+
+            {/* Orbiting Beautician Avatar 2: Pooja Luxury Studio (Bottom Right) */}
+            <Animated.View
+              style={[
+                styles.orbitingAvatarNode,
+                {
+                  bottom: -60,
+                  right: -45,
+                  transform: [{ scale: avatarPop2 }],
+                },
+              ]}
+            >
+              <View style={[styles.avatarBubble, styles.avatarBubblePro]}>
+                <Text style={styles.avatarBubbleText}>P</Text>
+                <View style={styles.avatarDiamondBadge}>
+                  <DiamondVector color="#ffffff" size={8} />
+                </View>
+              </View>
+              <View style={styles.avatarCalloutTag}>
+                <Text style={styles.avatarCalloutName}>Pooja Studio</Text>
+                <Text style={styles.avatarCalloutDist}>2.1 km</Text>
+              </View>
+            </Animated.View>
+
+            {/* Orbiting Beautician Avatar 3: Jo Makeovers (Top Left) */}
+            <Animated.View
+              style={[
+                styles.orbitingAvatarNode,
+                {
+                  top: -55,
+                  left: -60,
+                  transform: [{ scale: avatarPop3 }],
+                },
+              ]}
+            >
+              <View style={[styles.avatarBubble, styles.avatarBubblePro]}>
+                <Text style={styles.avatarBubbleText}>J</Text>
+                <View style={styles.avatarDiamondBadge}>
+                  <DiamondVector color="#ffffff" size={8} />
+                </View>
+              </View>
+              <View style={styles.avatarCalloutTag}>
+                <Text style={styles.avatarCalloutName}>Jo Makeovers</Text>
+                <Text style={styles.avatarCalloutDist}>0.6 km</Text>
+              </View>
+            </Animated.View>
+
+            {/* Orbiting Beautician Avatar 4: Nobita Makeovers (Bottom Left) */}
+            <Animated.View
+              style={[
+                styles.orbitingAvatarNode,
+                {
+                  bottom: -50,
+                  left: -50,
+                  transform: [{ scale: avatarPop4 }],
+                },
+              ]}
+            >
+              <View style={styles.avatarBubble}>
+                <Text style={[styles.avatarBubbleText, { color: '#0f172a' }]}>N</Text>
+              </View>
+              <View style={styles.avatarCalloutTag}>
+                <Text style={styles.avatarCalloutName}>Nobita Studio</Text>
+                <Text style={styles.avatarCalloutDist}>1.4 km</Text>
+              </View>
+            </Animated.View>
+          </View>
+
+          {/* Bottom Progress & Status Details */}
+          <View style={[styles.scanBottomCard, { bottom: insets.bottom + 24 }]}>
+            {/* Live Status Row */}
+            <View style={styles.scanStatusRow}>
+              <View style={styles.scanStatusIndicatorDot} />
+              <Text style={styles.scanStatusHeadingText}>{scanStatusText}</Text>
+            </View>
+
+            {/* Target Area Capsule */}
+            <View style={styles.scanTerritoryPill}>
+              <LocationPinVector color="#ea4335" size={13} />
+              <Text style={styles.scanTerritoryText} numberOfLines={1}>
+                {userAddress || userCity} · PIN {userPincode}
+              </Text>
+            </View>
+
+            {/* 3-Second Loading Progress Bar */}
+            <View style={styles.progressBarBg}>
+              <Animated.View
+                style={[
+                  styles.progressBarFill,
+                  {
+                    width: progressBarAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%'],
+                    }),
+                  },
+                ]}
+              />
+            </View>
+
+            {/* Verified Guarantee Badge */}
+            <View style={styles.scanVerifiedNotice}>
+              <ShieldCheckVector color="#10b981" size={15} />
+              <Text style={styles.scanVerifiedNoticeText}>
+                Showing 100% Verified Shilpi Makeover Artists
+              </Text>
+            </View>
+          </View>
+        </Animated.View>
+      )}
+
+      {/* -------------------------------------------------------------
+          6. MAIN MAP OR LIST VIEW (APPEARS AFTER 3-SECOND SCAN)
+         ------------------------------------------------------------- */}
       {viewMode === 'map' ? (
-        // -------------------------------------------------------------
-        // 4. AUTHENTIC GOOGLE MAPS UI VECTOR ENGINE
-        // -------------------------------------------------------------
         <View style={styles.fullBleedMapContainer}>
           <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT} style={StyleSheet.absoluteFill}>
             <Defs>
@@ -783,39 +1078,34 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               fill="#ebe7df"
             />
 
-            {/* 5. Google Maps Organic Road Network (Two-pass casing + fill) */}
-            {/* Pass 1: Local Streets (Casing) */}
+            {/* 5. Google Maps Organic Road Network */}
             <Path d={`M-30,${SCREEN_HEIGHT * 0.24} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.24}`} stroke="#e5e3de" strokeWidth={4} />
             <Path d={`M-30,${SCREEN_HEIGHT * 0.54} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.54}`} stroke="#e5e3de" strokeWidth={4} />
             <Path d={`M${SCREEN_WIDTH * 0.22},0 L${SCREEN_WIDTH * 0.22},${SCREEN_HEIGHT}`} stroke="#e5e3de" strokeWidth={4} />
             <Path d={`M${SCREEN_WIDTH * 0.74},0 L${SCREEN_WIDTH * 0.74},${SCREEN_HEIGHT}`} stroke="#e5e3de" strokeWidth={4} />
 
-            {/* Pass 1: Major Arterial Roads (Casing) */}
             <Path d={`M-30,${SCREEN_HEIGHT * 0.36} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.36}`} stroke="#d5d3ce" strokeWidth={7} />
             <Path d={`M-30,${SCREEN_HEIGHT * 0.48} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.48}`} stroke="#d5d3ce" strokeWidth={7} />
             <Path d={`M${SCREEN_WIDTH * 0.44},0 L${SCREEN_WIDTH * 0.44},${SCREEN_HEIGHT}`} stroke="#d5d3ce" strokeWidth={7} />
             <Path d={`M${SCREEN_WIDTH * 0.86},0 L${SCREEN_WIDTH * 0.86},${SCREEN_HEIGHT}`} stroke="#d5d3ce" strokeWidth={6} />
 
-            {/* Pass 1: Highway Expressway (Casing #f59e0b) */}
             <Path
               d={`M-30,${SCREEN_HEIGHT * 0.42} Q${SCREEN_WIDTH * 0.45},${SCREEN_HEIGHT * 0.40} ${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.48}`}
               stroke="#f59e0b"
               strokeWidth={9}
             />
 
-            {/* Pass 2: Local Streets (Pure White Fill #ffffff) */}
+            {/* Pure White Fills */}
             <Path d={`M-30,${SCREEN_HEIGHT * 0.24} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.24}`} stroke="#ffffff" strokeWidth={2.8} />
             <Path d={`M-30,${SCREEN_HEIGHT * 0.54} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.54}`} stroke="#ffffff" strokeWidth={2.8} />
             <Path d={`M${SCREEN_WIDTH * 0.22},0 L${SCREEN_WIDTH * 0.22},${SCREEN_HEIGHT}`} stroke="#ffffff" strokeWidth={2.8} />
             <Path d={`M${SCREEN_WIDTH * 0.74},0 L${SCREEN_WIDTH * 0.74},${SCREEN_HEIGHT}`} stroke="#ffffff" strokeWidth={2.8} />
 
-            {/* Pass 2: Major Arterial Roads (Pure White Fill #ffffff) */}
             <Path d={`M-30,${SCREEN_HEIGHT * 0.36} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.36}`} stroke="#ffffff" strokeWidth={5} />
             <Path d={`M-30,${SCREEN_HEIGHT * 0.48} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.48}`} stroke="#ffffff" strokeWidth={5} />
             <Path d={`M${SCREEN_WIDTH * 0.44},0 L${SCREEN_WIDTH * 0.44},${SCREEN_HEIGHT}`} stroke="#ffffff" strokeWidth={5} />
             <Path d={`M${SCREEN_WIDTH * 0.86},0 L${SCREEN_WIDTH * 0.86},${SCREEN_HEIGHT}`} stroke="#ffffff" strokeWidth={4.5} />
 
-            {/* Pass 2: Highway Expressway Fill (Google Signature #fed7aa) */}
             <Path
               d={`M-30,${SCREEN_HEIGHT * 0.42} Q${SCREEN_WIDTH * 0.45},${SCREEN_HEIGHT * 0.40} ${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.48}`}
               stroke="#fed7aa"
@@ -825,13 +1115,13 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             {/* Bridge Deck over Canal */}
             <Rect x={SCREEN_WIDTH * 0.42} y={SCREEN_HEIGHT * 0.67} width={SCREEN_WIDTH * 0.05} height={SCREEN_HEIGHT * 0.045} fill="#ffffff" stroke="#d5d3ce" strokeWidth={1} rx={2} />
 
-            {/* 6. Dynamic Google Maps Highway Shield Badge for Active Area */}
+            {/* Dynamic Highway Shield Badge */}
             <Rect x={SCREEN_WIDTH * 0.08} y={SCREEN_HEIGHT * 0.40} width={44} height={16} rx={3} fill="#15803d" />
             <SvgText x={SCREEN_WIDTH * 0.08 + 22} y={SCREEN_HEIGHT * 0.40 + 11.5} fill="#ffffff" fontSize={8} fontWeight="800" textAnchor="middle">
               {areaProfile.highwayName}
             </SvgText>
 
-            {/* 7. DYNAMIC AREA TYPOGRAPHY & LABELS (Tailored strictly to Kalugumalai / Coimbatore) */}
+            {/* DYNAMIC AREA TYPOGRAPHY & LABELS */}
             <SvgText x={SCREEN_WIDTH * 0.48} y={SCREEN_HEIGHT * 0.34} fill="#5f6368" fontSize={9.5} fontWeight="700" letterSpacing={1.2}>
               {areaProfile.primaryArea}
             </SvgText>
@@ -842,7 +1132,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               {areaProfile.secondaryArea2}
             </SvgText>
 
-            {/* Street Names (#80868b) */}
             <SvgText x={SCREEN_WIDTH * 0.52} y={SCREEN_HEIGHT * 0.47} fill="#80868b" fontSize={7.5} fontWeight="600">
               {areaProfile.mainRoad1}
             </SvgText>
@@ -850,7 +1139,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               {areaProfile.mainRoad2}
             </SvgText>
 
-            {/* Park & Promenade Labels (#188038) */}
             <SvgText x={SCREEN_WIDTH * 0.12} y={SCREEN_HEIGHT * 0.25} fill="#188038" fontSize={8} fontWeight="700">
               {areaProfile.parkName}
             </SvgText>
@@ -858,16 +1146,15 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               {areaProfile.promenadeName}
             </SvgText>
 
-            {/* 8. Google Maps POI Dots */}
+            {/* Google Maps POI Dots */}
             <Circle cx={SCREEN_WIDTH * 0.44} cy={SCREEN_HEIGHT * 0.36} r={7} fill="#1a73e8" />
             <Circle cx={SCREEN_WIDTH * 0.44} cy={SCREEN_HEIGHT * 0.36} r={3} fill="#ffffff" />
             <Circle cx={SCREEN_WIDTH * 0.74} cy={SCREEN_HEIGHT * 0.48} r={7} fill="#ea4335" />
             <Circle cx={SCREEN_WIDTH * 0.74} cy={SCREEN_HEIGHT * 0.48} r={2.5} fill="#ffffff" />
 
-            {/* 9. ACTIVE GOOGLE MAPS NAVIGATION ROUTE */}
+            {/* ACTIVE GOOGLE MAPS NAVIGATION ROUTE */}
             {selectedStudio && (
               <G>
-                {/* Route Glow Shadow */}
                 <Path
                   d={`M${userMapX},${userMapY} Q${midX},${midY} ${targetX},${targetY}`}
                   stroke="rgba(255, 45, 117, 0.22)"
@@ -875,7 +1162,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                   fill="none"
                   strokeLinecap="round"
                 />
-                {/* Sharp Core Route */}
                 <Path
                   d={`M${userMapX},${userMapY} Q${midX},${midY} ${targetX},${targetY}`}
                   stroke="url(#routePinkGlow)"
@@ -936,7 +1222,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                 onPress={() => handleSelectPin(studio)}
                 activeOpacity={0.88}
               >
-                {/* Floating Callout Capsule on Top of Pin */}
                 <View style={[styles.googlePinCallout, isSelected && styles.googlePinCalloutSelected]}>
                   {studio.isPro && (
                     <View style={styles.proMiniBadge}>
@@ -952,7 +1237,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                   </Text>
                 </View>
 
-                {/* Google Maps Teardrop Marker */}
                 <Animated.View
                   style={isSelected ? { transform: [{ scale: pinSpring }] } : undefined}
                 >
@@ -968,16 +1252,12 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             );
           })}
 
-          {/* -------------------------------------------------------------
-              5. FULLY RESPONSIVE TOP BAR (No Truncation for Kalugumalai)
-             ------------------------------------------------------------- */}
+          {/* FULLY RESPONSIVE TOP BAR */}
           <View style={[styles.floatingTopBarWrap, { top: insets.top + 8 }]}>
-            {/* Back Button */}
             <TouchableOpacity style={styles.floatingCircleBtn} onPress={onGoBack} activeOpacity={0.82}>
               <BackArrowVector color="#0f172a" size={18} />
             </TouchableOpacity>
 
-            {/* Location Selector Pill: Fully responsive flex container */}
             <TouchableOpacity
               style={styles.floatingLocationCapsule}
               onPress={() => {
@@ -999,7 +1279,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               </View>
             </TouchableOpacity>
 
-            {/* View Switcher Toggle */}
             <TouchableOpacity
               style={styles.floatingCircleBtn}
               onPress={() => setViewMode('list')}
@@ -1009,7 +1288,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             </TouchableOpacity>
           </View>
 
-          {/* Floating Category Filter Chips (With Vector Diamond for Pro) */}
+          {/* Floating Category Filter Chips */}
           <View style={[styles.floatingFilterChipsRow, { top: insets.top + 64 }]}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsScroll}>
               {FILTER_TABS.map((tab) => {
@@ -1051,9 +1330,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             </TouchableOpacity>
           </View>
 
-          {/* -------------------------------------------------------------
-              6. HORIZONTAL SNAPPING STUDIO CARD DECK
-             ------------------------------------------------------------- */}
+          {/* HORIZONTAL SNAPPING STUDIO CARD DECK */}
           <View style={[styles.carouselContainer, { bottom: insets.bottom + 10 }]}>
             <FlatList
               ref={cardListRef}
@@ -1083,10 +1360,8 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                         setDetailModalOpen(true);
                       }}
                     >
-                      {/* Drag Handle */}
                       <View style={styles.cardDragHandle} />
 
-                      {/* Header Row */}
                       <View style={styles.cardHeaderRow}>
                         <View style={[styles.cardAvatar, studio.isPro && styles.cardAvatarPro]}>
                           <Text style={[styles.cardAvatarText, studio.isPro && styles.cardAvatarTextPro]}>
@@ -1113,7 +1388,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                             By {studio.ownerName} · {studio.city}
                           </Text>
 
-                          {/* Meta Indicators: Distance, Estimated Time, PIN match */}
                           <View style={styles.cardMetaRow}>
                             <View style={styles.distanceBadgePill}>
                               <LocationPinVector color="#ea4335" size={10} />
@@ -1133,7 +1407,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                         </View>
                       </View>
 
-                      {/* Real Services & Pricing Row */}
                       <View style={styles.cardServicesRow}>
                         <View style={styles.chipsWrap}>
                           {studio.services.slice(0, 2).map((srv: string, idx: number) => (
@@ -1149,7 +1422,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                         </Text>
                       </View>
 
-                      {/* Action Buttons Row: Black Call, Green WhatsApp, Directions */}
                       <View style={styles.cardActionsRow}>
                         <TouchableOpacity
                           style={styles.actionBtnCall}
@@ -1190,7 +1462,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
         // 7. HIGH-DENSITY LIST VIEW (MATCHING THEME)
         // -------------------------------------------------------------
         <View style={[styles.screen, { paddingTop: insets.top }]}>
-          {/* List Top Bar */}
           <View style={styles.listTopBar}>
             <TouchableOpacity style={styles.floatingCircleBtn} onPress={onGoBack} activeOpacity={0.8}>
               <BackArrowVector color="#0f172a" size={18} />
@@ -1224,7 +1495,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             </TouchableOpacity>
           </View>
 
-          {/* List Content */}
           <ScrollView contentContainerStyle={styles.listScrollContent} showsVerticalScrollIndicator={false}>
             <View style={styles.listHeaderBadgeRow}>
               <Text style={styles.listHeaderTitle}>
@@ -1348,7 +1618,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: SCREEN_HEIGHT * 0.52 }}>
-              {/* Real Verified Information Card */}
               <View style={styles.modalStatsCard}>
                 <View style={styles.modalStatCol}>
                   <Text style={styles.modalStatVal}>{selectedStudio?.distanceKm} km</Text>
@@ -1372,7 +1641,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                 </View>
               </View>
 
-              {/* Studio Location with Google Maps Button */}
               <View style={styles.modalSectionCard}>
                 <Text style={styles.modalSectionHeading}>STUDIO ADDRESS</Text>
                 <Text style={styles.modalAddressText}>{selectedStudio?.address}</Text>
@@ -1386,10 +1654,9 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                 </TouchableOpacity>
               </View>
 
-              {/* Real Services & Offerings from Database */}
               <View style={styles.modalSectionCard}>
                 <Text style={styles.modalSectionHeading}>SERVICES & PACKAGES</Text>
-                {selectedStudio?.services.map((srv, idx) => (
+                {selectedStudio?.services.map((srv: string, idx: number) => (
                   <View key={`pkg-${idx}`} style={styles.modalServiceRow}>
                     <Text style={styles.modalServiceName} numberOfLines={1}>{srv}</Text>
                     <Text style={styles.modalServicePrice}>
@@ -1399,7 +1666,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                 ))}
               </View>
 
-              {/* Verified Shilpi Partner Guarantee Card */}
               <View style={styles.modalGuaranteeCard}>
                 <ShieldCheckVector color="#10b981" size={18} />
                 <View style={{ flex: 1 }}>
@@ -1411,7 +1677,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               </View>
             </ScrollView>
 
-            {/* Bottom CTA Row */}
             <View style={styles.modalFooterRow}>
               <TouchableOpacity
                 style={styles.modalCallBtn}
@@ -1502,6 +1767,263 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     screen: {
       flex: 1,
       backgroundColor: '#f4f3f0',
+    },
+    // Enterprise Radar Scanning Screen Styles
+    scanOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: '#f8fafc',
+      zIndex: 999,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    scanTopRow: {
+      position: 'absolute',
+      left: 16,
+      right: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    scanHeaderTitleWrap: {
+      alignItems: 'center',
+    },
+    scanHeaderTitle: {
+      fontSize: 13,
+      fontWeight: '900',
+      color: '#0f172a',
+      letterSpacing: 1,
+    },
+    scanHeaderSub: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: '#64748b',
+      marginTop: 2,
+    },
+    radarCenterStage: {
+      width: 220,
+      height: 220,
+      justifyContent: 'center',
+      alignItems: 'center',
+      position: 'relative',
+    },
+    sonarRing: {
+      position: 'absolute',
+      width: 140,
+      height: 140,
+      borderRadius: 70,
+      borderWidth: 2,
+      borderColor: '#ff2d75',
+      backgroundColor: 'rgba(255, 45, 117, 0.08)',
+    },
+    radarSweepBeam: {
+      position: 'absolute',
+      width: 220,
+      height: 220,
+      borderRadius: 110,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    radarLaserLine: {
+      position: 'absolute',
+      top: 0,
+      width: 2.5,
+      height: 110,
+      backgroundColor: '#ff2d75',
+      shadowColor: '#ff2d75',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.9,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    radarSweepSector: {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      width: 110,
+      height: 110,
+      borderTopRightRadius: 110,
+      backgroundColor: 'rgba(255, 45, 117, 0.12)',
+    },
+    scanUserCore: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: '#ff2d75',
+      borderWidth: 3.5,
+      borderColor: '#ffffff',
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: '#ff2d75',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.5,
+      shadowRadius: 6,
+      elevation: 6,
+      zIndex: 20,
+    },
+    scanUserCoreInner: {
+      width: 7,
+      height: 7,
+      borderRadius: 3.5,
+      backgroundColor: '#ffffff',
+    },
+    scanUserTag: {
+      position: 'absolute',
+      bottom: 60,
+      backgroundColor: '#0f172a',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+      zIndex: 21,
+    },
+    scanUserTagText: {
+      fontSize: 8.5,
+      fontWeight: '900',
+      color: '#ffffff',
+      letterSpacing: 0.6,
+    },
+    orbitingAvatarNode: {
+      position: 'absolute',
+      alignItems: 'center',
+      zIndex: 30,
+    },
+    avatarBubble: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: '#ffffff',
+      borderWidth: 2,
+      borderColor: '#e2e8f0',
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: '#0f172a',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    avatarBubblePro: {
+      borderColor: '#f59e0b',
+      backgroundColor: '#fef3c7',
+    },
+    avatarBubbleText: {
+      fontSize: 16,
+      fontWeight: '900',
+      color: '#b45309',
+    },
+    avatarDiamondBadge: {
+      position: 'absolute',
+      top: -3,
+      right: -3,
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      backgroundColor: '#f59e0b',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1.5,
+      borderColor: '#ffffff',
+    },
+    avatarCalloutTag: {
+      backgroundColor: '#ffffff',
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      borderRadius: 8,
+      marginTop: 4,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 4,
+      elevation: 3,
+      alignItems: 'center',
+    },
+    avatarCalloutName: {
+      fontSize: 9,
+      fontWeight: '700',
+      color: '#0f172a',
+    },
+    avatarCalloutDist: {
+      fontSize: 8,
+      fontWeight: '800',
+      color: '#ff2d75',
+    },
+    scanBottomCard: {
+      position: 'absolute',
+      left: 20,
+      right: 20,
+      backgroundColor: '#ffffff',
+      borderRadius: 22,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+      shadowColor: '#0f172a',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.10,
+      shadowRadius: 16,
+      elevation: 8,
+      alignItems: 'center',
+    },
+    scanStatusRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 8,
+    },
+    scanStatusIndicatorDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: '#ff2d75',
+    },
+    scanStatusHeadingText: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: '#0f172a',
+    },
+    scanTerritoryPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: '#f8fafc',
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+      marginBottom: 14,
+    },
+    scanTerritoryText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#475569',
+    },
+    progressBarBg: {
+      width: '100%',
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: '#f1f5f9',
+      overflow: 'hidden',
+      marginBottom: 12,
+    },
+    progressBarFill: {
+      height: '100%',
+      backgroundColor: '#ff2d75',
+      borderRadius: 3,
+    },
+    scanVerifiedNotice: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    scanVerifiedNoticeText: {
+      fontSize: 10.5,
+      fontWeight: '700',
+      color: '#059669',
     },
     fullBleedMapContainer: {
       flex: 1,
