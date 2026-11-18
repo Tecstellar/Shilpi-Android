@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,9 @@ import {
   Linking,
   Platform,
   Dimensions,
-  Alert,
   FlatList,
   Easing,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -27,6 +27,7 @@ import Svg, {
   Stop,
   G,
   Text as SvgText,
+  Line,
 } from 'react-native-svg';
 import { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
@@ -59,13 +60,10 @@ const LocationPinVector: React.FC<{ color?: string; size?: number }> = ({ color 
   </Svg>
 );
 
-// Diamond Vector Icon for Pro Beauticians (Replaces King / Crown Emoji)
+// Diamond Vector Icon for Pro Beauticians
 const DiamondVector: React.FC<{ color?: string; size?: number }> = ({ color = '#f59e0b', size = 12 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M12 2L2 9l10 13 10-13-10-13z"
-      fill={color}
-    />
+    <Path d="M12 2L2 9l10 13 10-13-10-13z" fill={color} />
     <Path
       d="M2 9h20M12 2l-4 7 4 13 4-13-4-7zM7 2l5 7M17 2l-5 7"
       stroke="#ffffff"
@@ -159,45 +157,57 @@ const ShieldCheckVector: React.FC<{ color?: string; size?: number }> = ({ color 
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
+      fill={color}
+      fillOpacity={0.12}
     />
     <Path d="M9 12l2 2 4-4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
-// -------------------------------------------------------------
-// 2. AUTHENTIC GOOGLE MAPS TEARDROP PIN COMPONENT
-// -------------------------------------------------------------
+const FilterSlidersVector: React.FC<{ color?: string; size?: number }> = ({ color = '#0f172a', size = 16 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" stroke={color} strokeWidth={2} strokeLinecap="round" />
+  </Svg>
+);
 
+const ChevronDownVector: React.FC<{ color?: string; size?: number }> = ({ color = '#0f172a', size = 14 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M6 9l6 6 6-6" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const StarFilledVector: React.FC<{ color?: string; size?: number }> = ({ color = '#fbbf24', size = 12 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <Path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+  </Svg>
+);
+
+// Google Maps Pin Marker
 const GoogleMapsPinIcon: React.FC<{
   color?: string;
   size?: number;
   isSelected?: boolean;
   isPro?: boolean;
   char?: string;
-}> = ({ color = '#ff2d75', size = 36, isSelected = false, isPro = false, char = 'S' }) => {
-  const pinFill = isPro ? '#f59e0b' : color;
+}> = ({ color = '#ff2d75', size = 38, isSelected = false, isPro = false, char = '' }) => {
   return (
-    <Svg width={size} height={size * 1.25} viewBox="0 0 36 45" fill="none">
-      <Circle cx={18} cy={42} r={isSelected ? 5.5 : 4} fill="rgba(0, 0, 0, 0.25)" />
+    <Svg width={size} height={size * 1.3} viewBox="0 0 32 42" fill="none">
       <Path
-        d="M18 2C9.716 2 3 8.716 3 17c0 11.25 15 25 15 25s15-13.75 15-25c0-8.284-6.716-15-15-15z"
-        fill={pinFill}
-        stroke="#ffffff"
-        strokeWidth={isSelected ? 2.5 : 1.8}
+        d="M16 41C16 41 30 26.5 30 15C30 7.26801 23.732 1 16 1C8.26801 1 2 7.26801 2 15C2 26.5 16 41 16 41Z"
+        fill={isSelected ? '#0f172a' : color}
+        stroke={isPro ? '#f59e0b' : '#ffffff'}
+        strokeWidth={isPro ? 2.5 : 1.5}
       />
-      <Circle cx={18} cy={17} r={8} fill="#ffffff" />
+      <Circle cx="16" cy="15" r="7.5" fill="#ffffff" />
       {isPro ? (
-        <Path
-          d="M18 11.5l-4 3 4 5 4-5-4-3z"
-          fill="#f59e0b"
-        />
+        <Path d="M16 11.5L12 14.5l4 5 4-5-4-3z" fill="#f59e0b" />
       ) : (
         <SvgText
-          x={18}
-          y={21}
+          x="16"
+          y="18.5"
+          fill={isSelected ? '#0f172a' : color}
           textAnchor="middle"
-          fill={pinFill}
-          fontSize={10.5}
+          fontSize={10}
           fontWeight="900"
         >
           {char}
@@ -208,7 +218,7 @@ const GoogleMapsPinIcon: React.FC<{
 };
 
 // -------------------------------------------------------------
-// 3. REAL REGISTERED BEAUTICIANS & LOCATION DIRECTORY (TAMIL NADU)
+// 2. REAL DATA INTERFACES
 // -------------------------------------------------------------
 
 export interface RegisteredMakeover {
@@ -233,9 +243,10 @@ export interface RegisteredMakeover {
   longitude: number;
   mapX: number;
   mapY: number;
+  createdAt?: string;
 }
 
-const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
+const FALLBACK_REGISTERED_STUDIOS: RegisteredMakeover[] = [
   {
     id: '2c704aa6-5642-4b9e-8b8a-3be33a4e53f2',
     businessName: 'Shilpi Makeovers',
@@ -421,29 +432,6 @@ const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
     mapY: 0.52,
   },
   {
-    id: 'meera-traditional-madurai-625002',
-    businessName: 'Meera Traditional Bridal Art',
-    ownerName: 'Meera Sundar',
-    phone: '+919790445566',
-    city: 'Madurai',
-    address: 'South Veli Street, Madurai - 625002',
-    pincode: '625002',
-    profilePhotoUrl: null,
-    businessTypes: ['Bridal Makeover', 'Mehendi'],
-    isPro: false,
-    subscriptionTier: 'free',
-    verified: true,
-    completedBookingsCount: 4,
-    distanceKm: 2.9,
-    isExactPincode: false,
-    startingPrice: 4000,
-    services: ['Bridal Mehendi', 'Muhurtham Saree Draping'],
-    latitude: 9.9180,
-    longitude: 78.1120,
-    mapX: 0.75,
-    mapY: 0.48,
-  },
-  {
     id: '16b10f24-72c8-4331-88e8-97636b8f33a3',
     businessName: 'Nobita Makeovers',
     ownerName: 'Nobita',
@@ -466,61 +454,26 @@ const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
     mapX: 0.72,
     mapY: 0.50,
   },
-  {
-    id: 'salem-pearl-636004',
-    businessName: 'Salem Pearl Makeovers',
-    ownerName: 'Lakshmi Priya',
-    phone: '+919566778899',
-    city: 'Salem',
-    address: 'Brindavan Road, Fairlands, Salem - 636004',
-    pincode: '636004',
-    profilePhotoUrl: null,
-    businessTypes: ['Beautician', 'Bridal Artist'],
-    isPro: false,
-    subscriptionTier: 'free',
-    verified: true,
-    completedBookingsCount: 3,
-    distanceKm: 4.1,
-    isExactPincode: false,
-    startingPrice: 3200,
-    services: ['Bridal Glow', 'Saree Draping', 'Hair Styling'],
-    latitude: 11.6643,
-    longitude: 78.1460,
-    mapX: 0.52,
-    mapY: 0.44,
-  },
-  {
-    id: 'sangeetha-saree-tirunelveli-627002',
-    businessName: 'Sangeetha Saree & Makeover',
-    ownerName: 'Sangeetha R.',
-    phone: '+919442667788',
-    city: 'Tirunelveli',
-    address: 'Palayamkottai High Road, Tirunelveli - 627002',
-    pincode: '627002',
-    profilePhotoUrl: null,
-    businessTypes: ['Makeover', 'Saree Draping'],
-    isPro: false,
-    subscriptionTier: 'free',
-    verified: true,
-    completedBookingsCount: 2,
-    distanceKm: 3.5,
-    isExactPincode: false,
-    startingPrice: 3000,
-    services: ['Simple Party Makeup', 'Pre-pleating', 'Hairstyling'],
-    latitude: 8.7200,
-    longitude: 77.7400,
-    mapX: 0.70,
-    mapY: 0.58,
-  },
 ];
 
-const FILTER_TABS = [
-  { id: 'nearby', label: 'Nearby Area', isPro: false },
-  { id: 'any_area', label: 'Any Area', isPro: false },
-  { id: 'top_5', label: 'Top 5', isPro: false },
-  { id: 'top_10', label: 'Top 10', isPro: false },
-  { id: 'pro', label: 'Shilpi Pro', isPro: true },
-  { id: 'bridal', label: 'Bridal Artists', isPro: false },
+const DEFAULT_PROFESSIONS = [
+  'All Beauticians',
+  'Bridal Artists',
+  'Makeup Artists',
+  'Hair Stylists',
+  'Mehndi Artists',
+  'Skin Care Specialists',
+  'Beauticians',
+  'Grooming Specialists',
+];
+
+const RANKING_LIMIT_OPTIONS = [
+  { id: 'top_5', label: 'Top 5', limit: 5 },
+  { id: 'top_10', label: 'Top 10', limit: 10 },
+  { id: 'top_20', label: 'Top 20', limit: 20 },
+  { id: 'top_50', label: 'Top 50', limit: 50 },
+  { id: 'top_100', label: 'Top 100', limit: 100 },
+  { id: 'all', label: 'All', limit: 9999 },
 ];
 
 const POPULAR_LOCATIONS = [
@@ -533,119 +486,6 @@ const POPULAR_LOCATIONS = [
   { pin: '600017', city: 'Chennai', area: 'T. Nagar, Chennai' },
 ];
 
-interface AreaMapProfile {
-  cityName: string;
-  primaryArea: string;
-  secondaryArea1: string;
-  secondaryArea2: string;
-  highwayName: string;
-  mainRoad1: string;
-  mainRoad2: string;
-  parkName: string;
-  promenadeName: string;
-  waterwayName: string;
-}
-
-const getAreaProfile = (city: string, pincode: string): AreaMapProfile => {
-  const c = city.toLowerCase();
-  if (c.includes('kalugumalai') || pincode === '628552') {
-    return {
-      cityName: 'KALUGUMALAI',
-      primaryArea: 'MAIN BAZAAR',
-      secondaryArea1: 'MURUGAN TEMPLE',
-      secondaryArea2: 'KAZHUGUMALAI HILLS',
-      highwayName: 'SH 76',
-      mainRoad1: 'Sankarankovil Rd',
-      mainRoad2: 'Main Bazaar St',
-      parkName: 'Vettuvan Koil Heritage Park',
-      promenadeName: 'Jain Monument Rock Reserve',
-      waterwayName: 'Ayyanar Reservoir',
-    };
-  }
-  if (c.includes('coimbatore') || pincode.startsWith('641')) {
-    return {
-      cityName: 'COIMBATORE',
-      primaryArea: 'GANDHIPURAM',
-      secondaryArea1: 'RS PURAM',
-      secondaryArea2: 'PEELAMEDU',
-      highwayName: 'NH 544',
-      mainRoad1: 'Cross Cut Rd',
-      mainRoad2: 'Avinashi Rd',
-      parkName: 'VOC Park & Grounds',
-      promenadeName: 'Race Course Promenade',
-      waterwayName: 'Valankulam Lake',
-    };
-  }
-  if (c.includes('chennai') || pincode.startsWith('600')) {
-    return {
-      cityName: 'CHENNAI',
-      primaryArea: 'T. NAGAR',
-      secondaryArea1: 'MYLAPORE',
-      secondaryArea2: 'ANNA NAGAR',
-      highwayName: 'NH 48',
-      mainRoad1: 'Anna Salai',
-      mainRoad2: 'Pondy Bazaar Rd',
-      parkName: 'Semmozhi Poonga',
-      promenadeName: 'Marina Promenade',
-      waterwayName: 'Cooum Canal',
-    };
-  }
-  if (c.includes('madurai') || pincode.startsWith('625')) {
-    return {
-      cityName: 'MADURAI',
-      primaryArea: 'TOWN HALL',
-      secondaryArea1: 'MEENAKSHI AMMAN',
-      secondaryArea2: 'KK NAGAR',
-      highwayName: 'NH 38',
-      mainRoad1: 'West Masi St',
-      mainRoad2: 'South Veli St',
-      parkName: 'Gandhi Memorial Park',
-      promenadeName: 'Teppakulam Grounds',
-      waterwayName: 'Vaigai River',
-    };
-  }
-  if (c.includes('kovilpatti') || pincode === '628501') {
-    return {
-      cityName: 'KOVILPATTI',
-      primaryArea: 'NEW ROAD',
-      secondaryArea1: 'PASUVANTHANAI RD',
-      secondaryArea2: 'OLD BUS STAND',
-      highwayName: 'NH 44',
-      mainRoad1: 'Main Road',
-      mainRoad2: 'Railway Feeder Rd',
-      parkName: 'Municipal Park',
-      promenadeName: 'Town Hall Grounds',
-      waterwayName: 'Kovilpatti Lake',
-    };
-  }
-  if (c.includes('tirunelveli') || pincode.startsWith('627')) {
-    return {
-      cityName: 'TIRUNELVELI',
-      primaryArea: 'JUNCTION',
-      secondaryArea1: 'PALAYAMKOTTAI',
-      secondaryArea2: 'TOWN ARCH',
-      highwayName: 'NH 44',
-      mainRoad1: 'Trivandrum Rd',
-      mainRoad2: 'North Car St',
-      parkName: 'VOC Ground Park',
-      promenadeName: 'Thamirabarani Riverfront',
-      waterwayName: 'Thamirabarani River',
-    };
-  }
-  return {
-    cityName: city.toUpperCase(),
-    primaryArea: `${city.toUpperCase()} TOWN`,
-    secondaryArea1: 'MARKET ROAD',
-    secondaryArea2: 'CIVIC CENTER',
-    highwayName: 'HIGHWAY',
-    mainRoad1: 'Station Road',
-    mainRoad2: 'Main Avenue',
-    parkName: 'City Green Park',
-    promenadeName: 'Central Grounds',
-    waterwayName: 'Canal Line',
-  };
-};
-
 interface NearestBeauticiansScreenProps {
   onGoBack: () => void;
 }
@@ -655,162 +495,158 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors, insets), [colors, insets]);
 
-  // 3-Second Loading Animation States
-  const [isScanning, setIsScanning] = useState(true);
-  const [scanStatusText, setScanStatusText] = useState('Detecting your current location...');
-  const [scanStepIndex, setScanStepIndex] = useState(1);
-
+  // Section Selector: 'nearby' (50 KM) | 'all' (Directory + Pagination) | 'top' (Dynamic Ranking)
+  const [activeSection, setActiveSection] = useState<'nearby' | 'all' | 'top'>('nearby');
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
-  const [loading, setLoading] = useState(false);
+
+  // Animation State (1:1 Video Match)
+  const [isAnimationRunning, setIsAnimationRunning] = useState(true);
+  const [animationStepText, setAnimationStepText] = useState('Finding your location');
+
+  // Location & Search State
   const [userPincode, setUserPincode] = useState<string>('641002');
   const [userCity, setUserCity] = useState<string>('Coimbatore');
   const [userAddress, setUserAddress] = useState<string>('Gandhipuram, Coimbatore');
-  const [activeFilter, setActiveFilter] = useState('nearby');
-  const [currentScope, setCurrentScope] = useState<'nearby' | 'any'>('nearby');
-  const [isVillageOrRemoteArea, setIsVillageOrRemoteArea] = useState(false);
-  const [studios, setStudios] = useState<RegisteredMakeover[]>(REAL_REGISTERED_STUDIOS);
-  const [selectedStudio, setSelectedStudio] = useState<RegisteredMakeover>(REAL_REGISTERED_STUDIOS[0]);
+  const [customerCoords, setCustomerCoords] = useState<{ lat: number; lng: number }>({ lat: 11.0168, lng: 76.9558 });
+
+  // Data State
+  const [loading, setLoading] = useState(false);
+  const [studios, setStudios] = useState<RegisteredMakeover[]>(FALLBACK_REGISTERED_STUDIOS);
+  const [selectedStudio, setSelectedStudio] = useState<RegisteredMakeover>(FALLBACK_REGISTERED_STUDIOS[0]);
+  const [availableProfessions, setAvailableProfessions] = useState<string[]>(DEFAULT_PROFESSIONS);
+  const [activeProfession, setActiveProfession] = useState<string>('All Beauticians');
+
+  // Dynamic Top Ranking State
+  const [rankingCriteria, setRankingCriteria] = useState<'combined' | 'bookings' | 'subscription'>('combined');
+  const [rankingLimit, setRankingLimit] = useState<string>('top_10');
+  const [rankingDropdownOpen, setRankingDropdownOpen] = useState(false);
+
+  // Pagination for Section 2 (All Beauticians)
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // Advanced Filters State
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [filterRadius, setFilterRadius] = useState<number | null>(50); // null means any
+  const [filterSubscription, setFilterSubscription] = useState<'all' | 'pro' | 'free'>('all');
+  const [filterBookingSort, setFilterBookingSort] = useState<'none' | 'most_bookings' | 'least_bookings'>('none');
+  const [filterAdditional, setFilterAdditional] = useState<'none' | 'highest_rated' | 'most_experienced' | 'recent'>('none');
+  const [searchNameQuery, setSearchNameQuery] = useState('');
+
+  // Modals
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [searchInput, setSearchInput] = useState('');
 
-  // Dynamic Google Maps Profile for the active geographic area
-  const areaProfile = useMemo(() => getAreaProfile(userCity, userPincode), [userCity, userPincode]);
-
-  // Animation values
-  const radarScale = useRef(new Animated.Value(1)).current;
-  const pinSpring = useRef(new Animated.Value(1)).current;
-  const cardListRef = useRef<FlatList>(null);
-
-  // Enterprise Loading Animation values
+  // Animation values (Matching User Video Reference 1:1)
   const scanFadeAnim = useRef(new Animated.Value(1)).current;
+  const pinDropAnim = useRef(new Animated.Value(-120)).current;
+  const pinScaleAnim = useRef(new Animated.Value(0.4)).current;
+  const shadowPulseAnim = useRef(new Animated.Value(0.4)).current;
   const radarSweepRotate = useRef(new Animated.Value(0)).current;
-  const sonarWave1 = useRef(new Animated.Value(0.5)).current;
-  const sonarWave2 = useRef(new Animated.Value(0.5)).current;
-  const sonarWave3 = useRef(new Animated.Value(0.5)).current;
   const avatarPop1 = useRef(new Animated.Value(0)).current;
   const avatarPop2 = useRef(new Animated.Value(0)).current;
   const avatarPop3 = useRef(new Animated.Value(0)).current;
   const avatarPop4 = useRef(new Animated.Value(0)).current;
+  const avatarPop5 = useRef(new Animated.Value(0)).current;
   const progressBarAnim = useRef(new Animated.Value(0)).current;
 
-  // Radar Pulse Animation for the Map Beacon
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(radarScale, {
-          toValue: 2.2,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(radarScale, {
-          toValue: 1,
-          duration: 0,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, [radarScale]);
+  const cardListRef = useRef<FlatList>(null);
 
   // -------------------------------------------------------------
-  // 4. HIGH-CRAFT 3-SECOND LOCATION SCANNING ANIMATION PIPELINE
+  // 3. ANIMATION LIFECYCLE (1:1 Match with Shilpi_Locating_Animation.mp4)
   // -------------------------------------------------------------
   useEffect(() => {
     let isMounted = true;
 
-    // Start 360-degree radar rotation
+    // 1. Pin Drops smoothly down from title to center stage
+    Animated.parallel([
+      Animated.timing(pinDropAnim, {
+        toValue: 0,
+        duration: 900,
+        easing: Easing.out(Easing.back(1.5)),
+        useNativeDriver: true,
+      }),
+      Animated.timing(pinScaleAnim, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(shadowPulseAnim, {
+        toValue: 1,
+        duration: 900,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // 2. Continuous 360-degree radar sweep beam
     Animated.loop(
       Animated.timing(radarSweepRotate, {
         toValue: 1,
-        duration: 2200,
+        duration: 2400,
         easing: Easing.linear,
         useNativeDriver: true,
       })
     ).start();
 
-    // Start multi-tier expanding sonar waves
-    const createSonar = (val: Animated.Value, delay: number) => {
-      return Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.parallel([
-            Animated.timing(val, {
-              toValue: 2.6,
-              duration: 2000,
-              easing: Easing.out(Easing.ease),
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.timing(val, {
-            toValue: 0.5,
-            duration: 0,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-    };
-
-    createSonar(sonarWave1, 0).start();
-    createSonar(sonarWave2, 600).start();
-    createSonar(sonarWave3, 1200).start();
-
-    // Progress bar from 0% to 100% over 3 seconds
+    // 3. Bottom progress bar from 0% to 100% over 3.6 seconds
     Animated.timing(progressBarAnim, {
       toValue: 1,
-      duration: 3000,
-      easing: Easing.out(Easing.quad),
+      duration: 3400,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
       useNativeDriver: false,
     }).start();
 
-    // Staggered pop-in for beautician avatars found in area
-    setTimeout(() => {
+    // 4. Staggered Subtitle step transitions & avatar appearances
+    const step2Timer = setTimeout(() => {
       if (isMounted) {
-        setScanStepIndex(2);
-        setScanStatusText('Locating postal area & PIN code...');
-        Animated.spring(avatarPop1, { toValue: 1, friction: 4.5, tension: 50, useNativeDriver: true }).start();
-        Animated.spring(avatarPop2, { toValue: 1, friction: 4.5, tension: 50, useNativeDriver: true }).start();
+        setAnimationStepText('Reading your PIN code');
+        Animated.spring(avatarPop1, { toValue: 1, friction: 5, tension: 50, useNativeDriver: true }).start();
+        Animated.spring(avatarPop2, { toValue: 1, friction: 5, tension: 50, useNativeDriver: true }).start();
       }
-    }, 1100);
+    }, 1300);
 
-    setTimeout(() => {
+    const step3Timer = setTimeout(() => {
       if (isMounted) {
-        setScanStepIndex(3);
-        setScanStatusText('Bringing beautiful beauticians to you...');
-        Animated.spring(avatarPop3, { toValue: 1, friction: 4.5, tension: 50, useNativeDriver: true }).start();
-        Animated.spring(avatarPop4, { toValue: 1, friction: 4.5, tension: 50, useNativeDriver: true }).start();
+        setAnimationStepText('Beauticians found near you');
+        Animated.spring(avatarPop3, { toValue: 1, friction: 5, tension: 50, useNativeDriver: true }).start();
+        Animated.spring(avatarPop4, { toValue: 1, friction: 5, tension: 50, useNativeDriver: true }).start();
+        Animated.spring(avatarPop5, { toValue: 1, friction: 5, tension: 50, useNativeDriver: true }).start();
         try {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch {}
       }
-    }, 2100);
+    }, 2400);
 
-    // Conclude 3-second scanning animation and reveal Google Map
-    const timer = setTimeout(() => {
+    // 5. Conclude animation and fade into Discovery UI
+    const finishTimer = setTimeout(() => {
       if (isMounted) {
         Animated.timing(scanFadeAnim, {
           toValue: 0,
-          duration: 400,
+          duration: 450,
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }).start(() => {
           if (isMounted) {
-            setIsScanning(false);
+            setIsAnimationRunning(false);
           }
         });
       }
-    }, 3100);
+    }, 3600);
 
-    // Ask for location and reverse geocode
-    async function locateCustomer() {
+    // Detect GPS Position & reverseGeocode
+    async function initLocation() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === 'granted') {
           const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-          const geocode = await Location.reverseGeocodeAsync({
-            latitude: loc.coords.latitude,
-            longitude: loc.coords.longitude,
-          });
+          const lat = loc.coords.latitude;
+          const lng = loc.coords.longitude;
+          setCustomerCoords({ lat, lng });
 
+          const geocode = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
           if (isMounted && geocode && geocode[0]) {
             const g = geocode[0];
             const detectedPin = g.postalCode || '641002';
@@ -823,262 +659,244 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             setUserPincode(detectedPin);
             setUserCity(detectedCity);
             setUserAddress(displayAddress);
-            filterByLocation(detectedPin, detectedCity, 'nearby');
+
+            fetchBeauticiansData({
+              lat,
+              lng,
+              city: detectedCity,
+              pincode: detectedPin,
+              section: 'nearby',
+            });
             return;
           }
         }
       } catch (e) {
-        console.warn('GPS detection notice:', e);
+        console.warn('GPS initial detection fallback notice:', e);
       }
       if (isMounted) {
-        filterByLocation('641002', 'Coimbatore', 'nearby');
+        fetchBeauticiansData({ section: 'nearby' });
       }
     }
 
-    locateCustomer();
+    initLocation();
 
     return () => {
       isMounted = false;
-      clearTimeout(timer);
+      clearTimeout(step2Timer);
+      clearTimeout(step3Timer);
+      clearTimeout(finishTimer);
     };
   }, []);
 
-  // Filter studios strictly according to detected/searched area or Any Area fallback
-  const filterByLocation = async (pincode: string, city: string, scopeOverride?: 'nearby' | 'any') => {
-    setLoading(true);
-    const scopeToUse = scopeOverride || (activeFilter === 'any_area' ? 'any' : 'nearby');
-    setCurrentScope(scopeToUse);
+  // -------------------------------------------------------------
+  // 4. REAL BACKEND DATA FETCHING ENGINE
+  // -------------------------------------------------------------
+  const fetchBeauticiansData = useCallback(
+    async (overrides?: {
+      section?: 'nearby' | 'all' | 'top';
+      pageToLoad?: number;
+      append?: boolean;
+      lat?: number;
+      lng?: number;
+      city?: string;
+      pincode?: string;
+    }) => {
+      const targetSection = overrides?.section || activeSection;
+      const targetPage = overrides?.pageToLoad || 1;
+      const isAppend = overrides?.append || false;
 
-    try {
-      const endpoint = `/discovery/beauticians?pincode=${encodeURIComponent(pincode)}&city=${encodeURIComponent(city)}&scope=${scopeToUse}`;
-      const res = await apiClient.get(endpoint);
+      if (isAppend) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
 
-      if (res.data?.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
-        const mapped = res.data.data.map((item: any, i: number) => {
-          const isExact = item.pincode === pincode;
-          return {
-            ...item,
-            isExactPincode: isExact,
+      try {
+        const params: any = {
+          section: targetSection,
+          lat: overrides?.lat || customerCoords.lat,
+          lng: overrides?.lng || customerCoords.lng,
+          city: overrides?.city || userCity,
+          pincode: overrides?.pincode || userPincode,
+          page: targetPage,
+          pageSize: 20,
+        };
+
+        // Section 1: Nearby (Strict 50 KM radius)
+        if (targetSection === 'nearby') {
+          params.radiusKm = filterRadius !== null ? filterRadius : 50;
+        }
+
+        // Section 3: Dynamic Top Beauticians Ranking
+        if (targetSection === 'top') {
+          params.rankingCriteria = rankingCriteria;
+          params.limit = rankingLimit;
+        }
+
+        // Section 4 & Filter: Profession Category
+        if (activeProfession && activeProfession !== 'All Beauticians') {
+          params.profession = activeProfession;
+        }
+
+        // Advanced Filter overrides
+        if (filterSubscription !== 'all') {
+          params.subscription = filterSubscription;
+        }
+        if (filterBookingSort !== 'none') {
+          params.sortBy = filterBookingSort;
+        } else if (filterAdditional !== 'none') {
+          params.sortBy = filterAdditional;
+        }
+        if (searchNameQuery.trim()) {
+          params.search = searchNameQuery.trim();
+        }
+
+        const queryString = Object.entries(params)
+          .filter(([_, v]) => v !== undefined && v !== null && v !== '')
+          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+          .join('&');
+        const endpoint = `/discovery/beauticians${queryString ? `?${queryString}` : ''}`;
+
+        const res = await apiClient.get(endpoint);
+
+        if (res.data?.success && Array.isArray(res.data.data)) {
+          const incoming = res.data.data.map((b: any, i: number) => ({
+            ...b,
             mapX: 0.52 + ((i * 14) % 36) / 100,
             mapY: 0.34 + ((i * 12) % 28) / 100,
-          };
-        });
-        setStudios(mapped);
-        setSelectedStudio(mapped[0]);
-        setIsVillageOrRemoteArea(false);
-        setLoading(false);
-        return;
+          }));
+
+          if (isAppend) {
+            setStudios((prev) => [...prev, ...incoming]);
+          } else {
+            setStudios(incoming);
+            if (incoming.length > 0) {
+              setSelectedStudio(incoming[0]);
+            }
+          }
+
+          if (Array.isArray(res.data.availableProfessions) && res.data.availableProfessions.length > 0) {
+            setAvailableProfessions(res.data.availableProfessions);
+          }
+
+          if (res.data.pagination) {
+            setPage(res.data.pagination.page);
+            setHasMore(res.data.pagination.hasMore);
+          }
+          setLoading(false);
+          setLoadingMore(false);
+          return;
+        }
+      } catch (err) {
+        console.warn('Live backend query fallback notice:', err);
       }
-    } catch {
-      // Fallback to local verified registered studios directory
-    }
 
-    // STRICT GEOGRAPHIC & SCOPE LOCALIZATION
-    const cityClean = city.toLowerCase().trim();
-    const isKalugumalai = cityClean.includes('kalugumalai') || pincode === '628552';
-    const isCoimbatore = cityClean.includes('coimbatore') || pincode.startsWith('641');
-    const isKovilpatti = cityClean.includes('kovilpatti') || pincode === '628501';
-    const isTirunelveli = cityClean.includes('tirunelveli') || pincode.startsWith('627');
-    const isChennai = cityClean.includes('chennai') || pincode.startsWith('600');
-    const isMadurai = cityClean.includes('madurai') || pincode.startsWith('625');
-    const isSalem = cityClean.includes('salem') || pincode.startsWith('636');
+      // Offline fallback strictly sorted according to active parameters
+      let pool = [...FALLBACK_REGISTERED_STUDIOS];
 
-    let pool: RegisteredMakeover[] = [];
-
-    if (scopeToUse === 'any') {
-      pool = [...REAL_REGISTERED_STUDIOS];
-      setIsVillageOrRemoteArea(false);
-    } else {
-      pool = REAL_REGISTERED_STUDIOS.filter((s) => {
-        if (isKalugumalai) return s.city.toLowerCase().includes('kalugumalai') || s.pincode === '628552' || s.city.toLowerCase().includes('kovilpatti');
-        if (isCoimbatore) return s.city.toLowerCase().includes('coimbatore') || s.pincode.startsWith('641');
-        if (isKovilpatti) return s.city.toLowerCase().includes('kovilpatti') || s.pincode === '628501' || s.city.toLowerCase().includes('kalugumalai');
-        if (isTirunelveli) return s.city.toLowerCase().includes('tirunelveli') || s.pincode.startsWith('627');
-        if (isChennai) return s.city.toLowerCase().includes('chennai') || s.pincode.startsWith('600');
-        if (isMadurai) return s.city.toLowerCase().includes('madurai') || s.pincode.startsWith('625');
-        if (isSalem) return s.city.toLowerCase().includes('salem') || s.pincode.startsWith('636');
-        return s.city.toLowerCase() === cityClean || s.pincode === pincode;
-      });
-
-      // Village or Remote Area Fallback:
-      // If 0 beauticians exist in this specific village or PIN code,
-      // show helpful fallback to surrounding Tamil Nadu studios so user is never stranded!
-      if (pool.length === 0) {
-        setIsVillageOrRemoteArea(true);
-        pool = [...REAL_REGISTERED_STUDIOS];
+      if (targetSection === 'nearby') {
+        const radius = filterRadius !== null ? filterRadius : 50;
+        pool = pool.filter((s) => s.distanceKm <= radius);
+        pool.sort((a, b) => a.distanceKm - b.distanceKm);
+      } else if (targetSection === 'top') {
+        if (rankingCriteria === 'bookings') {
+          pool.sort((a, b) => b.completedBookingsCount - a.completedBookingsCount);
+        } else if (rankingCriteria === 'subscription') {
+          pool.sort((a, b) => (a.isPro !== b.isPro ? (a.isPro ? -1 : 1) : b.completedBookingsCount - a.completedBookingsCount));
+        } else {
+          pool.sort((a, b) => {
+            if (a.isPro !== b.isPro) return a.isPro ? -1 : 1;
+            return b.completedBookingsCount - a.completedBookingsCount;
+          });
+        }
+        const opt = RANKING_LIMIT_OPTIONS.find((r) => r.id === rankingLimit);
+        if (opt && opt.limit < 9999) {
+          pool = pool.slice(0, opt.limit);
+        }
       } else {
-        setIsVillageOrRemoteArea(false);
+        // Section 'all'
+        if (searchNameQuery.trim()) {
+          const q = searchNameQuery.toLowerCase().trim();
+          pool = pool.filter((s) => s.businessName.toLowerCase().includes(q) || s.ownerName.toLowerCase().includes(q));
+        }
       }
-    }
 
-    // Sort order:
-    // 1. Shilpi Pro Subscribers first (Vector Diamond icon)
-    // 2. Orders completed volume descending (Real verified count)
-    // 3. Exact PIN code match
-    // 4. Distance proximity
-    const matched = pool.sort((a, b) => {
-      if (a.isPro !== b.isPro) return a.isPro ? -1 : 1;
-      if (b.completedBookingsCount !== a.completedBookingsCount) {
-        return b.completedBookingsCount - a.completedBookingsCount;
+      setStudios(pool);
+      if (pool.length > 0) {
+        setSelectedStudio(pool[0]);
       }
-      const aExact = a.pincode === pincode;
-      const bExact = b.pincode === pincode;
-      if (aExact !== bExact) return aExact ? -1 : 1;
-      return a.distanceKm - b.distanceKm;
-    });
+      setLoading(false);
+      setLoadingMore(false);
+    },
+    [
+      activeSection,
+      customerCoords,
+      userCity,
+      userPincode,
+      filterRadius,
+      rankingCriteria,
+      rankingLimit,
+      activeProfession,
+      filterSubscription,
+      filterBookingSort,
+      filterAdditional,
+      searchNameQuery,
+    ]
+  );
 
-    setStudios(matched);
-    if (matched.length > 0) {
-      setSelectedStudio(matched[0]);
+  // Trigger data reload on tab/filter updates
+  useEffect(() => {
+    if (!isAnimationRunning) {
+      fetchBeauticiansData();
     }
-    setLoading(false);
-  };
+  }, [
+    activeSection,
+    activeProfession,
+    rankingCriteria,
+    rankingLimit,
+    filterRadius,
+    filterSubscription,
+    filterBookingSort,
+    filterAdditional,
+  ]);
 
-  // Filtered List based on Active Filter Pill (Nearby, Any Area, Top 5, Top 10, Shilpi Pro, Bridal)
-  const filteredStudios = useMemo(() => {
-    let list = [...studios];
-
-    if (activeFilter === 'top_5') {
-      return list.slice(0, 5);
-    }
-    if (activeFilter === 'top_10') {
-      return list.slice(0, 10);
-    }
-    if (activeFilter === 'pro') {
-      return list.filter((s) => s.isPro);
-    }
-    if (activeFilter === 'bridal') {
-      return list.filter((s) =>
-        s.businessTypes.some((t) => t.toLowerCase().includes('bridal')) ||
-        s.services.some((sv) => sv.toLowerCase().includes('bridal'))
-      );
-    }
-    return list;
-  }, [studios, activeFilter]);
-
-  // Handle filter tap
-  const handleFilterSelect = (filterId: string) => {
-    try {
-      Haptics.selectionAsync();
-    } catch {}
-    setActiveFilter(filterId);
-
-    if (filterId === 'any_area') {
-      filterByLocation(userPincode, userCity, 'any');
-    } else if (filterId === 'nearby') {
-      filterByLocation(userPincode, userCity, 'nearby');
-    }
-  };
-
-  // Handle marker selection with spring & carousel synchronization
-  const handleSelectPin = (studio: RegisteredMakeover) => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch {}
-    setSelectedStudio(studio);
-
-    pinSpring.setValue(0.7);
-    Animated.spring(pinSpring, {
-      toValue: 1,
-      friction: 4,
-      useNativeDriver: true,
-    }).start();
-
-    const idx = filteredStudios.findIndex((s) => s.id === studio.id);
-    if (idx !== -1 && cardListRef.current) {
-      cardListRef.current.scrollToIndex({ index: idx, animated: true });
-    }
-  };
-
-  // Handle address or PIN search from modal
-  const handleSearchAddress = (query?: string) => {
-    const text = (query || searchInput).trim();
-    if (!text) return;
-
-    let targetPin = userPincode;
-    let targetCity = userCity;
-    let targetArea = text;
-
-    const cleanDigits = text.replace(/\D/g, '');
-    if (cleanDigits.length === 6) {
-      targetPin = cleanDigits;
-      if (cleanDigits === '628552') targetCity = 'Kalugumalai';
-      else if (cleanDigits.startsWith('641')) targetCity = 'Coimbatore';
-      else if (cleanDigits.startsWith('600')) targetCity = 'Chennai';
-      else if (cleanDigits.startsWith('625')) targetCity = 'Madurai';
-      targetArea = `${targetCity} - ${targetPin}`;
-    } else {
-      const lower = text.toLowerCase();
-      if (lower.includes('kalugu')) {
-        targetCity = 'Kalugumalai';
-        targetPin = '628552';
-        targetArea = 'Main Bazaar, Kalugumalai';
-      } else if (lower.includes('coimbatore') || lower.includes('gandhi') || lower.includes('avinashi') || lower.includes('puram')) {
-        targetCity = 'Coimbatore';
-        targetPin = '641002';
-        targetArea = 'Gandhipuram, Coimbatore';
-      } else if (lower.includes('chennai') || lower.includes('nagar') || lower.includes('george')) {
-        targetCity = 'Chennai';
-        targetPin = '600001';
-        targetArea = 'T. Nagar, Chennai';
-      } else if (lower.includes('madurai')) {
-        targetCity = 'Madurai';
-        targetPin = '625001';
-        targetArea = 'Town Center, Madurai';
-      } else {
-        targetCity = text;
-        targetArea = text;
-      }
-    }
-
-    setUserCity(targetCity);
-    setUserPincode(targetPin);
-    setUserAddress(targetArea);
+  // Handle location search selection
+  const handleSelectLocation = (areaName: string, pin: string, city: string) => {
+    setUserAddress(areaName);
+    setUserPincode(pin);
+    setUserCity(city);
     setSearchModalOpen(false);
-    filterByLocation(targetPin, targetCity);
+    fetchBeauticiansData({ city, pincode: pin });
   };
 
-  // Actions
-  const handleCall = (phone: string) => {
+  // Active filter count for badge
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filterRadius !== 50 && filterRadius !== null) count++;
+    if (filterSubscription !== 'all') count++;
+    if (filterBookingSort !== 'none') count++;
+    if (filterAdditional !== 'none') count++;
+    if (activeProfession !== 'All Beauticians') count++;
+    return count;
+  }, [filterRadius, filterSubscription, filterBookingSort, filterAdditional, activeProfession]);
+
+  // Reset All Filters
+  const handleClearFilters = () => {
+    setFilterRadius(50);
+    setFilterSubscription('all');
+    setFilterBookingSort('none');
+    setFilterAdditional('none');
+    setActiveProfession('All Beauticians');
+    setSearchNameQuery('');
+    setFilterModalOpen(false);
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {}
-    Linking.openURL(`tel:${phone}`);
   };
 
-  const handleWhatsApp = (studio: RegisteredMakeover) => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch {}
-    const cleanDigits = studio.phone.replace(/\D/g, '');
-    const text = encodeURIComponent(
-      `Hello ${studio.businessName}, I found your studio on Shilpi App. I would like to inquire about your bridal makeover packages!`
-    );
-    Linking.openURL(`https://wa.me/${cleanDigits}?text=${text}`);
-  };
-
-  const handleOpenMaps = (studio: RegisteredMakeover) => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch {}
-    const query = encodeURIComponent(`${studio.businessName}, ${studio.address}`);
-    const url = Platform.select({
-      ios: `maps:0,0?q=${query}`,
-      android: `geo:0,0?q=${query}`,
-      default: `https://www.google.com/maps/search/?api=1&query=${query}`,
-    });
-    Linking.openURL(url);
-  };
-
-  // User coordinate on map canvas
-  const userMapX = SCREEN_WIDTH * 0.44;
-  const userMapY = SCREEN_HEIGHT * 0.42;
-
-  // Selected Studio coordinates
-  const targetX = selectedStudio ? SCREEN_WIDTH * (selectedStudio.mapX || 0.60) : userMapX + 60;
-  const targetY = selectedStudio ? SCREEN_HEIGHT * (selectedStudio.mapY || 0.38) : userMapY - 50;
-  const midX = (userMapX + targetX) / 2;
-  const midY = (userMapY + targetY) / 2 - 25;
+  // -------------------------------------------------------------
+  // 5. RENDER METHODS
+  // -------------------------------------------------------------
 
   const spinInterpolation = radarSweepRotate.interpolate({
     inputRange: [0, 1],
@@ -1088,216 +906,372 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
   return (
     <View style={styles.screen}>
       {/* -------------------------------------------------------------
-          5. ENTERPRISE 3-SECOND RADAR SCANNING & AVATAR FETCHING OVERLAY
+          A. REPLACEMENT ANIMATION: 1:1 MATCH WITH USER VIDEO
          ------------------------------------------------------------- */}
-      {isScanning && (
-        <Animated.View style={[styles.scanOverlay, { opacity: scanFadeAnim }]}>
-          {/* Top Bar on Scan Screen */}
-          <View style={[styles.scanTopRow, { top: insets.top + 10 }]}>
-            <TouchableOpacity style={styles.floatingCircleBtn} onPress={onGoBack} activeOpacity={0.82}>
-              <BackArrowVector color="#0f172a" size={18} />
-            </TouchableOpacity>
-            <View style={styles.scanHeaderTitleWrap}>
-              <Text style={styles.scanHeaderTitle}>LOCATING BEAUTICIANS</Text>
-              <Text style={styles.scanHeaderSub}>High-Precision Territory Scan</Text>
-            </View>
-            <View style={{ width: 44 }} />
+      {isAnimationRunning && (
+        <Animated.View style={[styles.animationOverlay, { opacity: scanFadeAnim }]}>
+          {/* Top Shilpi Brand Title */}
+          <View style={[styles.animTopHeader, { top: insets.top + 28 }]}>
+            <Text style={styles.animBrandTitle}>Shilpi</Text>
           </View>
 
-          {/* Central Radar Stage */}
-          <View style={styles.radarCenterStage}>
-            {/* Concentric Expanding Sonar Waves */}
-            <Animated.View
-              style={[
-                styles.sonarRing,
-                {
-                  transform: [{ scale: sonarWave1 }],
-                  opacity: sonarWave1.interpolate({ inputRange: [0.5, 2.6], outputRange: [0.45, 0] }),
-                },
-              ]}
-            />
-            <Animated.View
-              style={[
-                styles.sonarRing,
-                {
-                  transform: [{ scale: sonarWave2 }],
-                  opacity: sonarWave2.interpolate({ inputRange: [0.5, 2.6], outputRange: [0.35, 0] }),
-                },
-              ]}
-            />
-            <Animated.View
-              style={[
-                styles.sonarRing,
-                {
-                  transform: [{ scale: sonarWave3 }],
-                  opacity: sonarWave3.interpolate({ inputRange: [0.5, 2.6], outputRange: [0.25, 0] }),
-                },
-              ]}
-            />
+          {/* Center Stage: Grid, Rings, Sweeper, Pin & Popping Avatars */}
+          <View style={styles.animCenterStage}>
+            {/* Street Grid Lines (Delicate Rose `#fbcfe8`) */}
+            <Svg width={300} height={300} style={StyleSheet.absoluteFill}>
+              <Line x1="15" y1="90" x2="285" y2="80" stroke="#fbcfe8" strokeWidth={1.5} />
+              <Line x1="0" y1="130" x2="300" y2="125" stroke="#fbcfe8" strokeWidth={1.5} />
+              <Line x1="10" y1="210" x2="290" y2="215" stroke="#fbcfe8" strokeWidth={1.5} />
+              <Line x1="85" y1="10" x2="105" y2="290" stroke="#fbcfe8" strokeWidth={1.5} />
+              <Line x1="210" y1="10" x2="195" y2="290" stroke="#fbcfe8" strokeWidth={1.5} />
+            </Svg>
 
-            {/* Rotating Radar Sweep Beam */}
-            <Animated.View style={[styles.radarSweepBeam, { transform: [{ rotate: spinInterpolation }] }]}>
-              <View style={styles.radarLaserLine} />
-              <View style={styles.radarSweepSector} />
+            {/* Outer Dotted Circle */}
+            <View style={styles.animCircleOuter} />
+
+            {/* Middle Dashed Circle */}
+            <View style={styles.animCircleMiddle} />
+
+            {/* Inner Solid Pink Ring */}
+            <View style={styles.animCircleInner} />
+
+            {/* Radial Connector Dashed Guides */}
+            <Svg width={300} height={300} style={StyleSheet.absoluteFill}>
+              <Line x1="150" y1="150" x2="80" y2="70" stroke="#f472b6" strokeWidth={1} strokeDasharray="3,3" />
+              <Line x1="150" y1="150" x2="225" y2="65" stroke="#f472b6" strokeWidth={1} strokeDasharray="3,3" />
+              <Line x1="150" y1="150" x2="230" y2="175" stroke="#f472b6" strokeWidth={1} strokeDasharray="3,3" />
+              <Line x1="150" y1="150" x2="170" y2="235" stroke="#f472b6" strokeWidth={1} strokeDasharray="3,3" />
+              <Line x1="150" y1="150" x2="70" y2="185" stroke="#f472b6" strokeWidth={1} strokeDasharray="3,3" />
+            </Svg>
+
+            {/* Rotating Translucent Pink Radar Sweep Beam */}
+            <Animated.View style={[styles.radarSweepSectorWrap, { transform: [{ rotate: spinInterpolation }] }]}>
+              <Svg width={140} height={140} viewBox="0 0 100 100">
+                <Defs>
+                  <LinearGradient id="sweepGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <Stop offset="0%" stopColor="#f472b6" stopOpacity={0.85} />
+                    <Stop offset="100%" stopColor="#ff2d75" stopOpacity={0.15} />
+                  </LinearGradient>
+                </Defs>
+                <Path d="M0 100 L100 0 A100 100 0 0 1 100 100 Z" fill="url(#sweepGrad)" />
+              </Svg>
             </Animated.View>
 
-            {/* Center User Beacon */}
-            <View style={styles.scanUserCore}>
-              <View style={styles.scanUserCoreInner} />
-            </View>
-            <View style={styles.scanUserTag}>
-              <Text style={styles.scanUserTagText}>Bringing Beautiful Beauticians...</Text>
-            </View>
+            {/* Shadow beneath Center Location Pin */}
+            <Animated.View style={[styles.animPinShadow, { transform: [{ scale: shadowPulseAnim }] }]} />
 
-            {/* Orbiting Beautician Avatar 1: Shilpi Makeovers (Top Right) */}
+            {/* Central Hot Pink Location Pin (Drops in from Top) */}
             <Animated.View
               style={[
-                styles.orbitingAvatarNode,
+                styles.animCenterPinWrap,
                 {
-                  top: -65,
-                  right: -55,
-                  transform: [{ scale: avatarPop1 }],
+                  transform: [{ translateY: pinDropAnim }, { scale: pinScaleAnim }],
                 },
               ]}
             >
-              <View style={[styles.avatarBubble, styles.avatarBubblePro]}>
-                <Text style={styles.avatarBubbleText}>S</Text>
-                <View style={styles.avatarDiamondBadge}>
-                  <DiamondVector color="#ffffff" size={8} />
+              <Svg width={52} height={68} viewBox="0 0 32 42" fill="none">
+                <Path
+                  d="M16 41C16 41 30 26.5 30 15C30 7.26801 23.732 1 16 1C8.26801 1 2 7.26801 2 15C2 26.5 16 41 16 41Z"
+                  fill="#e11d48"
+                  stroke="#ffffff"
+                  strokeWidth={2}
+                />
+                <Circle cx="16" cy="15" r="5" fill="#ffffff" />
+              </Svg>
+            </Animated.View>
+
+            {/* Orbiting Beautician Avatar 1 (Top Left) */}
+            <Animated.View style={[styles.avatarBubbleAnchor, { top: 38, left: 45, transform: [{ scale: avatarPop1 }] }]}>
+              <View style={[styles.avatarBubbleCircle, { borderColor: '#e11d48' }]}>
+                <Text style={styles.avatarBubbleChar}>S</Text>
+                <View style={styles.avatarStarBadge}>
+                  <StarFilledVector color="#ffffff" size={8} />
                 </View>
               </View>
-              <View style={styles.avatarCalloutTag}>
-                <Text style={styles.avatarCalloutName}>Shilpi Makeovers</Text>
-                <Text style={styles.avatarCalloutDist}>0.8 km</Text>
-              </View>
             </Animated.View>
 
-            {/* Orbiting Beautician Avatar 2: Pooja Luxury Studio (Bottom Right) */}
-            <Animated.View
-              style={[
-                styles.orbitingAvatarNode,
-                {
-                  bottom: -60,
-                  right: -45,
-                  transform: [{ scale: avatarPop2 }],
-                },
-              ]}
-            >
-              <View style={[styles.avatarBubble, styles.avatarBubblePro]}>
-                <Text style={styles.avatarBubbleText}>P</Text>
-                <View style={styles.avatarDiamondBadge}>
-                  <DiamondVector color="#ffffff" size={8} />
+            {/* Orbiting Beautician Avatar 2 (Top Right) */}
+            <Animated.View style={[styles.avatarBubbleAnchor, { top: 32, right: 40, transform: [{ scale: avatarPop2 }] }]}>
+              <View style={[styles.avatarBubbleCircle, { borderColor: '#db2777' }]}>
+                <Text style={styles.avatarBubbleChar}>D</Text>
+                <View style={styles.avatarStarBadge}>
+                  <StarFilledVector color="#ffffff" size={8} />
                 </View>
               </View>
-              <View style={styles.avatarCalloutTag}>
-                <Text style={styles.avatarCalloutName}>Pooja Studio</Text>
-                <Text style={styles.avatarCalloutDist}>2.1 km</Text>
-              </View>
             </Animated.View>
 
-            {/* Orbiting Beautician Avatar 3: Jo Makeovers (Top Left) */}
-            <Animated.View
-              style={[
-                styles.orbitingAvatarNode,
-                {
-                  top: -55,
-                  left: -60,
-                  transform: [{ scale: avatarPop3 }],
-                },
-              ]}
-            >
-              <View style={[styles.avatarBubble, styles.avatarBubblePro]}>
-                <Text style={styles.avatarBubbleText}>J</Text>
-                <View style={styles.avatarDiamondBadge}>
-                  <DiamondVector color="#ffffff" size={8} />
+            {/* Orbiting Beautician Avatar 3 (Mid Right) */}
+            <Animated.View style={[styles.avatarBubbleAnchor, { top: 140, right: 35, transform: [{ scale: avatarPop3 }] }]}>
+              <View style={[styles.avatarBubbleCircle, { borderColor: '#f43f5e' }]}>
+                <Text style={styles.avatarBubbleChar}>A</Text>
+                <View style={styles.avatarStarBadge}>
+                  <StarFilledVector color="#ffffff" size={8} />
                 </View>
               </View>
-              <View style={styles.avatarCalloutTag}>
-                <Text style={styles.avatarCalloutName}>Jo Makeovers</Text>
-                <Text style={styles.avatarCalloutDist}>0.6 km</Text>
+            </Animated.View>
+
+            {/* Orbiting Beautician Avatar 4 (Bottom Center) */}
+            <Animated.View style={[styles.avatarBubbleAnchor, { bottom: 28, right: 90, transform: [{ scale: avatarPop4 }] }]}>
+              <View style={[styles.avatarBubbleCircle, { borderColor: '#e11d48' }]}>
+                <Text style={styles.avatarBubbleChar}>J</Text>
+                <View style={styles.avatarStarBadge}>
+                  <StarFilledVector color="#ffffff" size={8} />
+                </View>
               </View>
             </Animated.View>
 
-            {/* Orbiting Beautician Avatar 4: Nobita Makeovers (Bottom Left) */}
-            <Animated.View
-              style={[
-                styles.orbitingAvatarNode,
-                {
-                  bottom: -50,
-                  left: -50,
-                  transform: [{ scale: avatarPop4 }],
-                },
-              ]}
-            >
-              <View style={styles.avatarBubble}>
-                <Text style={[styles.avatarBubbleText, { color: '#0f172a' }]}>N</Text>
-              </View>
-              <View style={styles.avatarCalloutTag}>
-                <Text style={styles.avatarCalloutName}>Nobita Studio</Text>
-                <Text style={styles.avatarCalloutDist}>1.4 km</Text>
+            {/* Orbiting Beautician Avatar 5 (Mid Left) */}
+            <Animated.View style={[styles.avatarBubbleAnchor, { top: 155, left: 35, transform: [{ scale: avatarPop5 }] }]}>
+              <View style={[styles.avatarBubbleCircle, { borderColor: '#db2777' }]}>
+                <Text style={styles.avatarBubbleChar}>P</Text>
+                <View style={styles.avatarStarBadge}>
+                  <StarFilledVector color="#ffffff" size={8} />
+                </View>
               </View>
             </Animated.View>
           </View>
 
-          {/* Bottom Progress & Status Details */}
-          <View style={[styles.scanBottomCard, { bottom: insets.bottom + 24 }]}>
-            {/* Live Status Row */}
-            <View style={styles.scanStatusRow}>
-              <View style={styles.scanStatusIndicatorDot} />
-              <Text style={styles.scanStatusHeadingText}>{scanStatusText}</Text>
-            </View>
+          {/* Subtitle Step Text in Luxury Serif Style */}
+          <View style={[styles.animStepWrap, { bottom: insets.bottom + 110 }]}>
+            <Text style={styles.animStepText}>{animationStepText}</Text>
+          </View>
 
-            {/* Target Area Capsule */}
-            <View style={styles.scanTerritoryPill}>
-              <LocationPinVector color="#ea4335" size={13} />
-              <Text style={styles.scanTerritoryText} numberOfLines={1}>
-                {userAddress || userCity} · PIN {userPincode}
-              </Text>
-            </View>
-
-            {/* 3-Second Loading Progress Bar */}
-            <View style={styles.progressBarBg}>
-              <Animated.View
-                style={[
-                  styles.progressBarFill,
-                  {
-                    width: progressBarAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0%', '100%'],
-                    }),
-                  },
-                ]}
-              />
-            </View>
-
-            {/* Verified Guarantee Badge */}
-            <View style={styles.scanVerifiedNotice}>
-              <ShieldCheckVector color="#10b981" size={15} />
-              <Text style={styles.scanVerifiedNoticeText}>
-                Showing 100% Verified Shilpi Makeover Artists
-              </Text>
-            </View>
+          {/* Slim Gradient Progress Bar at Bottom */}
+          <View style={[styles.animProgressBarTrack, { bottom: insets.bottom + 45 }]}>
+            <Animated.View
+              style={[
+                styles.animProgressBarFill,
+                {
+                  width: progressBarAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0%', '100%'],
+                  }),
+                },
+              ]}
+            />
           </View>
         </Animated.View>
       )}
 
       {/* -------------------------------------------------------------
-          6. MAIN MAP OR LIST VIEW (APPEARS AFTER 3-SECOND SCAN)
+          B. DISCOVERY HEADER: SEARCH, LOCATION & VIEW TOGGLE
+         ------------------------------------------------------------- */}
+      <View style={[styles.topBarContainer, { paddingTop: insets.top + 8 }]}>
+        <View style={styles.topBarRow}>
+          <TouchableOpacity style={styles.circleIconBtn} onPress={onGoBack} activeOpacity={0.8}>
+            <BackArrowVector color="#0f172a" size={18} />
+          </TouchableOpacity>
+
+          {/* Location Capsule */}
+          <TouchableOpacity
+            style={styles.locationCapsule}
+            onPress={() => setSearchModalOpen(true)}
+            activeOpacity={0.85}
+          >
+            <LocationPinVector color="#ea4335" size={16} />
+            <View style={styles.locationCapsuleTextWrap}>
+              <Text style={styles.capsuleCityText} numberOfLines={1}>
+                {userAddress || userCity}
+              </Text>
+              <View style={styles.capsuleDot} />
+              <Text style={styles.capsulePinText}>{userPincode}</Text>
+            </View>
+            <View style={styles.capsuleArrowIcon}>
+              <ChevronDownVector color="#64748b" size={13} />
+            </View>
+          </TouchableOpacity>
+
+          {/* Filter Button */}
+          <TouchableOpacity
+            style={[styles.circleIconBtn, activeFiltersCount > 0 && styles.circleIconBtnActive]}
+            onPress={() => setFilterModalOpen(true)}
+            activeOpacity={0.8}
+          >
+            <FilterSlidersVector color={activeFiltersCount > 0 ? '#ffffff' : '#0f172a'} size={16} />
+            {activeFiltersCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* View Toggle (Map vs List) */}
+          <TouchableOpacity
+            style={[styles.circleIconBtn, viewMode === 'map' && { backgroundColor: '#ff2d75' }]}
+            onPress={() => setViewMode((prev) => (prev === 'map' ? 'list' : 'map'))}
+            activeOpacity={0.8}
+          >
+            {viewMode === 'map' ? (
+              <ListVector color="#ffffff" size={16} />
+            ) : (
+              <CompassVector color="#0f172a" size={16} />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* -------------------------------------------------------------
+            C. 3 CORE SECTIONS: NEARBY (50 KM) | ALL | TOP BEAUTICIANS
+           ------------------------------------------------------------- */}
+        <View style={styles.sectionTabsRow}>
+          <TouchableOpacity
+            style={[styles.sectionTabPill, activeSection === 'nearby' && styles.sectionTabPillActive]}
+            onPress={() => setActiveSection('nearby')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.sectionTabText, activeSection === 'nearby' && styles.sectionTabTextActive]}>
+              📍 Nearby (50 KM)
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.sectionTabPill, activeSection === 'all' && styles.sectionTabPillActive]}
+            onPress={() => setActiveSection('all')}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.sectionTabText, activeSection === 'all' && styles.sectionTabTextActive]}>
+              All Beauticians
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.sectionTabPill, activeSection === 'top' && styles.sectionTabPillActive]}
+            onPress={() => setActiveSection('top')}
+            activeOpacity={0.8}
+          >
+            <DiamondVector color={activeSection === 'top' ? '#ffffff' : '#f59e0b'} size={11} />
+            <Text style={[styles.sectionTabText, activeSection === 'top' && styles.sectionTabTextActive, { marginLeft: 4 }]}>
+              Top Beauticians
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Section 3 Specific Sub-Bar: Dynamic Ranking Controls */}
+        {activeSection === 'top' && (
+          <View style={styles.topBeauticiansControlBar}>
+            {/* Criteria Pills: Combined | Bookings | Pro Priority */}
+            <View style={styles.rankingCriteriaRow}>
+              <TouchableOpacity
+                style={[styles.criteriaChip, rankingCriteria === 'combined' && styles.criteriaChipActive]}
+                onPress={() => setRankingCriteria('combined')}
+              >
+                <Text style={[styles.criteriaChipText, rankingCriteria === 'combined' && styles.criteriaChipTextActive]}>
+                  Combined
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.criteriaChip, rankingCriteria === 'bookings' && styles.criteriaChipActive]}
+                onPress={() => setRankingCriteria('bookings')}
+              >
+                <Text style={[styles.criteriaChipText, rankingCriteria === 'bookings' && styles.criteriaChipTextActive]}>
+                  Most Bookings
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.criteriaChip, rankingCriteria === 'subscription' && styles.criteriaChipActive]}
+                onPress={() => setRankingCriteria('subscription')}
+              >
+                <Text style={[styles.criteriaChipText, rankingCriteria === 'subscription' && styles.criteriaChipTextActive]}>
+                  Shilpi Pro
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Dynamic Ranking Limit Dropdown (Top 5, Top 10, Top 20, Top 50, Top 100, All) */}
+            <TouchableOpacity
+              style={styles.rankingLimitDropdownBtn}
+              onPress={() => setRankingDropdownOpen((prev) => !prev)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.rankingLimitDropdownText}>
+                {RANKING_LIMIT_OPTIONS.find((r) => r.id === rankingLimit)?.label || 'Top 10'}
+              </Text>
+              <ChevronDownVector color="#0f172a" size={12} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Dynamic Limit Dropdown Menu */}
+        {rankingDropdownOpen && activeSection === 'top' && (
+          <View style={styles.rankingDropdownMenu}>
+            {RANKING_LIMIT_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.id}
+                style={[styles.dropdownMenuItem, rankingLimit === opt.id && styles.dropdownMenuItemActive]}
+                onPress={() => {
+                  setRankingLimit(opt.id);
+                  setRankingDropdownOpen(false);
+                }}
+              >
+                <Text style={[styles.dropdownMenuText, rankingLimit === opt.id && styles.dropdownMenuTextActive]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Section 2 Specific Sub-Bar: Search by Name & Location */}
+        {activeSection === 'all' && (
+          <View style={styles.searchBarRow}>
+            <SearchVector color="#64748b" size={15} />
+            <TextInput
+              style={styles.searchBarInput}
+              placeholder="Search by beautician name or location..."
+              placeholderTextColor="#94a3b8"
+              value={searchNameQuery}
+              onChangeText={(text) => {
+                setSearchNameQuery(text);
+              }}
+              onSubmitEditing={() => fetchBeauticiansData({ section: 'all' })}
+            />
+            {searchNameQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchNameQuery('')}>
+                <CloseVector color="#94a3b8" size={14} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* -------------------------------------------------------------
+            D. DYNAMIC PROFESSION-BASED CATEGORIES SCROLL
+           ------------------------------------------------------------- */}
+        <View style={styles.professionsScrollWrap}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.professionsScroll}>
+            {availableProfessions.map((prof) => {
+              const isSelected = activeProfession === prof;
+              return (
+                <TouchableOpacity
+                  key={prof}
+                  style={[styles.profPill, isSelected && styles.profPillActive]}
+                  onPress={() => {
+                    try {
+                      Haptics.selectionAsync();
+                    } catch {}
+                    setActiveProfession(prof);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.profPillText, isSelected && styles.profPillTextActive]}>
+                    {prof}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </View>
+
+      {/* -------------------------------------------------------------
+          E. MAIN CONTENT: MAP VIEW OR LIST VIEW
          ------------------------------------------------------------- */}
       {viewMode === 'map' ? (
-        <View style={styles.fullBleedMapContainer}>
+        <View style={styles.mapContainer}>
+          {/* Authentic Google Maps SVG Base */}
           <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT} style={StyleSheet.absoluteFill}>
-            <Defs>
-              <LinearGradient id="routePinkGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-                <Stop offset="0%" stopColor="#ff2d75" />
-                <Stop offset="100%" stopColor="#e11d48" />
-              </LinearGradient>
-            </Defs>
-
-            {/* 1. Google Maps Base Land Terrain (Signature #f4f3f0) */}
             <Rect width="100%" height="100%" fill="#f4f3f0" />
-
-            {/* 2. Google Maps Parks & Green Spaces (#c8e8c8 with #a8d5a8 border) */}
+            {/* Parks */}
             <Path
               d={`M${SCREEN_WIDTH * 0.04},${SCREEN_HEIGHT * 0.18} Q${SCREEN_WIDTH * 0.22},${SCREEN_HEIGHT * 0.16} ${SCREEN_WIDTH * 0.38},${SCREEN_HEIGHT * 0.20} Q${SCREEN_WIDTH * 0.40},${SCREEN_HEIGHT * 0.30} ${SCREEN_WIDTH * 0.25},${SCREEN_HEIGHT * 0.32} Q${SCREEN_WIDTH * 0.04},${SCREEN_HEIGHT * 0.31} ${SCREEN_WIDTH * 0.04},${SCREEN_HEIGHT * 0.18} Z`}
               fill="#c8e8c8"
@@ -1310,420 +1284,220 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               stroke="#a8d5a8"
               strokeWidth={1}
             />
-            <Path
-              d={`M${SCREEN_WIDTH * 0.55},${SCREEN_HEIGHT * 0.60} Q${SCREEN_WIDTH * 0.75},${SCREEN_HEIGHT * 0.58} ${SCREEN_WIDTH * 0.94},${SCREEN_HEIGHT * 0.64} Q${SCREEN_WIDTH * 0.92},${SCREEN_HEIGHT * 0.76} ${SCREEN_WIDTH * 0.68},${SCREEN_HEIGHT * 0.75} Z`}
-              fill="#d4edd2"
-              stroke="#bbf2b6"
-              strokeWidth={1}
-            />
-
-            {/* 3. Google Maps Waterway / Canal (#aadaff) */}
+            {/* Waterway */}
             <Path
               d={`M-10,${SCREEN_HEIGHT * 0.67} C${SCREEN_WIDTH * 0.30},${SCREEN_HEIGHT * 0.62} ${SCREEN_WIDTH * 0.62},${SCREEN_HEIGHT * 0.72} ${SCREEN_WIDTH + 10},${SCREEN_HEIGHT * 0.66} L${SCREEN_WIDTH + 10},${SCREEN_HEIGHT * 0.72} C${SCREEN_WIDTH * 0.62},${SCREEN_HEIGHT * 0.78} ${SCREEN_WIDTH * 0.30},${SCREEN_HEIGHT * 0.68} -10,${SCREEN_HEIGHT * 0.73} Z`}
               fill="#aadaff"
             />
-
-            {/* 4. Google Maps Urban Neighborhood Blocks */}
-            <Path
-              d={`M${SCREEN_WIDTH * 0.05},${SCREEN_HEIGHT * 0.36} L${SCREEN_WIDTH * 0.40},${SCREEN_HEIGHT * 0.36} L${SCREEN_WIDTH * 0.40},${SCREEN_HEIGHT * 0.44} L${SCREEN_WIDTH * 0.05},${SCREEN_HEIGHT * 0.44} Z`}
-              fill="#ebe7df"
-            />
-            <Path
-              d={`M${SCREEN_WIDTH * 0.50},${SCREEN_HEIGHT * 0.36} L${SCREEN_WIDTH * 0.95},${SCREEN_HEIGHT * 0.36} L${SCREEN_WIDTH * 0.95},${SCREEN_HEIGHT * 0.46} L${SCREEN_WIDTH * 0.50},${SCREEN_HEIGHT * 0.46} Z`}
-              fill="#ebe7df"
-            />
-            <Path
-              d={`M${SCREEN_WIDTH * 0.05},${SCREEN_HEIGHT * 0.50} L${SCREEN_WIDTH * 0.42},${SCREEN_HEIGHT * 0.50} L${SCREEN_WIDTH * 0.42},${SCREEN_HEIGHT * 0.62} L${SCREEN_WIDTH * 0.05},${SCREEN_HEIGHT * 0.62} Z`}
-              fill="#ebe7df"
-            />
-
-            {/* 5. Google Maps Organic Road Network */}
-            <Path d={`M-30,${SCREEN_HEIGHT * 0.24} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.24}`} stroke="#e5e3de" strokeWidth={4} />
-            <Path d={`M-30,${SCREEN_HEIGHT * 0.54} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.54}`} stroke="#e5e3de" strokeWidth={4} />
-            <Path d={`M${SCREEN_WIDTH * 0.22},0 L${SCREEN_WIDTH * 0.22},${SCREEN_HEIGHT}`} stroke="#e5e3de" strokeWidth={4} />
-            <Path d={`M${SCREEN_WIDTH * 0.74},0 L${SCREEN_WIDTH * 0.74},${SCREEN_HEIGHT}`} stroke="#e5e3de" strokeWidth={4} />
-
+            {/* Major Highways */}
             <Path d={`M-30,${SCREEN_HEIGHT * 0.36} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.36}`} stroke="#d5d3ce" strokeWidth={7} />
-            <Path d={`M-30,${SCREEN_HEIGHT * 0.48} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.48}`} stroke="#d5d3ce" strokeWidth={7} />
-            <Path d={`M${SCREEN_WIDTH * 0.44},0 L${SCREEN_WIDTH * 0.44},${SCREEN_HEIGHT}`} stroke="#d5d3ce" strokeWidth={7} />
-            <Path d={`M${SCREEN_WIDTH * 0.86},0 L${SCREEN_WIDTH * 0.86},${SCREEN_HEIGHT}`} stroke="#d5d3ce" strokeWidth={6} />
-
-            <Path
-              d={`M-30,${SCREEN_HEIGHT * 0.42} Q${SCREEN_WIDTH * 0.45},${SCREEN_HEIGHT * 0.40} ${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.48}`}
-              stroke="#f59e0b"
-              strokeWidth={9}
-            />
-
-            {/* Pure White Fills */}
-            <Path d={`M-30,${SCREEN_HEIGHT * 0.24} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.24}`} stroke="#ffffff" strokeWidth={2.8} />
-            <Path d={`M-30,${SCREEN_HEIGHT * 0.54} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.54}`} stroke="#ffffff" strokeWidth={2.8} />
-            <Path d={`M${SCREEN_WIDTH * 0.22},0 L${SCREEN_WIDTH * 0.22},${SCREEN_HEIGHT}`} stroke="#ffffff" strokeWidth={2.8} />
-            <Path d={`M${SCREEN_WIDTH * 0.74},0 L${SCREEN_WIDTH * 0.74},${SCREEN_HEIGHT}`} stroke="#ffffff" strokeWidth={2.8} />
-
             <Path d={`M-30,${SCREEN_HEIGHT * 0.36} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.36}`} stroke="#ffffff" strokeWidth={5} />
-            <Path d={`M-30,${SCREEN_HEIGHT * 0.48} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.48}`} stroke="#ffffff" strokeWidth={5} />
-            <Path d={`M${SCREEN_WIDTH * 0.44},0 L${SCREEN_WIDTH * 0.44},${SCREEN_HEIGHT}`} stroke="#ffffff" strokeWidth={5} />
-            <Path d={`M${SCREEN_WIDTH * 0.86},0 L${SCREEN_WIDTH * 0.86},${SCREEN_HEIGHT}`} stroke="#ffffff" strokeWidth={4.5} />
-
             <Path
-              d={`M-30,${SCREEN_HEIGHT * 0.42} Q${SCREEN_WIDTH * 0.45},${SCREEN_HEIGHT * 0.40} ${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.48}`}
+              d={`M-30,${SCREEN_HEIGHT * 0.44} Q${SCREEN_WIDTH * 0.45},${SCREEN_HEIGHT * 0.42} ${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.48}`}
               stroke="#fed7aa"
-              strokeWidth={6.5}
+              strokeWidth={7}
             />
-
-            {/* Bridge Deck over Canal */}
-            <Rect x={SCREEN_WIDTH * 0.42} y={SCREEN_HEIGHT * 0.67} width={SCREEN_WIDTH * 0.05} height={SCREEN_HEIGHT * 0.045} fill="#ffffff" stroke="#d5d3ce" strokeWidth={1} rx={2} />
-
-            {/* Dynamic Highway Shield Badge */}
-            <Rect x={SCREEN_WIDTH * 0.08} y={SCREEN_HEIGHT * 0.40} width={44} height={16} rx={3} fill="#15803d" />
-            <SvgText x={SCREEN_WIDTH * 0.08 + 22} y={SCREEN_HEIGHT * 0.40 + 11.5} fill="#ffffff" fontSize={8} fontWeight="800" textAnchor="middle">
-              {areaProfile.highwayName}
-            </SvgText>
-
-            {/* DYNAMIC AREA TYPOGRAPHY & LABELS */}
-            <SvgText x={SCREEN_WIDTH * 0.48} y={SCREEN_HEIGHT * 0.34} fill="#5f6368" fontSize={9.5} fontWeight="700" letterSpacing={1.2}>
-              {areaProfile.primaryArea}
-            </SvgText>
-            <SvgText x={SCREEN_WIDTH * 0.06} y={SCREEN_HEIGHT * 0.52} fill="#5f6368" fontSize={9} fontWeight="700" letterSpacing={1.2}>
-              {areaProfile.secondaryArea1}
-            </SvgText>
-            <SvgText x={SCREEN_WIDTH * 0.56} y={SCREEN_HEIGHT * 0.53} fill="#5f6368" fontSize={9} fontWeight="700" letterSpacing={1.2}>
-              {areaProfile.secondaryArea2}
-            </SvgText>
-
-            <SvgText x={SCREEN_WIDTH * 0.52} y={SCREEN_HEIGHT * 0.47} fill="#80868b" fontSize={7.5} fontWeight="600">
-              {areaProfile.mainRoad1}
-            </SvgText>
-            <SvgText x={SCREEN_WIDTH * 0.05} y={SCREEN_HEIGHT * 0.35} fill="#80868b" fontSize={7.5} fontWeight="600">
-              {areaProfile.mainRoad2}
-            </SvgText>
-
-            <SvgText x={SCREEN_WIDTH * 0.12} y={SCREEN_HEIGHT * 0.25} fill="#188038" fontSize={8} fontWeight="700">
-              {areaProfile.parkName}
-            </SvgText>
-            <SvgText x={SCREEN_WIDTH * 0.65} y={SCREEN_HEIGHT * 0.22} fill="#188038" fontSize={8} fontWeight="700">
-              {areaProfile.promenadeName}
-            </SvgText>
-
-            {/* Google Maps POI Dots */}
-            <Circle cx={SCREEN_WIDTH * 0.44} cy={SCREEN_HEIGHT * 0.36} r={7} fill="#1a73e8" />
-            <Circle cx={SCREEN_WIDTH * 0.44} cy={SCREEN_HEIGHT * 0.36} r={3} fill="#ffffff" />
-            <Circle cx={SCREEN_WIDTH * 0.74} cy={SCREEN_HEIGHT * 0.48} r={7} fill="#ea4335" />
-            <Circle cx={SCREEN_WIDTH * 0.74} cy={SCREEN_HEIGHT * 0.48} r={2.5} fill="#ffffff" />
-
-            {/* ACTIVE GOOGLE MAPS NAVIGATION ROUTE */}
-            {selectedStudio && (
-              <G>
-                <Path
-                  d={`M${userMapX},${userMapY} Q${midX},${midY} ${targetX},${targetY}`}
-                  stroke="rgba(255, 45, 117, 0.22)"
-                  strokeWidth={10}
-                  fill="none"
-                  strokeLinecap="round"
-                />
-                <Path
-                  d={`M${userMapX},${userMapY} Q${midX},${midY} ${targetX},${targetY}`}
-                  stroke="url(#routePinkGlow)"
-                  strokeWidth={5}
-                  fill="none"
-                  strokeLinecap="round"
-                />
-              </G>
-            )}
           </Svg>
 
-          {/* ACTIVE ROUTE FLOATING ETA CAPSULE */}
-          {selectedStudio && (
-            <View style={[styles.routeEtaPill, { left: midX - 55, top: midY - 14 }]}>
-              <View style={styles.etaDotPulse} />
-              <Text style={styles.routeEtaPillText}>
-                {Math.max(2, Math.round(selectedStudio.distanceKm * 2.5))} min ({selectedStudio.distanceKm} km)
-              </Text>
-            </View>
-          )}
-
-          {/* USER LIVE GPS BEACON */}
-          <View style={[styles.userGpsBeacon, { left: userMapX - 22, top: userMapY - 22 }]}>
-            <Animated.View
-              style={[
-                styles.userGpsSonarWave,
-                {
-                  transform: [{ scale: radarScale }],
-                  opacity: radarScale.interpolate({
-                    inputRange: [1, 2.2],
-                    outputRange: [0.7, 0],
-                  }),
-                },
-              ]}
-            />
-            <View style={styles.userGpsCorePoint}>
-              <View style={styles.userGpsWhiteCenter} />
-            </View>
+          {/* User GPS Center Point */}
+          <View style={[styles.userGpsPinWrap, { left: SCREEN_WIDTH * 0.48 - 18, top: SCREEN_HEIGHT * 0.46 - 18 }]}>
+            <View style={styles.userGpsPulseRing} />
+            <View style={styles.userGpsCenterDot} />
             <View style={styles.userGpsTag}>
               <Text style={styles.userGpsTagText}>YOU ({userPincode})</Text>
             </View>
           </View>
 
-          {/* AUTHENTIC GOOGLE MAPS TEARDROP LOCATION PINS */}
-          {filteredStudios.map((studio) => {
+          {/* Interactive Beautician Markers on Map */}
+          {studios.map((studio, idx) => {
+            const isSelected = selectedStudio?.id === studio.id;
             const pinX = SCREEN_WIDTH * studio.mapX;
             const pinY = SCREEN_HEIGHT * studio.mapY;
-            const isSelected = selectedStudio?.id === studio.id;
 
             return (
               <TouchableOpacity
                 key={studio.id}
                 style={[
-                  styles.googlePinAnchor,
-                  { left: pinX - 30, top: pinY - 56 },
-                  isSelected && styles.googlePinAnchorSelected,
+                  styles.mapPinAnchor,
+                  { left: pinX - 30, top: pinY - 54 },
+                  isSelected && styles.mapPinAnchorSelected,
                 ]}
-                onPress={() => handleSelectPin(studio)}
+                onPress={() => {
+                  try {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  } catch {}
+                  setSelectedStudio(studio);
+                  if (cardListRef.current) {
+                    cardListRef.current.scrollToIndex({ index: idx, animated: true });
+                  }
+                }}
                 activeOpacity={0.88}
               >
-                <View style={[styles.googlePinCallout, isSelected && styles.googlePinCalloutSelected]}>
+                {/* Callout Bubble */}
+                <View style={[styles.pinCallout, isSelected && styles.pinCalloutSelected]}>
                   {studio.isPro && (
-                    <View style={styles.proMiniBadge}>
-                      <DiamondVector color="#f59e0b" size={10} />
+                    <View style={{ marginRight: 3 }}>
+                      <DiamondVector color="#f59e0b" size={9} />
                     </View>
                   )}
-                  <Text style={[styles.googlePinCalloutText, isSelected && styles.googlePinCalloutTextSelected]} numberOfLines={1}>
+                  <Text style={[styles.pinCalloutText, isSelected && styles.pinCalloutTextSelected]} numberOfLines={1}>
                     {studio.businessName}
                   </Text>
                   <View style={styles.pinDistDot} />
-                  <Text style={[styles.pinPriceText, isSelected && styles.pinPriceTextSelected]}>
-                    ₹{(studio.startingPrice / 1000).toFixed(1)}k
-                  </Text>
+                  <Text style={styles.pinDistText}>{studio.distanceKm} km</Text>
                 </View>
 
-                <Animated.View
-                  style={isSelected ? { transform: [{ scale: pinSpring }] } : undefined}
-                >
-                  <GoogleMapsPinIcon
-                    color="#ff2d75"
-                    size={isSelected ? 40 : 34}
-                    isSelected={isSelected}
-                    isPro={studio.isPro}
-                    char={studio.businessName.charAt(0)}
-                  />
-                </Animated.View>
+                <GoogleMapsPinIcon
+                  color="#ff2d75"
+                  size={isSelected ? 40 : 34}
+                  isSelected={isSelected}
+                  isPro={studio.isPro}
+                  char={studio.businessName.charAt(0)}
+                />
               </TouchableOpacity>
             );
           })}
 
-          {/* FULLY RESPONSIVE TOP BAR */}
-          <View style={[styles.floatingTopBarWrap, { top: insets.top + 8 }]}>
-            <TouchableOpacity style={styles.floatingCircleBtn} onPress={onGoBack} activeOpacity={0.82}>
-              <BackArrowVector color="#0f172a" size={18} />
-            </TouchableOpacity>
-
+          {/* Re-Center / Target GPS Button */}
+          <View style={[styles.floatingGpsBtn, { bottom: insets.bottom + 215 }]}>
             <TouchableOpacity
-              style={styles.floatingLocationCapsule}
-              onPress={() => {
-                setSearchInput(userAddress || `${userCity} - ${userPincode}`);
-                setSearchModalOpen(true);
-              }}
+              style={styles.circleIconBtn}
+              onPress={() => fetchBeauticiansData({ section: 'nearby' })}
               activeOpacity={0.85}
-            >
-              <LocationPinVector color="#ea4335" size={17} />
-              <View style={styles.locationContentWrap}>
-                <Text style={styles.capsuleCityText} numberOfLines={1} ellipsizeMode="tail">
-                  {userAddress || userCity}
-                </Text>
-                <View style={styles.capsuleDot} />
-                <Text style={styles.capsulePinText}>{userPincode}</Text>
-              </View>
-              <View style={styles.capsuleSearchCircle}>
-                <SearchVector color="#5f6368" size={13} />
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.floatingCircleBtn}
-              onPress={() => setViewMode('list')}
-              activeOpacity={0.82}
-            >
-              <ListVector color="#0f172a" size={16} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Floating Category Filter Chips (Nearby, Any Area, Top 5, Top 10, Shilpi Pro, Bridal) */}
-          <View style={[styles.floatingFilterChipsRow, { top: insets.top + 64 }]}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsScroll}>
-              {FILTER_TABS.map((tab) => {
-                const isSelected = activeFilter === tab.id;
-                return (
-                  <TouchableOpacity
-                    key={tab.id}
-                    style={[styles.floatingFilterPill, isSelected && styles.floatingFilterPillActive]}
-                    onPress={() => handleFilterSelect(tab.id)}
-                    activeOpacity={0.8}
-                  >
-                    {tab.isPro && (
-                      <View style={{ marginRight: 4 }}>
-                        <DiamondVector color={isSelected ? '#ffffff' : '#f59e0b'} size={12} />
-                      </View>
-                    )}
-                    <Text style={[styles.floatingFilterText, isSelected && styles.floatingFilterTextActive]}>
-                      {tab.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-
-          {/* Rural Village or Remote Area Fallback Banner */}
-          {isVillageOrRemoteArea && (
-            <View style={[styles.villageNoticeBanner, { top: insets.top + 108 }]}>
-              <LocationPinVector color="#ff2d75" size={14} />
-              <View style={styles.villageNoticeTextWrap}>
-                <Text style={styles.villageNoticeTitle} numberOfLines={1}>
-                  Village / Remote PIN ({userPincode})
-                </Text>
-                <Text style={styles.villageNoticeSub} numberOfLines={1}>
-                  No studios directly in PIN. Showing top artists in Tamil Nadu.
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.villageNoticePill}
-                onPress={() => handleFilterSelect('any_area')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.villageNoticePillText}>Any Area</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Floating Google Maps Target GPS Button */}
-          <View style={[styles.floatingRightActions, { top: insets.top + (isVillageOrRemoteArea ? 162 : 120) }]}>
-            <TouchableOpacity
-              style={styles.floatingActionIcon}
-              onPress={() => filterByLocation(userPincode, userCity, 'nearby')}
-              activeOpacity={0.8}
             >
               <CrosshairTargetVector color="#1a73e8" size={20} />
             </TouchableOpacity>
           </View>
 
-          {/* HORIZONTAL SNAPPING STUDIO CARD DECK */}
-          <View style={[styles.carouselContainer, { bottom: insets.bottom + 10 }]}>
+          {/* Snapping Horizontal Studio Carousel at Bottom */}
+          <View style={[styles.carouselContainer, { bottom: insets.bottom + 12 }]}>
             <FlatList
               ref={cardListRef}
-              data={filteredStudios}
+              data={studios}
               keyExtractor={(item) => item.id}
               horizontal
               pagingEnabled={false}
               snapToInterval={CARD_INTERVAL}
               decelerationRate="fast"
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.carouselScrollPadding}
+              contentContainerStyle={styles.carouselPadding}
               onMomentumScrollEnd={(e) => {
                 const offset = e.nativeEvent.contentOffset.x;
                 const index = Math.round(offset / CARD_INTERVAL);
-                if (filteredStudios[index] && filteredStudios[index].id !== selectedStudio.id) {
-                  setSelectedStudio(filteredStudios[index]);
+                if (studios[index] && studios[index].id !== selectedStudio.id) {
+                  setSelectedStudio(studios[index]);
                 }
               }}
-              renderItem={({ item: studio }) => {
+              renderItem={({ item: studio, index }) => {
                 const isSelected = selectedStudio?.id === studio.id;
                 return (
-                  <View style={[styles.carouselCardItem, isSelected && styles.carouselCardItemSelected]}>
+                  <View style={[styles.carouselCard, isSelected && styles.carouselCardSelected]}>
                     <TouchableOpacity
-                      activeOpacity={0.94}
+                      activeOpacity={0.92}
                       onPress={() => {
                         setSelectedStudio(studio);
                         setDetailModalOpen(true);
                       }}
                     >
-                      <View style={styles.cardDragHandle} />
+                      {/* Ranking Badge if Section is Top */}
+                      {activeSection === 'top' && (
+                        <View style={[styles.cardRankBadge, index < 3 && styles.cardRankBadgeTopThree]}>
+                          <Text style={styles.cardRankBadgeText}>#{index + 1} Ranked</Text>
+                        </View>
+                      )}
 
-                      <View style={styles.cardHeaderRow}>
+                      <View style={styles.cardTopRow}>
                         <View style={[styles.cardAvatar, studio.isPro && styles.cardAvatarPro]}>
-                          <Text style={[styles.cardAvatarText, studio.isPro && styles.cardAvatarTextPro]}>
+                          <Text style={[styles.cardAvatarChar, studio.isPro && styles.cardAvatarCharPro]}>
                             {studio.businessName.charAt(0)}
                           </Text>
                         </View>
 
-                        <View style={styles.cardInfoCol}>
+                        <View style={styles.cardHeaderInfo}>
                           <View style={styles.cardTitleWrap}>
                             <Text style={styles.cardTitleText} numberOfLines={1}>
                               {studio.businessName}
                             </Text>
                             {studio.isPro ? (
                               <View style={styles.proGoldBadge}>
-                                <DiamondVector color="#fbbf24" size={9} />
-                                <Text style={styles.proGoldText}>PRO</Text>
+                                <DiamondVector color="#f59e0b" size={10} />
+                                <Text style={styles.proGoldBadgeText}>PRO</Text>
                               </View>
                             ) : (
                               <VerifiedBadgeVector color="#ff2d75" size={13} />
                             )}
                           </View>
 
-                          <Text style={styles.cardOwnerSub} numberOfLines={1}>
+                          <Text style={styles.cardOwnerText} numberOfLines={1}>
                             By {studio.ownerName} · {studio.city}
                           </Text>
 
+                          {/* Meta Row: Distance, Orders & Pin */}
                           <View style={styles.cardMetaRow}>
-                            <View style={styles.distanceBadgePill}>
+                            <View style={styles.distanceBadge}>
                               <LocationPinVector color="#ea4335" size={10} />
                               <Text style={styles.distanceBadgeText}>{studio.distanceKm} km</Text>
                             </View>
 
-                            <View style={styles.etaBadgePill}>
-                              <Text style={styles.etaBadgeText}>~{Math.max(2, Math.round(studio.distanceKm * 2.5))} min</Text>
+                            <View style={styles.ordersBadge}>
+                              <Text style={styles.ordersBadgeText}>{studio.completedBookingsCount} Orders</Text>
                             </View>
 
-                            <View style={[styles.pinBadgePill, studio.isExactPincode && styles.pinExactBadgePill]}>
-                              <Text style={[styles.pinBadgeText, studio.isExactPincode && styles.pinExactBadgeText]}>
-                                {studio.isExactPincode ? `Exact PIN ${studio.pincode}` : `PIN ${studio.pincode}`}
-                              </Text>
+                            <View style={styles.pinBadge}>
+                              <Text style={styles.pinBadgeText}>PIN {studio.pincode}</Text>
                             </View>
                           </View>
                         </View>
                       </View>
 
+                      {/* Services & Price */}
                       <View style={styles.cardServicesRow}>
-                        <View style={styles.chipsWrap}>
-                          {studio.services.slice(0, 2).map((srv: string, idx: number) => (
-                            <View key={`srv-${idx}`} style={styles.servicePill}>
-                              <Text style={styles.servicePillText} numberOfLines={1}>
+                        <View style={styles.serviceChipsWrap}>
+                          {studio.services.slice(0, 2).map((srv: string, sIdx: number) => (
+                            <View key={`s-${sIdx}`} style={styles.serviceChip}>
+                              <Text style={styles.serviceChipText} numberOfLines={1}>
                                 {srv}
                               </Text>
                             </View>
                           ))}
                         </View>
-                        <Text style={styles.priceHighlight}>
-                          From ₹{studio.startingPrice.toLocaleString('en-IN')}
-                        </Text>
+                        <Text style={styles.priceText}>From ₹{studio.startingPrice.toLocaleString('en-IN')}</Text>
                       </View>
 
+                      {/* Actions Row */}
                       <View style={styles.cardActionsRow}>
                         <TouchableOpacity
-                          style={styles.actionBtnCall}
-                          onPress={() => handleCall(studio.phone)}
-                          activeOpacity={0.82}
+                          style={styles.callActionBtn}
+                          onPress={() => Linking.openURL(`tel:${studio.phone}`)}
                         >
-                          <PhoneCallVector color="#ffffff" size={13} />
-                          <Text style={styles.actionBtnCallText}>Call</Text>
+                          <PhoneCallVector color="#ffffff" size={12} />
+                          <Text style={styles.actionBtnText}>Call</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                          style={styles.actionBtnWhatsApp}
-                          onPress={() => handleWhatsApp(studio)}
-                          activeOpacity={0.82}
+                          style={styles.waActionBtn}
+                          onPress={() => {
+                            const msg = encodeURIComponent(`Hi ${studio.ownerName}, I found ${studio.businessName} on Shilpi.`);
+                            Linking.openURL(`whatsapp://send?phone=${studio.phone}&text=${msg}`);
+                          }}
                         >
-                          <WhatsAppVector color="#ffffff" size={14} />
-                          <Text style={styles.actionBtnWhatsAppText}>WhatsApp</Text>
+                          <WhatsAppVector color="#ffffff" size={13} />
+                          <Text style={styles.actionBtnText}>WhatsApp</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                          style={styles.actionBtnDirections}
-                          onPress={() => handleOpenMaps(studio)}
-                          activeOpacity={0.82}
+                          style={styles.directionsActionBtn}
+                          onPress={() => {
+                            const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
+                            const url = Platform.select({
+                              ios: `${scheme}${studio.businessName}@${studio.latitude},${studio.longitude}`,
+                              android: `${scheme}${studio.latitude},${studio.longitude}(${studio.businessName})`,
+                            });
+                            if (url) Linking.openURL(url);
+                          }}
                         >
-                          <MapNavigationVector color="#ea4335" size={13} />
-                          <Text style={styles.actionBtnDirectionsText}>Directions</Text>
+                          <MapNavigationVector color="#ea4335" size={12} />
+                          <Text style={styles.directionsBtnText}>Directions</Text>
                         </TouchableOpacity>
                       </View>
                     </TouchableOpacity>
@@ -1735,288 +1509,250 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
         </View>
       ) : (
         // -------------------------------------------------------------
-        // 7. HIGH-DENSITY LIST VIEW (MATCHING THEME)
+        // F. VERTICAL HIGH-CRAFT LIST VIEW
         // -------------------------------------------------------------
-        <View style={[styles.screen, { paddingTop: insets.top }]}>
-          <View style={styles.listTopBar}>
-            <TouchableOpacity style={styles.floatingCircleBtn} onPress={onGoBack} activeOpacity={0.8}>
-              <BackArrowVector color="#0f172a" size={18} />
-            </TouchableOpacity>
+        <ScrollView contentContainerStyle={styles.listContainer} showsVerticalScrollIndicator={false}>
+          {/* List Section Header */}
+          <View style={styles.listHeaderRow}>
+            <View>
+              <Text style={styles.listHeaderTitle}>
+                {studios.length} {activeSection === 'top' ? 'Top Ranked' : activeSection === 'nearby' ? 'Nearby (50 KM)' : 'All Registered'} Beauticians
+              </Text>
+              <Text style={styles.listHeaderSub}>
+                {activeSection === 'nearby'
+                  ? `Showing within 50 KM of ${userCity} · Sorted by distance`
+                  : activeSection === 'top'
+                  ? `Ranked by ${rankingCriteria} · Limited to ${rankingLimit}`
+                  : `All verified members in Shilpi directory`}
+              </Text>
+            </View>
+          </View>
 
+          {/* Studio List Cards */}
+          {studios.map((studio, idx) => (
             <TouchableOpacity
-              style={styles.floatingLocationCapsule}
+              key={studio.id}
+              style={styles.listCard}
               onPress={() => {
-                setSearchInput(userAddress || `${userCity} - ${userPincode}`);
-                setSearchModalOpen(true);
+                setSelectedStudio(studio);
+                setDetailModalOpen(true);
               }}
-              activeOpacity={0.85}
+              activeOpacity={0.88}
             >
-              <LocationPinVector color="#ea4335" size={15} />
-              <View style={styles.locationContentWrap}>
-                <Text style={styles.capsuleCityText} numberOfLines={1}>{userAddress || userCity}</Text>
-                <View style={styles.capsuleDot} />
-                <Text style={styles.capsulePinText}>{userPincode}</Text>
+              {activeSection === 'top' && (
+                <View style={[styles.cardRankBadge, idx < 3 && styles.cardRankBadgeTopThree]}>
+                  <Text style={styles.cardRankBadgeText}>#{idx + 1} Ranked</Text>
+                </View>
+              )}
+
+              <View style={styles.listCardTopRow}>
+                <View style={[styles.cardAvatar, studio.isPro && styles.cardAvatarPro]}>
+                  <Text style={[styles.cardAvatarChar, studio.isPro && styles.cardAvatarCharPro]}>
+                    {studio.businessName.charAt(0)}
+                  </Text>
+                </View>
+
+                <View style={styles.listCardInfo}>
+                  <View style={styles.cardTitleWrap}>
+                    <Text style={styles.cardTitleText} numberOfLines={1}>
+                      {studio.businessName}
+                    </Text>
+                    {studio.isPro ? (
+                      <View style={styles.proGoldBadge}>
+                        <DiamondVector color="#f59e0b" size={9} />
+                        <Text style={styles.proGoldBadgeText}>PRO</Text>
+                      </View>
+                    ) : (
+                      <VerifiedBadgeVector color="#ff2d75" size={13} />
+                    )}
+                  </View>
+
+                  <Text style={styles.cardOwnerText}>By {studio.ownerName} · {studio.city}</Text>
+                  <Text style={styles.listAddressText} numberOfLines={1}>{studio.address}</Text>
+
+                  <View style={styles.cardMetaRow}>
+                    <View style={styles.distanceBadge}>
+                      <Text style={styles.distanceBadgeText}>{studio.distanceKm} km away</Text>
+                    </View>
+                    <View style={styles.ordersBadge}>
+                      <Text style={styles.ordersBadgeText}>{studio.completedBookingsCount} Orders</Text>
+                    </View>
+                    <View style={styles.pinBadge}>
+                      <Text style={styles.pinBadgeText}>PIN {studio.pincode}</Text>
+                    </View>
+                  </View>
+                </View>
               </View>
-              <View style={styles.capsuleSearchCircle}>
-                <SearchVector color="#5f6368" size={13} />
+
+              <View style={styles.listDivider} />
+
+              <View style={styles.listActionsRow}>
+                <Text style={styles.priceText}>From ₹{studio.startingPrice.toLocaleString('en-IN')}</Text>
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    style={styles.btnSmallCall}
+                    onPress={() => Linking.openURL(`tel:${studio.phone}`)}
+                  >
+                    <PhoneCallVector color="#ffffff" size={12} />
+                    <Text style={styles.actionBtnText}>Call</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.btnSmallWa}
+                    onPress={() => {
+                      const msg = encodeURIComponent(`Hi ${studio.ownerName}, I found ${studio.businessName} on Shilpi.`);
+                      Linking.openURL(`whatsapp://send?phone=${studio.phone}&text=${msg}`);
+                    }}
+                  >
+                    <WhatsAppVector color="#ffffff" size={13} />
+                    <Text style={styles.actionBtnText}>WhatsApp</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </TouchableOpacity>
+          ))}
 
+          {/* Load More Button for Section 2 (All Beauticians Pagination) */}
+          {activeSection === 'all' && hasMore && (
             <TouchableOpacity
-              style={[styles.floatingCircleBtn, { backgroundColor: '#ff2d75' }]}
-              onPress={() => setViewMode('map')}
+              style={styles.loadMoreBtn}
+              onPress={() => fetchBeauticiansData({ section: 'all', pageToLoad: page + 1, append: true })}
               activeOpacity={0.8}
             >
-              <CompassVector color="#ffffff" size={16} />
+              {loadingMore ? (
+                <ActivityIndicator color="#0f172a" size="small" />
+              ) : (
+                <Text style={styles.loadMoreBtnText}>LOAD MORE BEAUTICIANS</Text>
+              )}
             </TouchableOpacity>
-          </View>
+          )}
 
-          {/* Category Filter Chips in List View */}
-          <View style={styles.listFilterChipsRow}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsScroll}>
-              {FILTER_TABS.map((tab) => {
-                const isSelected = activeFilter === tab.id;
-                return (
-                  <TouchableOpacity
-                    key={tab.id}
-                    style={[styles.floatingFilterPill, isSelected && styles.floatingFilterPillActive]}
-                    onPress={() => handleFilterSelect(tab.id)}
-                    activeOpacity={0.8}
-                  >
-                    {tab.isPro && (
-                      <View style={{ marginRight: 4 }}>
-                        <DiamondVector color={isSelected ? '#ffffff' : '#f59e0b'} size={12} />
-                      </View>
-                    )}
-                    <Text style={[styles.floatingFilterText, isSelected && styles.floatingFilterTextActive]}>
-                      {tab.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-
-          <ScrollView contentContainerStyle={styles.listScrollContent} showsVerticalScrollIndicator={false}>
-            {isVillageOrRemoteArea && (
-              <View style={[styles.villageNoticeBanner, { position: 'relative', top: 0, marginHorizontal: 16, marginBottom: 12 }]}>
-                <LocationPinVector color="#ff2d75" size={14} />
-                <View style={styles.villageNoticeTextWrap}>
-                  <Text style={styles.villageNoticeTitle} numberOfLines={1}>
-                    Village / Remote PIN ({userPincode})
-                  </Text>
-                  <Text style={styles.villageNoticeSub} numberOfLines={1}>
-                    No studios directly in PIN. Showing top artists in Tamil Nadu.
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.villageNoticePill}
-                  onPress={() => handleFilterSelect('any_area')}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.villageNoticePillText}>Any Area</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            <View style={styles.listHeaderBadgeRow}>
-              <Text style={styles.listHeaderTitle}>
-                {filteredStudios.length} {activeFilter === 'top_5' ? 'Top 5' : activeFilter === 'top_10' ? 'Top 10' : ''} {currentScope === 'any' ? 'Beauticians Across Tamil Nadu' : `Registered Beauticians Near ${userCity}`}
-              </Text>
-              <Text style={styles.listHeaderSub}>Ranked by Shilpi Pro (Diamond) priority & real completed orders</Text>
-            </View>
-
-            {filteredStudios.map((studio) => (
-              <TouchableOpacity
-                key={studio.id}
-                style={styles.listCard}
-                onPress={() => {
-                  setSelectedStudio(studio);
-                  setDetailModalOpen(true);
-                }}
-                activeOpacity={0.88}
-              >
-                <View style={styles.listCardTop}>
-                  <View style={[styles.listAvatar, studio.isPro && styles.listAvatarPro]}>
-                    <Text style={[styles.listAvatarText, studio.isPro && styles.listAvatarTextPro]}>
-                      {studio.businessName.charAt(0)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.listInfoWrap}>
-                    <View style={styles.cardTitleWrap}>
-                      <Text style={styles.listStudioName} numberOfLines={1}>{studio.businessName}</Text>
-                      {studio.isPro ? (
-                        <View style={styles.proGoldBadge}>
-                          <DiamondVector color="#fbbf24" size={8} />
-                          <Text style={styles.proGoldText}>PRO</Text>
-                        </View>
-                      ) : (
-                        <VerifiedBadgeVector color="#ff2d75" size={13} />
-                      )}
-                    </View>
-                    <Text style={styles.listOwnerName}>By {studio.ownerName}</Text>
-                    <Text style={styles.listAddress} numberOfLines={1}>{studio.address}</Text>
-
-                    <View style={styles.listBadgesRow}>
-                      <View style={styles.distanceBadgePill}>
-                        <Text style={styles.distanceBadgeText}>{studio.distanceKm} km</Text>
-                      </View>
-                      <View style={[styles.pinBadgePill, studio.isExactPincode && styles.pinExactBadgePill]}>
-                        <Text style={[styles.pinBadgeText, studio.isExactPincode && styles.pinExactBadgeText]}>
-                          PIN {studio.pincode}
-                        </Text>
-                      </View>
-                      {studio.completedBookingsCount > 0 && (
-                        <View style={styles.ordersBadgePill}>
-                          <Text style={styles.ordersBadgeText}>{studio.completedBookingsCount} Orders</Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.listCardDivider} />
-
-                <View style={styles.listActionsRow}>
-                  <TouchableOpacity
-                    style={styles.btnCallSmall}
-                    onPress={() => handleCall(studio.phone)}
-                    activeOpacity={0.8}
-                  >
-                    <PhoneCallVector color="#ffffff" size={13} />
-                    <Text style={styles.btnCallSmallText}>Call</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.btnWaSmall}
-                    onPress={() => handleWhatsApp(studio)}
-                    activeOpacity={0.8}
-                  >
-                    <WhatsAppVector color="#ffffff" size={14} />
-                    <Text style={styles.btnWaSmallText}>WhatsApp</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.btnDirectionsSmall}
-                    onPress={() => handleOpenMaps(studio)}
-                    activeOpacity={0.8}
-                  >
-                    <MapNavigationVector color="#ea4335" size={12} />
-                    <Text style={styles.btnDirectionsSmallText}>Directions</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            ))}
-            <View style={{ height: 60 }} />
-          </ScrollView>
-        </View>
+          <View style={{ height: 60 }} />
+        </ScrollView>
       )}
 
       {/* -------------------------------------------------------------
-          8. FULL STUDIO DETAILS MODAL (GOOGLE MAPS CARD)
+          G. ADVANCED FILTERS MODAL (SECTION 5)
          ------------------------------------------------------------- */}
-      <Modal visible={detailModalOpen} transparent animationType="slide" onRequestClose={() => setDetailModalOpen(false)}>
+      <Modal visible={filterModalOpen} transparent animationType="slide" onRequestClose={() => setFilterModalOpen(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={styles.modalSheetContainer}>
-            <View style={styles.modalSheetHandle} />
+          <View style={styles.filterSheetContainer}>
+            <View style={styles.sheetHandle} />
 
-            <View style={styles.modalHeaderRow}>
-              <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.modalStudioName} numberOfLines={1}>{selectedStudio?.businessName}</Text>
-                  {selectedStudio?.isPro && (
-                    <View style={styles.proGoldBadge}>
-                      <DiamondVector color="#fbbf24" size={10} />
-                      <Text style={styles.proGoldText}>PRO</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.modalOwnerName}>By {selectedStudio?.ownerName} · Registered Beautician</Text>
+            <View style={styles.filterSheetHeader}>
+              <View>
+                <Text style={styles.sheetTitle}>Advanced Filters</Text>
+                <Text style={styles.sheetSubtitle}>Refine beauticians across Tamil Nadu</Text>
               </View>
-
-              <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setDetailModalOpen(false)}>
+              <TouchableOpacity onPress={() => setFilterModalOpen(false)} style={styles.sheetCloseBtn}>
                 <CloseVector color="#0f172a" size={16} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: SCREEN_HEIGHT * 0.52 }}>
-              <View style={styles.modalStatsCard}>
-                <View style={styles.modalStatCol}>
-                  <Text style={styles.modalStatVal}>{selectedStudio?.distanceKm} km</Text>
-                  <Text style={styles.modalStatLabel}>Distance</Text>
-                </View>
-
-                <View style={styles.modalStatDivider} />
-
-                <View style={styles.modalStatCol}>
-                  <Text style={styles.modalStatVal}>{selectedStudio?.pincode}</Text>
-                  <Text style={styles.modalStatLabel}>{selectedStudio?.isExactPincode ? 'Same PIN Code' : 'PIN Code'}</Text>
-                </View>
-
-                <View style={styles.modalStatDivider} />
-
-                <View style={styles.modalStatCol}>
-                  <Text style={styles.modalStatVal}>
-                    {selectedStudio?.completedBookingsCount > 0 ? selectedStudio.completedBookingsCount : 'Active'}
-                  </Text>
-                  <Text style={styles.modalStatLabel}>Orders Completed</Text>
-                </View>
-              </View>
-
-              <View style={styles.modalSectionCard}>
-                <Text style={styles.modalSectionHeading}>STUDIO ADDRESS</Text>
-                <Text style={styles.modalAddressText}>{selectedStudio?.address}</Text>
-                <TouchableOpacity
-                  style={styles.modalDirectionsBtn}
-                  onPress={() => selectedStudio && handleOpenMaps(selectedStudio)}
-                  activeOpacity={0.8}
-                >
-                  <MapNavigationVector color="#ea4335" size={14} />
-                  <Text style={styles.modalDirectionsText}>Open in Google Maps</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.modalSectionCard}>
-                <Text style={styles.modalSectionHeading}>SERVICES & PACKAGES</Text>
-                {selectedStudio?.services.map((srv: string, idx: number) => (
-                  <View key={`pkg-${idx}`} style={styles.modalServiceRow}>
-                    <Text style={styles.modalServiceName} numberOfLines={1}>{srv}</Text>
-                    <Text style={styles.modalServicePrice}>
-                      ₹{(selectedStudio.startingPrice + idx * 1000).toLocaleString('en-IN')}
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: SCREEN_HEIGHT * 0.58 }}>
+              {/* 1. Distance Radius */}
+              <Text style={styles.filterGroupHeading}>LOCATION & RADIUS</Text>
+              <View style={styles.filterPillsGrid}>
+                {[
+                  { label: 'Within 5 KM', val: 5 },
+                  { label: 'Within 10 KM', val: 10 },
+                  { label: 'Within 25 KM', val: 25 },
+                  { label: 'Within 50 KM', val: 50 },
+                  { label: 'Any Distance', val: null },
+                ].map((item) => (
+                  <TouchableOpacity
+                    key={item.label}
+                    style={[styles.filterChoicePill, filterRadius === item.val && styles.filterChoicePillActive]}
+                    onPress={() => setFilterRadius(item.val)}
+                  >
+                    <Text style={[styles.filterChoiceText, filterRadius === item.val && styles.filterChoiceTextActive]}>
+                      {item.label}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </View>
 
-              <View style={styles.modalGuaranteeCard}>
-                <ShieldCheckVector color="#10b981" size={18} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.modalGuaranteeTitle}>Verified Shilpi Partner Studio</Text>
-                  <Text style={styles.modalGuaranteeDesc}>
-                    KYC verified, authenticated phone identity, and certified bridal makeover provider.
-                  </Text>
-                </View>
+              {/* 2. Subscription Status */}
+              <Text style={styles.filterGroupHeading}>SUBSCRIPTION TIER</Text>
+              <View style={styles.filterPillsGrid}>
+                {[
+                  { label: 'All Members', val: 'all' },
+                  { label: 'Shilpi Pro', val: 'pro', isPro: true },
+                  { label: 'Free Members', val: 'free' },
+                ].map((item) => (
+                  <TouchableOpacity
+                    key={item.label}
+                    style={[styles.filterChoicePill, filterSubscription === item.val && styles.filterChoicePillActive]}
+                    onPress={() => setFilterSubscription(item.val as any)}
+                  >
+                    {item.isPro && (
+                      <View style={{ marginRight: 4 }}>
+                        <DiamondVector color={filterSubscription === 'pro' ? '#ffffff' : '#f59e0b'} size={11} />
+                      </View>
+                    )}
+                    <Text style={[styles.filterChoiceText, filterSubscription === item.val && styles.filterChoiceTextActive]}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* 3. Booking Sorting */}
+              <Text style={styles.filterGroupHeading}>BOOKING VOLUME</Text>
+              <View style={styles.filterPillsGrid}>
+                {[
+                  { label: 'Standard Ranking', val: 'none' },
+                  { label: 'Most Bookings', val: 'most_bookings' },
+                  { label: 'Least Bookings', val: 'least_bookings' },
+                ].map((item) => (
+                  <TouchableOpacity
+                    key={item.label}
+                    style={[styles.filterChoicePill, filterBookingSort === item.val && styles.filterChoicePillActive]}
+                    onPress={() => setFilterBookingSort(item.val as any)}
+                  >
+                    <Text style={[styles.filterChoiceText, filterBookingSort === item.val && styles.filterChoiceTextActive]}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* 4. Additional Ranking Filters */}
+              <Text style={styles.filterGroupHeading}>ADDITIONAL FILTERS</Text>
+              <View style={styles.filterPillsGrid}>
+                {[
+                  { label: 'Highest Rated', val: 'highest_rated' },
+                  { label: 'Most Experienced', val: 'most_experienced' },
+                  { label: 'Recently Registered', val: 'recent' },
+                ].map((item) => (
+                  <TouchableOpacity
+                    key={item.label}
+                    style={[styles.filterChoicePill, filterAdditional === item.val && styles.filterChoicePillActive]}
+                    onPress={() => setFilterAdditional(item.val as any)}
+                  >
+                    <Text style={[styles.filterChoiceText, filterAdditional === item.val && styles.filterChoiceTextActive]}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </ScrollView>
 
-            <View style={styles.modalFooterRow}>
-              <TouchableOpacity
-                style={styles.modalCallBtn}
-                onPress={() => selectedStudio && handleCall(selectedStudio.phone)}
-                activeOpacity={0.82}
-              >
-                <PhoneCallVector color="#ffffff" size={15} />
-                <Text style={styles.modalCallBtnText}>Call Studio</Text>
+            {/* Modal Bottom Actions: Clear All & Apply Filters */}
+            <View style={styles.filterSheetFooter}>
+              <TouchableOpacity style={styles.clearFiltersBtn} onPress={handleClearFilters}>
+                <Text style={styles.clearFiltersText}>Clear All</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.modalWaBtn}
-                onPress={() => selectedStudio && handleWhatsApp(selectedStudio)}
-                activeOpacity={0.82}
+                style={styles.applyFiltersBtn}
+                onPress={() => {
+                  setFilterModalOpen(false);
+                  fetchBeauticiansData();
+                }}
               >
-                <WhatsAppVector color="#ffffff" size={17} />
-                <Text style={styles.modalWaBtnText}>WhatsApp Inquiry</Text>
+                <Text style={styles.applyFiltersText}>Apply Filters</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -2024,55 +1760,148 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
       </Modal>
 
       {/* -------------------------------------------------------------
-          9. GOOGLE MAPS ADDRESS & PIN SEARCH DIALOG
+          H. LOCATION CHANGE MODAL
          ------------------------------------------------------------- */}
       <Modal visible={searchModalOpen} transparent animationType="fade" onRequestClose={() => setSearchModalOpen(false)}>
         <View style={styles.modalBackdrop}>
-          <View style={styles.pincodeModalCard}>
-            <View style={styles.modalHeaderRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.modalStudioName}>Search Area or PIN Code</Text>
-                <Text style={styles.modalOwnerName}>Find registered beauticians in any city or address</Text>
+          <View style={styles.locationModalCard}>
+            <View style={styles.filterSheetHeader}>
+              <View>
+                <Text style={styles.sheetTitle}>Change Location / Area</Text>
+                <Text style={styles.sheetSubtitle}>Find beauticians in any Tamil Nadu city or PIN</Text>
               </View>
-              <TouchableOpacity onPress={() => setSearchModalOpen(false)} style={styles.modalCloseBtn}>
+              <TouchableOpacity onPress={() => setSearchModalOpen(false)} style={styles.sheetCloseBtn}>
                 <CloseVector color="#0f172a" size={16} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.searchInputWrap}>
-              <SearchVector color="#5f6368" size={16} />
+            <View style={styles.locationInputWrap}>
+              <SearchVector color="#64748b" size={16} />
               <TextInput
-                style={styles.pincodeInput}
-                placeholder="e.g. Kalugumalai, Gandhipuram, 641002..."
-                placeholderTextColor="rgba(15, 23, 42, 0.4)"
+                style={styles.locationTextInput}
+                placeholder="Enter city, area or 6-digit PIN code..."
+                placeholderTextColor="#94a3b8"
                 value={searchInput}
                 onChangeText={setSearchInput}
-                autoFocus={true}
+                autoFocus
               />
             </View>
 
-            <TouchableOpacity
-              style={styles.applyPinBtn}
-              onPress={() => handleSearchAddress()}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.applyPinText}>SEARCH LOCATION</Text>
-            </TouchableOpacity>
-
-            <Text style={styles.suggestionsHeading}>FREQUENT LOCATIONS</Text>
-            <View style={styles.suggestionsGrid}>
-              {POPULAR_LOCATIONS.map((item) => (
+            <Text style={styles.filterGroupHeading}>FREQUENT CITIES</Text>
+            <View style={styles.popularCitiesGrid}>
+              {POPULAR_LOCATIONS.map((loc) => (
                 <TouchableOpacity
-                  key={`${item.city}-${item.pin}`}
-                  style={styles.suggestionPill}
-                  onPress={() => handleSearchAddress(item.area)}
-                  activeOpacity={0.8}
+                  key={`${loc.city}-${loc.pin}`}
+                  style={styles.popularCityPill}
+                  onPress={() => handleSelectLocation(loc.area, loc.pin, loc.city)}
                 >
-                  <LocationPinVector color="#ea4335" size={14} />
-                  <Text style={styles.suggestionArea} numberOfLines={1}>{item.area}</Text>
-                  <Text style={styles.suggestionPin}>{item.pin}</Text>
+                  <LocationPinVector color="#ea4335" size={13} />
+                  <Text style={styles.popularCityText} numberOfLines={1}>{loc.city}</Text>
+                  <Text style={styles.popularCityPin}>{loc.pin}</Text>
                 </TouchableOpacity>
               ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* -------------------------------------------------------------
+          I. FULL STUDIO DETAILS MODAL
+         ------------------------------------------------------------- */}
+      <Modal visible={detailModalOpen} transparent animationType="slide" onRequestClose={() => setDetailModalOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.studioDetailSheet}>
+            <View style={styles.sheetHandle} />
+
+            <View style={styles.detailHeaderRow}>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.detailStudioName} numberOfLines={1}>{selectedStudio?.businessName}</Text>
+                  {selectedStudio?.isPro && (
+                    <View style={styles.proGoldBadge}>
+                      <DiamondVector color="#f59e0b" size={9} />
+                      <Text style={styles.proGoldBadgeText}>PRO</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.detailOwnerName}>By {selectedStudio?.ownerName} · Verified Partner</Text>
+              </View>
+
+              <TouchableOpacity onPress={() => setDetailModalOpen(false)} style={styles.sheetCloseBtn}>
+                <CloseVector color="#0f172a" size={16} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: SCREEN_HEIGHT * 0.48 }}>
+              {/* Key Metrics */}
+              <View style={styles.detailMetricsRow}>
+                <View style={styles.metricCol}>
+                  <Text style={styles.metricVal}>{selectedStudio?.distanceKm} km</Text>
+                  <Text style={styles.metricLabel}>Distance</Text>
+                </View>
+                <View style={styles.metricDivider} />
+                <View style={styles.metricCol}>
+                  <Text style={styles.metricVal}>{selectedStudio?.pincode}</Text>
+                  <Text style={styles.metricLabel}>PIN Code</Text>
+                </View>
+                <View style={styles.metricDivider} />
+                <View style={styles.metricCol}>
+                  <Text style={styles.metricVal}>{selectedStudio?.completedBookingsCount}</Text>
+                  <Text style={styles.metricLabel}>Orders Completed</Text>
+                </View>
+              </View>
+
+              {/* Address */}
+              <View style={styles.detailSectionBox}>
+                <Text style={styles.detailSectionHeading}>STUDIO ADDRESS</Text>
+                <Text style={styles.detailAddressText}>{selectedStudio?.address}</Text>
+              </View>
+
+              {/* Services & Packages */}
+              <View style={styles.detailSectionBox}>
+                <Text style={styles.detailSectionHeading}>SERVICES & PRICING</Text>
+                {selectedStudio?.services.map((srv, idx) => (
+                  <View key={`srv-${idx}`} style={styles.detailServiceRow}>
+                    <Text style={styles.detailServiceName}>{srv}</Text>
+                    <Text style={styles.detailServicePrice}>
+                      ₹{(selectedStudio.startingPrice + idx * 1000).toLocaleString('en-IN')}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Verified Shilpi Partner Guarantee */}
+              <View style={styles.guaranteeBox}>
+                <ShieldCheckVector color="#10b981" size={18} />
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={styles.guaranteeTitle}>Verified Shilpi Makeover Artist</Text>
+                  <Text style={styles.guaranteeSub}>Identity authenticated and registered on the Shilpi platform.</Text>
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Bottom Actions */}
+            <View style={styles.detailFooterRow}>
+              <TouchableOpacity
+                style={styles.detailCallBtn}
+                onPress={() => selectedStudio && Linking.openURL(`tel:${selectedStudio.phone}`)}
+              >
+                <PhoneCallVector color="#ffffff" size={14} />
+                <Text style={styles.detailCallBtnText}>Call Studio</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.detailWaBtn}
+                onPress={() => {
+                  if (selectedStudio) {
+                    const msg = encodeURIComponent(`Hi ${selectedStudio.ownerName}, I found ${selectedStudio.businessName} on Shilpi.`);
+                    Linking.openURL(`whatsapp://send?phone=${selectedStudio.phone}&text=${msg}`);
+                  }
+                }}
+              >
+                <WhatsAppVector color="#ffffff" size={15} />
+                <Text style={styles.detailWaBtnText}>WhatsApp</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -2082,1302 +1911,1152 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
 };
 
 // -------------------------------------------------------------
-// 10. AUTHENTIC GOOGLE MAPS THEME STYLESHEET
+// 6. PREMIUM MINIMALIST THEME STYLESHEET
 // -------------------------------------------------------------
 
 const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number }) =>
   StyleSheet.create({
     screen: {
       flex: 1,
-      backgroundColor: '#f4f3f0',
+      backgroundColor: '#f8fafc',
     },
-    // Enterprise Radar Scanning Screen Styles
-    scanOverlay: {
+
+    // -------------------------------------------------------------
+    // VIDEO REFERENCE ANIMATION OVERLAY (1:1 Match)
+    // -------------------------------------------------------------
+    animationOverlay: {
       position: 'absolute',
       top: 0,
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: '#f8fafc',
-      zIndex: 999,
+      backgroundColor: '#fff0f3',
+      zIndex: 9999,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    scanTopRow: {
+    animTopHeader: {
       position: 'absolute',
-      left: 16,
-      right: 16,
-      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
+      zIndex: 10,
     },
-    scanHeaderTitleWrap: {
-      alignItems: 'center',
+    animBrandTitle: {
+      fontSize: 24,
+      fontFamily: Platform.select({ ios: 'Georgia', android: 'serif' }),
+      fontWeight: '600',
+      color: '#db2777',
+      letterSpacing: 0.5,
     },
-    scanHeaderTitle: {
-      fontSize: 13,
-      fontWeight: '900',
-      color: '#0f172a',
-      letterSpacing: 1,
-    },
-    scanHeaderSub: {
-      fontSize: 11,
-      fontWeight: '500',
-      color: '#64748b',
-      marginTop: 2,
-    },
-    radarCenterStage: {
-      width: 220,
-      height: 220,
+    animCenterStage: {
+      width: 300,
+      height: 300,
       justifyContent: 'center',
       alignItems: 'center',
       position: 'relative',
     },
-    sonarRing: {
+    animCircleOuter: {
+      position: 'absolute',
+      width: 250,
+      height: 250,
+      borderRadius: 125,
+      borderWidth: 1.2,
+      borderColor: '#fbcfe8',
+      borderStyle: 'dotted',
+    },
+    animCircleMiddle: {
+      position: 'absolute',
+      width: 195,
+      height: 195,
+      borderRadius: 97.5,
+      borderWidth: 1.4,
+      borderColor: '#f472b6',
+      borderStyle: 'dashed',
+    },
+    animCircleInner: {
       position: 'absolute',
       width: 140,
       height: 140,
       borderRadius: 70,
       borderWidth: 2,
-      borderColor: '#ff2d75',
-      backgroundColor: 'rgba(255, 45, 117, 0.08)',
+      borderColor: '#e11d48',
+      backgroundColor: 'rgba(255, 241, 242, 0.4)',
     },
-    radarSweepBeam: {
+    radarSweepSectorWrap: {
       position: 'absolute',
-      width: 220,
-      height: 220,
-      borderRadius: 110,
+      width: 140,
+      height: 140,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    radarLaserLine: {
+    animPinShadow: {
       position: 'absolute',
-      top: 0,
-      width: 2.5,
-      height: 110,
-      backgroundColor: '#ff2d75',
-      shadowColor: '#ff2d75',
-      shadowOffset: { width: 0, height: 0 },
-      shadowOpacity: 0.9,
-      shadowRadius: 8,
-      elevation: 6,
+      width: 28,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: 'rgba(225, 29, 72, 0.25)',
+      bottom: 124,
     },
-    radarSweepSector: {
+    animCenterPinWrap: {
       position: 'absolute',
-      top: 0,
-      right: 0,
-      width: 110,
-      height: 110,
-      borderTopRightRadius: 110,
-      backgroundColor: 'rgba(255, 45, 117, 0.12)',
+      zIndex: 50,
+      bottom: 128,
     },
-    scanUserCore: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: '#ff2d75',
-      borderWidth: 3.5,
-      borderColor: '#ffffff',
-      justifyContent: 'center',
-      alignItems: 'center',
-      shadowColor: '#ff2d75',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.5,
-      shadowRadius: 6,
-      elevation: 6,
-      zIndex: 20,
-    },
-    scanUserCoreInner: {
-      width: 7,
-      height: 7,
-      borderRadius: 3.5,
-      backgroundColor: '#ffffff',
-    },
-    scanUserTag: {
+    avatarBubbleAnchor: {
       position: 'absolute',
-      bottom: 46,
-      backgroundColor: '#0f172a',
-      paddingHorizontal: 12,
-      paddingVertical: 5,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: 'rgba(255, 45, 117, 0.45)',
-      zIndex: 25,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.25,
-      shadowRadius: 5,
-      elevation: 6,
+      zIndex: 60,
     },
-    scanUserTagText: {
-      fontSize: 10,
-      fontWeight: '800',
-      color: '#ffffff',
-      letterSpacing: 0.4,
-    },
-    orbitingAvatarNode: {
-      position: 'absolute',
-      alignItems: 'center',
-      zIndex: 30,
-    },
-    avatarBubble: {
+    avatarBubbleCircle: {
       width: 44,
       height: 44,
       borderRadius: 22,
       backgroundColor: '#ffffff',
-      borderWidth: 2,
+      borderWidth: 2.2,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: '#e11d48',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.18,
+      shadowRadius: 6,
+      elevation: 5,
+    },
+    avatarBubbleChar: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: '#0f172a',
+    },
+    avatarStarBadge: {
+      position: 'absolute',
+      bottom: -2,
+      right: -2,
+      width: 15,
+      height: 15,
+      borderRadius: 7.5,
+      backgroundColor: '#e11d48',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#ffffff',
+    },
+    animStepWrap: {
+      position: 'absolute',
+      alignItems: 'center',
+      width: '100%',
+    },
+    animStepText: {
+      fontSize: 17,
+      fontFamily: Platform.select({ ios: 'Georgia', android: 'serif' }),
+      fontWeight: '500',
+      color: '#475569',
+      letterSpacing: 0.3,
+    },
+    animProgressBarTrack: {
+      position: 'absolute',
+      width: SCREEN_WIDTH * 0.85,
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: 'rgba(244, 114, 182, 0.22)',
+      overflow: 'hidden',
+    },
+    animProgressBarFill: {
+      height: '100%',
+      borderRadius: 3,
+      backgroundColor: '#e11d48',
+    },
+
+    // -------------------------------------------------------------
+    // TOP NAVIGATION & CAPSULE
+    // -------------------------------------------------------------
+    topBarContainer: {
+      backgroundColor: '#ffffff',
+      borderBottomWidth: 1,
+      borderBottomColor: '#f1f5f9',
+      zIndex: 100,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 6,
+      elevation: 3,
+    },
+    topBarRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      gap: 8,
+    },
+    circleIconBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: '#f8fafc',
+      borderWidth: 1,
       borderColor: '#e2e8f0',
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: '#0f172a',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 6,
     },
-    avatarBubblePro: {
-      borderColor: '#f59e0b',
-      backgroundColor: '#fef3c7',
+    circleIconBtnActive: {
+      backgroundColor: '#ff2d75',
+      borderColor: '#ff2d75',
     },
-    avatarBubbleText: {
-      fontSize: 16,
-      fontWeight: '900',
-      color: '#b45309',
-    },
-    avatarDiamondBadge: {
+    filterBadge: {
       position: 'absolute',
       top: -3,
       right: -3,
-      width: 16,
-      height: 16,
-      borderRadius: 8,
-      backgroundColor: '#f59e0b',
+      width: 17,
+      height: 17,
+      borderRadius: 8.5,
+      backgroundColor: '#0f172a',
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1.5,
-      borderColor: '#ffffff',
     },
-    avatarCalloutTag: {
-      backgroundColor: '#ffffff',
-      paddingHorizontal: 7,
-      paddingVertical: 3,
-      borderRadius: 8,
-      marginTop: 4,
-      borderWidth: 1,
-      borderColor: '#e2e8f0',
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 4,
-      elevation: 3,
-      alignItems: 'center',
-    },
-    avatarCalloutName: {
+    filterBadgeText: {
       fontSize: 9,
-      fontWeight: '700',
-      color: '#0f172a',
-    },
-    avatarCalloutDist: {
-      fontSize: 8,
       fontWeight: '800',
-      color: '#ff2d75',
+      color: '#ffffff',
     },
-    scanBottomCard: {
-      position: 'absolute',
-      left: 20,
-      right: 20,
-      backgroundColor: '#ffffff',
-      borderRadius: 22,
-      padding: 18,
-      borderWidth: 1,
-      borderColor: '#e2e8f0',
-      shadowColor: '#0f172a',
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.10,
-      shadowRadius: 16,
-      elevation: 8,
-      alignItems: 'center',
-    },
-    scanStatusRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginBottom: 8,
-    },
-    scanStatusIndicatorDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: '#ff2d75',
-    },
-    scanStatusHeadingText: {
-      fontSize: 13,
-      fontWeight: '800',
-      color: '#0f172a',
-    },
-    scanTerritoryPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
+    locationCapsule: {
+      flex: 1,
+      height: 40,
       backgroundColor: '#f8fafc',
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 8,
+      borderRadius: 20,
       borderWidth: 1,
       borderColor: '#e2e8f0',
-      marginBottom: 14,
-    },
-    scanTerritoryText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: '#475569',
-    },
-    progressBarBg: {
-      width: '100%',
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: '#f1f5f9',
-      overflow: 'hidden',
-      marginBottom: 12,
-    },
-    progressBarFill: {
-      height: '100%',
-      backgroundColor: '#ff2d75',
-      borderRadius: 3,
-    },
-    scanVerifiedNotice: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
-    },
-    scanVerifiedNoticeText: {
-      fontSize: 10.5,
-      fontWeight: '700',
-      color: '#059669',
-    },
-    fullBleedMapContainer: {
-      flex: 1,
-      position: 'relative',
-      backgroundColor: '#f4f3f0',
-    },
-    floatingTopBarWrap: {
-      position: 'absolute',
-      left: 14,
-      right: 14,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      zIndex: 50,
-    },
-    floatingCircleBtn: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: '#ffffff',
-      justifyContent: 'center',
-      alignItems: 'center',
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.15,
-      shadowRadius: 6,
-      elevation: 4,
-      borderWidth: 1,
-      borderColor: 'rgba(0, 0, 0, 0.08)',
-      flexShrink: 0,
-    },
-    floatingLocationCapsule: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#ffffff',
-      paddingVertical: 10,
       paddingHorizontal: 12,
-      borderRadius: 24,
-      borderWidth: 1,
-      borderColor: 'rgba(0, 0, 0, 0.10)',
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.16,
-      shadowRadius: 8,
-      elevation: 5,
-      minWidth: 0,
-      gap: 8,
     },
-    locationContentWrap: {
+    locationCapsuleTextWrap: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      minWidth: 0,
-      gap: 5,
+      marginLeft: 6,
+      marginRight: 4,
     },
     capsuleCityText: {
       fontSize: 12.5,
       fontWeight: '700',
-      color: '#202124',
-      flexShrink: 1,
+      color: '#0f172a',
+      maxWidth: '65%',
     },
     capsuleDot: {
-      width: 3,
-      height: 3,
-      borderRadius: 1.5,
-      backgroundColor: '#70757a',
-      flexShrink: 0,
+      width: 3.5,
+      height: 3.5,
+      borderRadius: 2,
+      backgroundColor: '#94a3b8',
+      marginHorizontal: 5,
     },
     capsulePinText: {
-      fontSize: 12,
-      fontWeight: '800',
-      color: '#ea4335',
-      flexShrink: 0,
-    },
-    capsuleSearchCircle: {
-      width: 26,
-      height: 26,
-      borderRadius: 13,
-      backgroundColor: '#f1f3f4',
-      justifyContent: 'center',
-      alignItems: 'center',
-      flexShrink: 0,
-    },
-    floatingFilterChipsRow: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      zIndex: 49,
-    },
-    listFilterChipsRow: {
-      paddingVertical: 8,
-      backgroundColor: '#f4f3f0',
-      borderBottomWidth: 1,
-      borderBottomColor: '#e2e8f0',
-    },
-    villageNoticeBanner: {
-      position: 'absolute',
-      left: 14,
-      right: 14,
-      backgroundColor: 'rgba(15, 23, 42, 0.94)',
-      borderRadius: 14,
-      paddingHorizontal: 12,
-      paddingVertical: 9,
-      flexDirection: 'row',
-      alignItems: 'center',
-      zIndex: 80,
-      borderWidth: 1,
-      borderColor: 'rgba(255, 45, 117, 0.35)',
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.25,
-      shadowRadius: 8,
-      elevation: 7,
-    },
-    villageNoticeTextWrap: {
-      flex: 1,
-      minWidth: 0,
-      marginLeft: 8,
-      marginRight: 8,
-    },
-    villageNoticeTitle: {
       fontSize: 11.5,
-      fontWeight: '800',
-      color: '#ffffff',
+      fontWeight: '600',
+      color: '#64748b',
     },
-    villageNoticeSub: {
-      fontSize: 9.5,
-      fontWeight: '500',
-      color: '#94a3b8',
-      marginTop: 1,
+    capsuleArrowIcon: {
+      marginLeft: 2,
     },
-    villageNoticePill: {
-      backgroundColor: '#ff2d75',
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 8,
-    },
-    villageNoticePillText: {
-      fontSize: 10.5,
-      fontWeight: '800',
-      color: '#ffffff',
-    },
-    filterChipsScroll: {
+
+    // -------------------------------------------------------------
+    // SECTION TABS: NEARBY (50KM) | ALL | TOP BEAUTICIANS
+    // -------------------------------------------------------------
+    sectionTabsRow: {
+      flexDirection: 'row',
       paddingHorizontal: 14,
+      paddingTop: 10,
+      paddingBottom: 6,
       gap: 6,
     },
-    floatingFilterPill: {
+    sectionTabPill: {
       flexDirection: 'row',
       alignItems: 'center',
+      paddingHorizontal: 12,
       paddingVertical: 7,
-      paddingHorizontal: 13,
-      borderRadius: 20,
-      backgroundColor: '#ffffff',
-      borderWidth: 1,
-      borderColor: '#dadce0',
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.10,
-      shadowRadius: 4,
-      elevation: 3,
+      borderRadius: 18,
+      backgroundColor: '#f1f5f9',
     },
-    floatingFilterPillActive: {
-      backgroundColor: '#202124',
-      borderColor: '#202124',
+    sectionTabPillActive: {
+      backgroundColor: '#0f172a',
     },
-    floatingFilterText: {
+    sectionTabText: {
       fontSize: 11.5,
       fontWeight: '700',
-      color: '#3c4043',
+      color: '#475569',
     },
-    floatingFilterTextActive: {
+    sectionTabTextActive: {
       color: '#ffffff',
     },
-    floatingRightActions: {
-      position: 'absolute',
-      right: 14,
-      zIndex: 48,
-    },
-    floatingActionIcon: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: '#ffffff',
-      justifyContent: 'center',
-      alignItems: 'center',
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.18,
-      shadowRadius: 8,
-      elevation: 5,
-      borderWidth: 1,
-      borderColor: 'rgba(0, 0, 0, 0.08)',
-    },
-    routeEtaPill: {
-      position: 'absolute',
+
+    // Top Beauticians Controls
+    topBeauticiansControlBar: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      backgroundColor: '#fffbeb',
+      borderTopWidth: 1,
+      borderTopColor: '#fef3c7',
+    },
+    rankingCriteriaRow: {
+      flexDirection: 'row',
       gap: 5,
-      backgroundColor: '#202124',
+    },
+    criteriaChip: {
       paddingHorizontal: 9,
       paddingVertical: 4.5,
       borderRadius: 12,
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.30,
-      shadowRadius: 5,
-      elevation: 6,
-      zIndex: 15,
-    },
-    etaDotPulse: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: '#ff2d75',
-    },
-    routeEtaPillText: {
-      fontSize: 9,
-      fontWeight: '800',
-      color: '#ffffff',
-      letterSpacing: 0.3,
-    },
-    userGpsBeacon: {
-      position: 'absolute',
-      width: 44,
-      height: 44,
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 10,
-    },
-    userGpsSonarWave: {
-      position: 'absolute',
-      width: 52,
-      height: 52,
-      borderRadius: 26,
-      backgroundColor: 'rgba(66, 133, 244, 0.25)',
-    },
-    userGpsCorePoint: {
-      width: 18,
-      height: 18,
-      borderRadius: 9,
-      backgroundColor: '#1a73e8',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 3,
-      borderColor: '#ffffff',
-      shadowColor: '#1a73e8',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.45,
-      shadowRadius: 4,
-      elevation: 4,
-    },
-    userGpsWhiteCenter: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
       backgroundColor: '#ffffff',
+      borderWidth: 1,
+      borderColor: '#fde68a',
+    },
+    criteriaChipActive: {
+      backgroundColor: '#f59e0b',
+      borderColor: '#f59e0b',
+    },
+    criteriaChipText: {
+      fontSize: 10.5,
+      fontWeight: '700',
+      color: '#78350f',
+    },
+    criteriaChipTextActive: {
+      color: '#ffffff',
+    },
+    rankingLimitDropdownBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      paddingVertical: 4.5,
+      borderRadius: 12,
+      backgroundColor: '#ffffff',
+      borderWidth: 1,
+      borderColor: '#cbd5e1',
+      gap: 4,
+    },
+    rankingLimitDropdownText: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: '#0f172a',
+    },
+    rankingDropdownMenu: {
+      position: 'absolute',
+      right: 14,
+      top: 135,
+      backgroundColor: '#ffffff',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.15,
+      shadowRadius: 10,
+      elevation: 8,
+      zIndex: 500,
+      minWidth: 110,
+      overflow: 'hidden',
+    },
+    dropdownMenuItem: {
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: '#f8fafc',
+    },
+    dropdownMenuItemActive: {
+      backgroundColor: '#fff1f2',
+    },
+    dropdownMenuText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#334155',
+    },
+    dropdownMenuTextActive: {
+      color: '#e11d48',
+      fontWeight: '800',
+    },
+
+    // Search bar for Section 2 (All Beauticians)
+    searchBarRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginHorizontal: 14,
+      marginTop: 6,
+      marginBottom: 2,
+      paddingHorizontal: 10,
+      height: 36,
+      backgroundColor: '#f1f5f9',
+      borderRadius: 10,
+      gap: 6,
+    },
+    searchBarInput: {
+      flex: 1,
+      fontSize: 12,
+      fontWeight: '500',
+      color: '#0f172a',
+      paddingVertical: 0,
+    },
+
+    // Dynamic Professions Scroll
+    professionsScrollWrap: {
+      paddingVertical: 6,
+    },
+    professionsScroll: {
+      paddingHorizontal: 14,
+      gap: 6,
+    },
+    profPill: {
+      paddingHorizontal: 12,
+      paddingVertical: 5.5,
+      borderRadius: 14,
+      backgroundColor: '#ffffff',
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+    },
+    profPillActive: {
+      backgroundColor: '#ff2d75',
+      borderColor: '#ff2d75',
+    },
+    profPillText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: '#475569',
+    },
+    profPillTextActive: {
+      color: '#ffffff',
+      fontWeight: '700',
+    },
+
+    // -------------------------------------------------------------
+    // MAP VIEW & MARKERS
+    // -------------------------------------------------------------
+    mapContainer: {
+      flex: 1,
+      position: 'relative',
+    },
+    userGpsPinWrap: {
+      position: 'absolute',
+      width: 36,
+      height: 36,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 35,
+    },
+    userGpsPulseRing: {
+      position: 'absolute',
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: 'rgba(26, 115, 232, 0.2)',
+      borderWidth: 1.5,
+      borderColor: '#1a73e8',
+    },
+    userGpsCenterDot: {
+      width: 14,
+      height: 14,
+      borderRadius: 7,
+      backgroundColor: '#1a73e8',
+      borderWidth: 2.5,
+      borderColor: '#ffffff',
     },
     userGpsTag: {
       position: 'absolute',
       bottom: -18,
-      backgroundColor: '#ffffff',
+      backgroundColor: '#1a73e8',
       paddingHorizontal: 6,
       paddingVertical: 2,
-      borderRadius: 6,
-      borderWidth: 1,
-      borderColor: '#1a73e8',
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.1,
-      shadowRadius: 2,
-      elevation: 2,
+      borderRadius: 4,
     },
     userGpsTagText: {
-      fontSize: 8,
+      fontSize: 8.5,
       fontWeight: '800',
-      letterSpacing: 0.4,
-      color: '#1a73e8',
+      color: '#ffffff',
     },
-    googlePinAnchor: {
+    mapPinAnchor: {
       position: 'absolute',
+      width: 60,
       alignItems: 'center',
-      zIndex: 20,
+      zIndex: 40,
     },
-    googlePinAnchorSelected: {
-      zIndex: 99,
+    mapPinAnchorSelected: {
+      zIndex: 45,
     },
-    googlePinCallout: {
+    pinCallout: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
       backgroundColor: '#ffffff',
       paddingHorizontal: 8,
-      paddingVertical: 3.5,
+      paddingVertical: 4,
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: '#dadce0',
+      borderColor: '#e2e8f0',
       marginBottom: 3,
-      shadowColor: '#000000',
+      shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.18,
+      shadowOpacity: 0.12,
       shadowRadius: 4,
       elevation: 4,
-      maxWidth: 130,
+      maxWidth: 140,
     },
-    googlePinCalloutSelected: {
-      borderColor: '#ff2d75',
-      backgroundColor: '#fff1f6',
+    pinCalloutSelected: {
+      backgroundColor: '#0f172a',
+      borderColor: '#0f172a',
     },
-    proMiniBadge: {
-      flexShrink: 0,
-    },
-    googlePinCalloutText: {
-      fontSize: 9.5,
+    pinCalloutText: {
+      fontSize: 10,
       fontWeight: '700',
-      color: '#202124',
-      flexShrink: 1,
+      color: '#0f172a',
     },
-    googlePinCalloutTextSelected: {
-      color: '#ff2d75',
+    pinCalloutTextSelected: {
+      color: '#ffffff',
     },
     pinDistDot: {
-      width: 2.5,
-      height: 2.5,
-      borderRadius: 1.25,
-      backgroundColor: '#70757a',
-      flexShrink: 0,
+      width: 3,
+      height: 3,
+      borderRadius: 1.5,
+      backgroundColor: '#94a3b8',
+      marginHorizontal: 4,
     },
-    pinPriceText: {
-      fontSize: 9.5,
-      fontWeight: '800',
-      color: '#188038',
-      flexShrink: 0,
+    pinDistText: {
+      fontSize: 9,
+      fontWeight: '600',
+      color: '#64748b',
     },
-    pinPriceTextSelected: {
-      color: '#ff2d75',
+    floatingGpsBtn: {
+      position: 'absolute',
+      right: 16,
+      zIndex: 60,
     },
+
+    // -------------------------------------------------------------
+    // CAROUSEL STUDIO CARDS (MAP VIEW)
+    // -------------------------------------------------------------
     carouselContainer: {
       position: 'absolute',
       left: 0,
       right: 0,
-      zIndex: 60,
+      zIndex: 70,
     },
-    carouselScrollPadding: {
-      paddingHorizontal: 18,
+    carouselPadding: {
+      paddingHorizontal: 16,
       gap: 12,
     },
-    carouselCardItem: {
+    carouselCard: {
       width: CARD_WIDTH,
       backgroundColor: '#ffffff',
-      borderRadius: 24,
-      padding: 16,
+      borderRadius: 18,
+      padding: 14,
       borderWidth: 1,
-      borderColor: '#dadce0',
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.18,
-      shadowRadius: 18,
-      elevation: 10,
+      borderColor: '#e2e8f0',
+      shadowColor: '#0f172a',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.12,
+      shadowRadius: 12,
+      elevation: 6,
     },
-    carouselCardItemSelected: {
+    carouselCardSelected: {
       borderColor: '#ff2d75',
+      borderWidth: 1.8,
     },
-    cardDragHandle: {
-      width: 36,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: '#dadce0',
-      alignSelf: 'center',
-      marginBottom: 10,
+    cardRankBadge: {
+      alignSelf: 'flex-start',
+      backgroundColor: '#f1f5f9',
+      paddingHorizontal: 8,
+      paddingVertical: 2.5,
+      borderRadius: 6,
+      marginBottom: 6,
     },
-    cardHeaderRow: {
+    cardRankBadgeTopThree: {
+      backgroundColor: '#fef3c7',
+    },
+    cardRankBadgeText: {
+      fontSize: 9.5,
+      fontWeight: '800',
+      color: '#92400e',
+    },
+    cardTopRow: {
       flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      marginBottom: 10,
     },
     cardAvatar: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: '#f1f3f4',
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: '#f1f5f9',
       borderWidth: 1.5,
-      borderColor: '#dadce0',
+      borderColor: '#e2e8f0',
       justifyContent: 'center',
       alignItems: 'center',
+      marginRight: 12,
     },
     cardAvatarPro: {
       borderColor: '#f59e0b',
-      backgroundColor: '#fef3c7',
+      borderWidth: 2,
+      backgroundColor: '#fffbeb',
     },
-    cardAvatarText: {
-      fontSize: 18,
-      fontWeight: '900',
-      color: '#202124',
+    cardAvatarChar: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: '#0f172a',
     },
-    cardAvatarTextPro: {
+    cardAvatarCharPro: {
       color: '#b45309',
     },
-    cardInfoCol: {
+    cardHeaderInfo: {
       flex: 1,
-      minWidth: 0,
     },
     cardTitleWrap: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      marginBottom: 2,
     },
     cardTitleText: {
-      fontSize: 15,
+      fontSize: 14,
       fontWeight: '800',
-      color: '#202124',
-      letterSpacing: -0.3,
-      flexShrink: 1,
+      color: '#0f172a',
+      flex: 1,
     },
     proGoldBadge: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 3,
-      backgroundColor: '#202124',
-      paddingHorizontal: 6,
+      backgroundColor: '#fffbeb',
+      paddingHorizontal: 5,
       paddingVertical: 2,
-      borderRadius: 6,
+      borderRadius: 4,
       borderWidth: 1,
-      borderColor: '#f59e0b',
+      borderColor: '#fde68a',
+      gap: 3,
     },
-    proGoldText: {
+    proGoldBadgeText: {
       fontSize: 8.5,
       fontWeight: '900',
-      color: '#fbbf24',
-      letterSpacing: 0.5,
+      color: '#b45309',
     },
-    cardOwnerSub: {
-      fontSize: 11.5,
+    cardOwnerText: {
+      fontSize: 11,
       fontWeight: '500',
-      color: '#5f6368',
-      marginBottom: 6,
+      color: '#64748b',
+      marginTop: 1,
     },
     cardMetaRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      flexWrap: 'wrap',
       gap: 6,
+      marginTop: 5,
     },
-    distanceBadgePill: {
+    distanceBadge: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 3,
       backgroundColor: '#fef2f2',
       paddingHorizontal: 6,
       paddingVertical: 2,
       borderRadius: 6,
-      borderWidth: 1,
-      borderColor: '#fecaca',
+      gap: 3,
     },
     distanceBadgeText: {
-      fontSize: 9.5,
-      fontWeight: '800',
-      color: '#ea4335',
-    },
-    etaBadgePill: {
-      backgroundColor: '#f1f3f4',
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 6,
-      borderWidth: 1,
-      borderColor: '#dadce0',
-    },
-    etaBadgeText: {
-      fontSize: 9.5,
+      fontSize: 10,
       fontWeight: '700',
-      color: '#3c4043',
+      color: '#dc2626',
     },
-    pinBadgePill: {
-      backgroundColor: '#f8fafc',
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 6,
-      borderWidth: 1,
-      borderColor: '#dadce0',
-    },
-    pinExactBadgePill: {
-      backgroundColor: '#e6f4ea',
-      borderColor: '#a8dab5',
-    },
-    pinBadgeText: {
-      fontSize: 9.5,
-      fontWeight: '700',
-      color: '#5f6368',
-    },
-    pinExactBadgeText: {
-      color: '#137333',
-      fontWeight: '800',
-    },
-    cardServicesRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingTop: 8,
-      paddingBottom: 10,
-      borderTopWidth: 1,
-      borderTopColor: '#f1f3f4',
-      gap: 6,
-    },
-    chipsWrap: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      flex: 1,
-      minWidth: 0,
-    },
-    servicePill: {
-      backgroundColor: '#f8f9fa',
-      paddingHorizontal: 7,
-      paddingVertical: 3,
-      borderRadius: 6,
-      borderWidth: 1,
-      borderColor: '#dadce0',
-      maxWidth: 110,
-    },
-    servicePillText: {
-      fontSize: 9.5,
-      fontWeight: '600',
-      color: '#3c4043',
-    },
-    priceHighlight: {
-      fontSize: 12,
-      fontWeight: '800',
-      color: '#188038',
-      flexShrink: 0,
-    },
-    cardActionsRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginTop: 2,
-    },
-    actionBtnCall: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 5,
-      backgroundColor: '#202124',
-      paddingVertical: 10,
-      borderRadius: 12,
-    },
-    actionBtnCallText: {
-      fontSize: 11.5,
-      fontWeight: '800',
-      color: '#ffffff',
-    },
-    actionBtnWhatsApp: {
-      flex: 1.4,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 5,
-      backgroundColor: '#ff2d75',
-      paddingVertical: 10,
-      borderRadius: 12,
-      shadowColor: '#ff2d75',
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.35,
-      shadowRadius: 6,
-      elevation: 4,
-    },
-    actionBtnWhatsAppText: {
-      fontSize: 11.5,
-      fontWeight: '800',
-      color: '#ffffff',
-    },
-    actionBtnDirections: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 5,
-      backgroundColor: '#ffffff',
-      paddingVertical: 9,
-      borderRadius: 12,
-      borderWidth: 1.2,
-      borderColor: '#dadce0',
-    },
-    actionBtnDirectionsText: {
-      fontSize: 11,
-      fontWeight: '800',
-      color: '#ea4335',
-    },
-    listTopBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      backgroundColor: '#ffffff',
-      borderBottomWidth: 1,
-      borderBottomColor: '#f1f3f4',
-    },
-    listScrollContent: {
-      padding: 14,
-      gap: 12,
-    },
-    listHeaderBadgeRow: {
-      marginBottom: 4,
-    },
-    listHeaderTitle: {
-      fontSize: 15,
-      fontWeight: '800',
-      color: '#202124',
-      letterSpacing: -0.3,
-    },
-    listHeaderSub: {
-      fontSize: 11,
-      fontWeight: '500',
-      color: '#5f6368',
-      marginTop: 2,
-    },
-    listCard: {
-      backgroundColor: '#ffffff',
-      borderRadius: 18,
-      padding: 14,
-      borderWidth: 1,
-      borderColor: '#dadce0',
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 6,
-      elevation: 3,
-    },
-    listCardTop: {
-      flexDirection: 'row',
-      gap: 12,
-    },
-    listAvatar: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: '#f1f3f4',
-      borderWidth: 1.5,
-      borderColor: '#dadce0',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    listAvatarPro: {
-      borderColor: '#f59e0b',
-      backgroundColor: '#fef3c7',
-    },
-    listAvatarText: {
-      fontSize: 16,
-      fontWeight: '900',
-      color: '#202124',
-    },
-    listAvatarTextPro: {
-      color: '#b45309',
-    },
-    listInfoWrap: {
-      flex: 1,
-      minWidth: 0,
-    },
-    listStudioName: {
-      fontSize: 14,
-      fontWeight: '800',
-      color: '#202124',
-      flexShrink: 1,
-    },
-    listOwnerName: {
-      fontSize: 11,
-      fontWeight: '500',
-      color: '#5f6368',
-      marginTop: 1,
-    },
-    listAddress: {
-      fontSize: 10.5,
-      fontWeight: '400',
-      color: '#70757a',
-      marginTop: 2,
-    },
-    listBadgesRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      marginTop: 6,
-    },
-    ordersBadgePill: {
-      backgroundColor: '#f1f3f4',
+    ordersBadge: {
+      backgroundColor: '#f0fdf4',
       paddingHorizontal: 6,
       paddingVertical: 2,
       borderRadius: 6,
     },
     ordersBadgeText: {
-      fontSize: 9.5,
+      fontSize: 10,
       fontWeight: '700',
-      color: '#3c4043',
+      color: '#16a34a',
     },
-    listCardDivider: {
+    pinBadge: {
+      backgroundColor: '#f8fafc',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+    },
+    pinBadgeText: {
+      fontSize: 9.5,
+      fontWeight: '600',
+      color: '#475569',
+    },
+    cardServicesRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 10,
+      paddingTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: '#f1f5f9',
+    },
+    serviceChipsWrap: {
+      flexDirection: 'row',
+      gap: 5,
+      flex: 1,
+    },
+    serviceChip: {
+      backgroundColor: '#f8fafc',
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 6,
+    },
+    serviceChipText: {
+      fontSize: 10,
+      fontWeight: '500',
+      color: '#475569',
+    },
+    priceText: {
+      fontSize: 12.5,
+      fontWeight: '800',
+      color: '#0f172a',
+    },
+    cardActionsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 10,
+    },
+    callActionBtn: {
+      flex: 1,
+      height: 34,
+      backgroundColor: '#0f172a',
+      borderRadius: 8,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 5,
+    },
+    waActionBtn: {
+      flex: 1.2,
+      height: 34,
+      backgroundColor: '#16a34a',
+      borderRadius: 8,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 5,
+    },
+    directionsActionBtn: {
+      flex: 1.1,
+      height: 34,
+      backgroundColor: '#ffffff',
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: '#cbd5e1',
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 5,
+    },
+    actionBtnText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#ffffff',
+    },
+    directionsBtnText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#0f172a',
+    },
+
+    // -------------------------------------------------------------
+    // LIST VIEW STYLES
+    // -------------------------------------------------------------
+    listContainer: {
+      paddingHorizontal: 16,
+      paddingTop: 12,
+    },
+    listHeaderRow: {
+      marginBottom: 12,
+    },
+    listHeaderTitle: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: '#0f172a',
+    },
+    listHeaderSub: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: '#64748b',
+      marginTop: 2,
+    },
+    listCard: {
+      backgroundColor: '#ffffff',
+      borderRadius: 16,
+      padding: 14,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 6,
+      elevation: 2,
+    },
+    listCardTopRow: {
+      flexDirection: 'row',
+    },
+    listCardInfo: {
+      flex: 1,
+    },
+    listAddressText: {
+      fontSize: 10.5,
+      color: '#64748b',
+      marginTop: 2,
+    },
+    listDivider: {
       height: 1,
-      backgroundColor: '#f1f3f4',
+      backgroundColor: '#f1f5f9',
       marginVertical: 10,
     },
     listActionsRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      justifyContent: 'space-between',
     },
-    btnCallSmall: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 4,
-      backgroundColor: '#202124',
-      paddingVertical: 7,
-      borderRadius: 10,
-    },
-    btnCallSmallText: {
-      fontSize: 11,
-      fontWeight: '800',
-      color: '#ffffff',
-    },
-    btnWaSmall: {
-      flex: 1.3,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 4,
-      backgroundColor: '#ff2d75',
-      paddingVertical: 7,
-      borderRadius: 10,
-    },
-    btnWaSmallText: {
-      fontSize: 11,
-      fontWeight: '800',
-      color: '#ffffff',
-    },
-    btnDirectionsSmall: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 4,
-      backgroundColor: '#ffffff',
+    btnSmallCall: {
+      backgroundColor: '#0f172a',
+      paddingHorizontal: 12,
       paddingVertical: 6,
-      borderRadius: 10,
+      borderRadius: 6,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    btnSmallWa: {
+      backgroundColor: '#16a34a',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 6,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    loadMoreBtn: {
+      height: 44,
+      backgroundColor: '#ffffff',
+      borderRadius: 12,
       borderWidth: 1,
-      borderColor: '#dadce0',
+      borderColor: '#cbd5e1',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginVertical: 12,
     },
-    btnDirectionsSmallText: {
-      fontSize: 10.5,
-      fontWeight: '700',
-      color: '#ea4335',
+    loadMoreBtnText: {
+      fontSize: 12,
+      fontWeight: '800',
+      color: '#0f172a',
+      letterSpacing: 0.5,
     },
+
+    // -------------------------------------------------------------
+    // MODALS: FILTER, LOCATION & STUDIO DETAILS
+    // -------------------------------------------------------------
     modalBackdrop: {
       flex: 1,
-      backgroundColor: 'rgba(32, 33, 36, 0.65)',
+      backgroundColor: 'rgba(15, 23, 42, 0.65)',
       justifyContent: 'flex-end',
     },
-    modalSheetContainer: {
-      backgroundColor: '#ffffff',
-      borderTopLeftRadius: 28,
-      borderTopRightRadius: 28,
-      padding: 20,
-      paddingBottom: 28,
-      maxHeight: SCREEN_HEIGHT * 0.82,
-    },
-    modalSheetHandle: {
-      width: 40,
+    sheetHandle: {
+      width: 36,
       height: 4,
       borderRadius: 2,
-      backgroundColor: '#dadce0',
+      backgroundColor: '#cbd5e1',
       alignSelf: 'center',
       marginBottom: 14,
     },
-    modalHeaderRow: {
+    filterSheetContainer: {
+      backgroundColor: '#ffffff',
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: 18,
+      paddingBottom: 28,
+    },
+    filterSheetHeader: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: 14,
     },
-    modalStudioName: {
-      fontSize: 18,
+    sheetTitle: {
+      fontSize: 17,
       fontWeight: '800',
-      color: '#202124',
-      letterSpacing: -0.4,
+      color: '#0f172a',
     },
-    modalOwnerName: {
-      fontSize: 12,
+    sheetSubtitle: {
+      fontSize: 11,
       fontWeight: '500',
-      color: '#5f6368',
+      color: '#64748b',
       marginTop: 2,
     },
-    modalCloseBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: '#f1f3f4',
+    sheetCloseBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: '#f1f5f9',
       justifyContent: 'center',
       alignItems: 'center',
     },
-    modalStatsCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#f8f9fa',
-      borderRadius: 16,
-      paddingVertical: 12,
-      paddingHorizontal: 8,
-      borderWidth: 1,
-      borderColor: '#dadce0',
-      marginBottom: 14,
-    },
-    modalStatCol: {
-      flex: 1,
-      alignItems: 'center',
-    },
-    modalStatVal: {
-      fontSize: 14,
-      fontWeight: '900',
-      color: '#202124',
-    },
-    modalStatLabel: {
-      fontSize: 9.5,
-      fontWeight: '600',
-      color: '#5f6368',
-      marginTop: 2,
-    },
-    modalStatDivider: {
-      width: 1,
-      height: 24,
-      backgroundColor: '#dadce0',
-    },
-    modalSectionCard: {
-      backgroundColor: '#ffffff',
-      borderRadius: 16,
-      padding: 14,
-      borderWidth: 1,
-      borderColor: '#f1f3f4',
-      marginBottom: 12,
-    },
-    modalSectionHeading: {
-      fontSize: 10,
+    filterGroupHeading: {
+      fontSize: 10.5,
       fontWeight: '800',
-      color: '#70757a',
+      color: '#94a3b8',
       letterSpacing: 0.8,
+      marginTop: 14,
       marginBottom: 8,
     },
-    modalAddressText: {
-      fontSize: 12.5,
-      fontWeight: '500',
-      color: '#3c4043',
-      lineHeight: 18,
-      marginBottom: 10,
-    },
-    modalDirectionsBtn: {
+    filterPillsGrid: {
       flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
+      flexWrap: 'wrap',
       gap: 6,
-      backgroundColor: '#fef2f2',
-      paddingVertical: 9,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: '#fecaca',
     },
-    modalDirectionsText: {
-      fontSize: 11.5,
-      fontWeight: '800',
-      color: '#ea4335',
-    },
-    modalServiceRow: {
+    filterChoicePill: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
-      paddingVertical: 6,
-      borderBottomWidth: 1,
-      borderBottomColor: '#f8f9fa',
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 16,
+      backgroundColor: '#f8fafc',
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
     },
-    modalServiceName: {
-      fontSize: 12,
+    filterChoicePillActive: {
+      backgroundColor: '#0f172a',
+      borderColor: '#0f172a',
+    },
+    filterChoiceText: {
+      fontSize: 11.5,
       fontWeight: '600',
-      color: '#202124',
-      flex: 1,
-      paddingRight: 8,
+      color: '#475569',
     },
-    modalServicePrice: {
-      fontSize: 12,
-      fontWeight: '800',
-      color: '#188038',
+    filterChoiceTextActive: {
+      color: '#ffffff',
+      fontWeight: '700',
     },
-    modalGuaranteeCard: {
+    filterSheetFooter: {
       flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      backgroundColor: '#e6f4ea',
-      borderRadius: 14,
-      padding: 12,
+      gap: 12,
+      marginTop: 18,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: '#f1f5f9',
+    },
+    clearFiltersBtn: {
+      flex: 1,
+      height: 44,
+      borderRadius: 12,
       borderWidth: 1,
-      borderColor: '#a8dab5',
-      marginBottom: 14,
-    },
-    modalGuaranteeTitle: {
-      fontSize: 11.5,
-      fontWeight: '800',
-      color: '#137333',
-    },
-    modalGuaranteeDesc: {
-      fontSize: 10,
-      fontWeight: '500',
-      color: '#137333',
-      marginTop: 2,
-    },
-    modalFooterRow: {
-      flexDirection: 'row',
-      gap: 10,
-      marginTop: 10,
-    },
-    modalCallBtn: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
+      borderColor: '#cbd5e1',
       justifyContent: 'center',
-      gap: 6,
-      backgroundColor: '#202124',
-      paddingVertical: 13,
-      borderRadius: 14,
+      alignItems: 'center',
     },
-    modalCallBtnText: {
+    clearFiltersText: {
       fontSize: 13,
-      fontWeight: '800',
-      color: '#ffffff',
+      fontWeight: '700',
+      color: '#475569',
     },
-    modalWaBtn: {
-      flex: 1.5,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
+    applyFiltersBtn: {
+      flex: 1.6,
+      height: 44,
+      borderRadius: 12,
       backgroundColor: '#ff2d75',
-      paddingVertical: 13,
-      borderRadius: 14,
-      shadowColor: '#ff2d75',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.35,
-      shadowRadius: 8,
-      elevation: 5,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
-    modalWaBtnText: {
+    applyFiltersText: {
       fontSize: 13,
       fontWeight: '800',
       color: '#ffffff',
     },
-    pincodeModalCard: {
+
+    // Location Modal
+    locationModalCard: {
       backgroundColor: '#ffffff',
-      borderTopLeftRadius: 28,
-      borderTopRightRadius: 28,
-      padding: 20,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: 18,
       paddingBottom: 32,
     },
-    searchInputWrap: {
+    locationInputWrap: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#f8f9fa',
-      borderRadius: 14,
-      borderWidth: 1.5,
-      borderColor: '#dadce0',
-      paddingHorizontal: 14,
-      marginVertical: 14,
+      backgroundColor: '#f1f5f9',
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      height: 44,
       gap: 8,
+      marginBottom: 12,
     },
-    pincodeInput: {
+    locationTextInput: {
       flex: 1,
-      paddingVertical: 12,
-      fontSize: 15,
-      fontWeight: '600',
-      color: '#202124',
+      fontSize: 13,
+      color: '#0f172a',
     },
-    applyPinBtn: {
-      backgroundColor: '#ea4335',
-      borderRadius: 14,
-      paddingVertical: 13,
-      alignItems: 'center',
-      shadowColor: '#ea4335',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.30,
-      shadowRadius: 8,
-      elevation: 4,
-      marginBottom: 16,
-    },
-    applyPinText: {
-      fontSize: 12,
-      fontWeight: '900',
-      color: '#ffffff',
-      letterSpacing: 0.8,
-    },
-    suggestionsHeading: {
-      fontSize: 10,
-      fontWeight: '800',
-      color: '#70757a',
-      letterSpacing: 0.8,
-      marginBottom: 8,
-    },
-    suggestionsGrid: {
+    popularCitiesGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 6,
     },
-    suggestionPill: {
+    popularCityPill: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#f8f9fa',
-      paddingHorizontal: 12,
-      paddingVertical: 10,
+      backgroundColor: '#f8fafc',
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+      gap: 4,
+    },
+    popularCityText: {
+      fontSize: 11.5,
+      fontWeight: '700',
+      color: '#0f172a',
+    },
+    popularCityPin: {
+      fontSize: 10,
+      fontWeight: '500',
+      color: '#64748b',
+    },
+
+    // Studio Detail Sheet
+    studioDetailSheet: {
+      backgroundColor: '#ffffff',
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: 18,
+      paddingBottom: 28,
+    },
+    detailHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    detailStudioName: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: '#0f172a',
+    },
+    detailOwnerName: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: '#64748b',
+      marginTop: 2,
+    },
+    detailMetricsRow: {
+      flexDirection: 'row',
+      backgroundColor: '#f8fafc',
+      borderRadius: 14,
+      paddingVertical: 12,
+      marginVertical: 10,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+    },
+    metricCol: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    metricVal: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: '#0f172a',
+    },
+    metricLabel: {
+      fontSize: 9.5,
+      fontWeight: '500',
+      color: '#64748b',
+      marginTop: 2,
+    },
+    metricDivider: {
+      width: 1,
+      height: '60%',
+      backgroundColor: '#cbd5e1',
+      alignSelf: 'center',
+    },
+    detailSectionBox: {
+      marginTop: 10,
+      padding: 12,
+      borderRadius: 12,
+      backgroundColor: '#f8fafc',
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+    },
+    detailSectionHeading: {
+      fontSize: 10,
+      fontWeight: '800',
+      color: '#94a3b8',
+      letterSpacing: 0.6,
+      marginBottom: 6,
+    },
+    detailAddressText: {
+      fontSize: 12,
+      color: '#334155',
+      lineHeight: 18,
+    },
+    detailServiceRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingVertical: 4,
+    },
+    detailServiceName: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: '#334155',
+    },
+    detailServicePrice: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#0f172a',
+    },
+    guaranteeBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#f0fdf4',
+      padding: 10,
       borderRadius: 10,
       borderWidth: 1,
-      borderColor: '#dadce0',
-      gap: 8,
+      borderColor: '#bbf7d0',
+      marginTop: 12,
     },
-    suggestionArea: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: '#3c4043',
+    guaranteeTitle: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#166534',
+    },
+    guaranteeSub: {
+      fontSize: 10,
+      color: '#15803d',
+      marginTop: 1,
+    },
+    detailFooterRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 14,
+    },
+    detailCallBtn: {
       flex: 1,
+      height: 44,
+      backgroundColor: '#0f172a',
+      borderRadius: 12,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 6,
     },
-    suggestionPin: {
-      fontSize: 11.5,
-      fontWeight: '800',
-      color: '#ea4335',
+    detailCallBtnText: {
+      fontSize: 12.5,
+      fontWeight: '700',
+      color: '#ffffff',
+    },
+    detailWaBtn: {
+      flex: 1.2,
+      height: 44,
+      backgroundColor: '#16a34a',
+      borderRadius: 12,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 6,
+    },
+    detailWaBtnText: {
+      fontSize: 12.5,
+      fontWeight: '700',
+      color: '#ffffff',
     },
   });
