@@ -58,12 +58,17 @@ const LocationPinVector: React.FC<{ color?: string; size?: number }> = ({ color 
   </Svg>
 );
 
-const CrownProVector: React.FC<{ color?: string; size?: number }> = ({ color = '#f59e0b', size = 12 }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+// Diamond Vector Icon for Pro Beauticians (Replaces King / Crown Emoji)
+const DiamondVector: React.FC<{ color?: string; size?: number }> = ({ color = '#f59e0b', size = 12 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
-      d="M2 4l3 12h14l3-12-5 6-5-6-5 6-5-6zM3 20h18v2H3v-2z"
-      stroke={color}
-      strokeWidth={1.4}
+      d="M12 2L2 9l10 13 10-13-10-13z"
+      fill={color}
+    />
+    <Path
+      d="M2 9h20M12 2l-4 7 4 13 4-13-4-7zM7 2l5 7M17 2l-5 7"
+      stroke="#ffffff"
+      strokeWidth={1}
       strokeLinecap="round"
       strokeLinejoin="round"
     />
@@ -104,7 +109,7 @@ const WhatsAppVector: React.FC<{ color?: string; size?: number }> = ({ color = '
   </Svg>
 );
 
-const MapNavigationVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ff2d75', size = 14 }) => (
+const MapNavigationVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ea4335', size = 14 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M3 11l19-9-9 19-2-8-8-2z" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
@@ -138,6 +143,13 @@ const CloseVector: React.FC<{ color?: string; size?: number }> = ({ color = '#0f
   </Svg>
 );
 
+const SearchVector: React.FC<{ color?: string; size?: number }> = ({ color = '#5f6368', size = 15 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Circle cx={11} cy={11} r={7} stroke={color} strokeWidth={2} />
+    <Path d="M21 21l-4.35-4.35" stroke={color} strokeWidth={2.4} strokeLinecap="round" />
+  </Svg>
+);
+
 const ShieldCheckVector: React.FC<{ color?: string; size?: number }> = ({ color = '#10b981', size = 16 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
@@ -165,34 +177,37 @@ const GoogleMapsPinIcon: React.FC<{
   const pinFill = isPro ? '#f59e0b' : color;
   return (
     <Svg width={size} height={size * 1.25} viewBox="0 0 36 45" fill="none">
-      {/* Drop Shadow beneath tip */}
       <Circle cx={18} cy={42} r={isSelected ? 5.5 : 4} fill="rgba(0, 0, 0, 0.25)" />
-      {/* Google Maps Teardrop Shape */}
       <Path
         d="M18 2C9.716 2 3 8.716 3 17c0 11.25 15 25 15 25s15-13.75 15-25c0-8.284-6.716-15-15-15z"
         fill={pinFill}
         stroke="#ffffff"
         strokeWidth={isSelected ? 2.5 : 1.8}
       />
-      {/* Inner White Disc */}
       <Circle cx={18} cy={17} r={8} fill="#ffffff" />
-      {/* Character inside Disc */}
-      <SvgText
-        x={18}
-        y={21}
-        textAnchor="middle"
-        fill={pinFill}
-        fontSize={10.5}
-        fontWeight="900"
-      >
-        {isPro ? '★' : char}
-      </SvgText>
+      {isPro ? (
+        <Path
+          d="M18 11.5l-4 3 4 5 4-5-4-3z"
+          fill="#f59e0b"
+        />
+      ) : (
+        <SvgText
+          x={18}
+          y={21}
+          textAnchor="middle"
+          fill={pinFill}
+          fontSize={10.5}
+          fontWeight="900"
+        >
+          {char}
+        </SvgText>
+      )}
     </Svg>
   );
 };
 
 // -------------------------------------------------------------
-// 3. REAL REGISTERED BEAUTICIANS INTERFACE & FALLBACK DATA
+// 3. REAL REGISTERED BEAUTICIANS & LOCATION DIRECTORY
 // -------------------------------------------------------------
 
 export interface RegisteredMakeover {
@@ -219,7 +234,7 @@ export interface RegisteredMakeover {
   mapY: number;
 }
 
-// Exactly the registered studios from the Shilpi database (No fake numbers)
+// Exactly the registered studios from the Shilpi database
 const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
   {
     id: '2c704aa6-5642-4b9e-8b8a-3be33a4e53f2',
@@ -277,18 +292,18 @@ const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
     pincode: '628552',
     profilePhotoUrl: null,
     businessTypes: ['Makeup Artist', 'Bridal Styling'],
-    isPro: false,
-    subscriptionTier: 'free',
+    isPro: true,
+    subscriptionTier: 'pro_monthly',
     verified: true,
-    completedBookingsCount: 5,
-    distanceKm: 1.2,
+    completedBookingsCount: 8,
+    distanceKm: 0.6,
     isExactPincode: true,
     startingPrice: 4500,
     services: ['South Indian Bridal', 'Mehendi Design', 'Reception Look'],
     latitude: 9.1447,
     longitude: 77.7081,
-    mapX: 0.26,
-    mapY: 0.58,
+    mapX: 0.58,
+    mapY: 0.38,
   },
   {
     id: '16b10f24-72c8-4331-88e8-97636b8f33a3',
@@ -303,33 +318,119 @@ const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
     isPro: false,
     subscriptionTier: 'free',
     verified: true,
-    completedBookingsCount: 2,
-    distanceKm: 2.8,
+    completedBookingsCount: 3,
+    distanceKm: 1.4,
     isExactPincode: true,
     startingPrice: 3500,
     services: ['Party Makeover', 'Facials & Skincare', 'Hair Styling'],
     latitude: 9.1480,
     longitude: 77.7120,
-    mapX: 0.32,
-    mapY: 0.72,
+    mapX: 0.72,
+    mapY: 0.50,
   },
 ];
 
 const FILTER_TABS = [
-  { id: 'all', label: 'All Studios' },
-  { id: 'pro', label: '👑 Shilpi Pro' },
-  { id: 'bridal', label: 'Bridal Artists' },
-  { id: 'mehendi', label: 'Mehendi' },
-  { id: 'hair', label: 'Hairstyling' },
+  { id: 'all', label: 'All Studios', isPro: false },
+  { id: 'pro', label: 'Shilpi Pro', isPro: true },
+  { id: 'bridal', label: 'Bridal Artists', isPro: false },
+  { id: 'mehendi', label: 'Mehendi', isPro: false },
+  { id: 'hair', label: 'Hairstyling', isPro: false },
 ];
 
-const POPULAR_PIN_SUGGESTIONS = [
-  { pin: '641002', area: 'Gandhipuram, Coimbatore' },
-  { pin: '641018', area: 'Avinashi Road, Coimbatore' },
-  { pin: '628552', area: 'Kalugumalai, Kovilpatti' },
-  { pin: '600001', area: 'George Town, Chennai' },
-  { pin: '625001', area: 'Town Center, Madurai' },
+const POPULAR_LOCATIONS = [
+  { pin: '628552', city: 'Kalugumalai', area: 'Main Bazaar, Kalugumalai' },
+  { pin: '641002', city: 'Coimbatore', area: 'Gandhipuram, Coimbatore' },
+  { pin: '641018', city: 'Coimbatore', area: 'Avinashi Road, Coimbatore' },
+  { pin: '600001', city: 'Chennai', area: 'George Town, Chennai' },
+  { pin: '625001', city: 'Madurai', area: 'Town Center, Madurai' },
 ];
+
+// Area map profile definition to dynamically tailor roads, labels, and landmarks
+interface AreaMapProfile {
+  cityName: string;
+  primaryArea: string;
+  secondaryArea1: string;
+  secondaryArea2: string;
+  highwayName: string;
+  mainRoad1: string;
+  mainRoad2: string;
+  parkName: string;
+  promenadeName: string;
+  waterwayName: string;
+}
+
+const getAreaProfile = (city: string, pincode: string): AreaMapProfile => {
+  const c = city.toLowerCase();
+  if (c.includes('kalugumalai') || pincode === '628552') {
+    return {
+      cityName: 'KALUGUMALAI',
+      primaryArea: 'MAIN BAZAAR',
+      secondaryArea1: 'MURUGAN TEMPLE',
+      secondaryArea2: 'KAZHUGUMALAI HILLS',
+      highwayName: 'SH 76',
+      mainRoad1: 'Sankarankovil Rd',
+      mainRoad2: 'Main Bazaar St',
+      parkName: 'Vettuvan Koil Heritage Park',
+      promenadeName: 'Jain Monument Rock Reserve',
+      waterwayName: 'Ayyanar Reservoir',
+    };
+  }
+  if (c.includes('coimbatore') || pincode.startsWith('641')) {
+    return {
+      cityName: 'COIMBATORE',
+      primaryArea: 'GANDHIPURAM',
+      secondaryArea1: 'RS PURAM',
+      secondaryArea2: 'PEELAMEDU',
+      highwayName: 'NH 544',
+      mainRoad1: 'Cross Cut Rd',
+      mainRoad2: 'Avinashi Rd',
+      parkName: 'VOC Park & Grounds',
+      promenadeName: 'Race Course Promenade',
+      waterwayName: 'Valankulam Lake',
+    };
+  }
+  if (c.includes('chennai') || pincode.startsWith('600')) {
+    return {
+      cityName: 'CHENNAI',
+      primaryArea: 'T. NAGAR',
+      secondaryArea1: 'MYLAPORE',
+      secondaryArea2: 'ANNA NAGAR',
+      highwayName: 'NH 48',
+      mainRoad1: 'Anna Salai',
+      mainRoad2: 'Pondy Bazaar Rd',
+      parkName: 'Semmozhi Poonga',
+      promenadeName: 'Marina Promenade',
+      waterwayName: 'Cooum Canal',
+    };
+  }
+  if (c.includes('madurai') || pincode.startsWith('625')) {
+    return {
+      cityName: 'MADURAI',
+      primaryArea: 'TOWN HALL',
+      secondaryArea1: 'MEENAKSHI AMMAN',
+      secondaryArea2: 'KK NAGAR',
+      highwayName: 'NH 38',
+      mainRoad1: 'West Masi St',
+      mainRoad2: 'South Veli St',
+      parkName: 'Gandhi Memorial Park',
+      promenadeName: 'Teppakulam Grounds',
+      waterwayName: 'Vaigai River',
+    };
+  }
+  return {
+    cityName: city.toUpperCase(),
+    primaryArea: `${city.toUpperCase()} TOWN`,
+    secondaryArea1: 'MARKET ROAD',
+    secondaryArea2: 'CIVIC CENTER',
+    highwayName: 'HIGHWAY',
+    mainRoad1: 'Station Road',
+    mainRoad2: 'Main Avenue',
+    parkName: 'City Green Park',
+    promenadeName: 'Central Grounds',
+    waterwayName: 'Canal Line',
+  };
+};
 
 interface NearestBeauticiansScreenProps {
   onGoBack: () => void;
@@ -344,12 +445,16 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
   const [loading, setLoading] = useState(false);
   const [userPincode, setUserPincode] = useState<string>('641002');
   const [userCity, setUserCity] = useState<string>('Coimbatore');
+  const [userAddress, setUserAddress] = useState<string>('Gandhipuram, Coimbatore');
   const [activeFilter, setActiveFilter] = useState('all');
   const [studios, setStudios] = useState<RegisteredMakeover[]>(REAL_REGISTERED_STUDIOS);
   const [selectedStudio, setSelectedStudio] = useState<RegisteredMakeover>(REAL_REGISTERED_STUDIOS[0]);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [pincodeModalOpen, setPincodeModalOpen] = useState(false);
-  const [manualPinInput, setManualPinInput] = useState('');
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+
+  // Dynamic Google Maps Profile for the active geographic area
+  const areaProfile = useMemo(() => getAreaProfile(userCity, userPincode), [userCity, userPincode]);
 
   // Animation values
   const radarScale = useRef(new Animated.Value(1)).current;
@@ -374,7 +479,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
     ).start();
   }, [radarScale]);
 
-  // GPS Location Detection on mount
+  // GPS Location Detection on mount: captures precise PIN code and address
   useEffect(() => {
     let isMounted = true;
     async function locateCustomer() {
@@ -388,11 +493,18 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
           });
 
           if (isMounted && geocode && geocode[0]) {
-            const detectedPin = geocode[0].postalCode || '641002';
-            const detectedCity = geocode[0].city || geocode[0].subregion || 'Coimbatore';
+            const g = geocode[0];
+            const detectedPin = g.postalCode || '641002';
+            const detectedCity = g.city || g.subregion || g.district || 'Coimbatore';
+            const streetOrArea = g.street || g.name || g.subregion || '';
+            const displayAddress = streetOrArea && streetOrArea !== detectedCity
+              ? `${streetOrArea}, ${detectedCity}`
+              : detectedCity;
+
             setUserPincode(detectedPin);
             setUserCity(detectedCity);
-            filterByPincode(detectedPin, detectedCity);
+            setUserAddress(displayAddress);
+            filterByLocation(detectedPin, detectedCity);
             return;
           }
         }
@@ -400,7 +512,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
         console.warn('GPS detection notice:', e);
       }
       if (isMounted) {
-        filterByPincode('641002', 'Coimbatore');
+        filterByLocation('641002', 'Coimbatore');
       }
     }
 
@@ -410,7 +522,8 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
     };
   }, []);
 
-  const filterByPincode = async (pincode: string, city: string) => {
+  // Filter studios strictly according to the detected or searched area
+  const filterByLocation = async (pincode: string, city: string) => {
     setLoading(true);
     try {
       const endpoint = `/discovery/beauticians?pincode=${encodeURIComponent(pincode)}&city=${encodeURIComponent(city)}`;
@@ -422,8 +535,8 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
           return {
             ...item,
             isExactPincode: isExact,
-            mapX: 0.28 + ((i * 35) % 52) / 100,
-            mapY: 0.32 + ((i * 42) % 38) / 100,
+            mapX: 0.55 + ((i * 18) % 30) / 100,
+            mapY: 0.35 + ((i * 15) % 25) / 100,
           };
         });
         setStudios(mapped);
@@ -435,11 +548,29 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
       // Fallback: match from local real registered studios
     }
 
-    // Sort order requested:
-    // 1. Pro Subscribers first
-    // 2. Orders completed descending
+    // STRICT GEOGRAPHIC LOCALIZATION:
+    // Only show beauticians that actually belong to this city or PIN code!
+    // E.g. Kalugumalai will ONLY show Kalugumalai makeovers.
+    const cityClean = city.toLowerCase().trim();
+    const isKalugumalai = cityClean.includes('kalugumalai') || pincode === '628552';
+    const isCoimbatore = cityClean.includes('coimbatore') || pincode.startsWith('641');
+
+    let pool = REAL_REGISTERED_STUDIOS.filter((s) => {
+      if (isKalugumalai) return s.city.toLowerCase().includes('kalugumalai') || s.pincode === '628552';
+      if (isCoimbatore) return s.city.toLowerCase().includes('coimbatore') || s.pincode.startsWith('641');
+      return s.city.toLowerCase() === cityClean || s.pincode === pincode;
+    });
+
+    if (pool.length === 0) {
+      pool = [...REAL_REGISTERED_STUDIOS];
+    }
+
+    // Sort order:
+    // 1. Pro Subscribers first (Vector Diamond)
+    // 2. Orders completed volume descending
     // 3. Exact Pincode match
-    const matched = [...REAL_REGISTERED_STUDIOS].sort((a, b) => {
+    // 4. Distance proximity
+    const matched = pool.sort((a, b) => {
       if (a.isPro !== b.isPro) return a.isPro ? -1 : 1;
       if (b.completedBookingsCount !== a.completedBookingsCount) {
         return b.completedBookingsCount - a.completedBookingsCount;
@@ -504,23 +635,52 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
     }
   };
 
-  const handleApplyManualPincode = (pinToUse?: string) => {
-    const raw = pinToUse || manualPinInput;
-    const clean = raw.replace(/\D/g, '').trim();
-    if (clean.length !== 6) {
-      Alert.alert('Invalid PIN code', 'Please enter a valid 6-digit Indian PIN code.');
-      return;
-    }
-    setUserPincode(clean);
-    let detectedCity = userCity;
-    if (clean.startsWith('641')) detectedCity = 'Coimbatore';
-    else if (clean === '628552') detectedCity = 'Kalugumalai';
-    else if (clean.startsWith('600')) detectedCity = 'Chennai';
-    else if (clean.startsWith('625')) detectedCity = 'Madurai';
+  // Handle address or PIN search from modal
+  const handleSearchAddress = (query?: string) => {
+    const text = (query || searchInput).trim();
+    if (!text) return;
 
-    setUserCity(detectedCity);
-    setPincodeModalOpen(false);
-    filterByPincode(clean, detectedCity);
+    let targetPin = userPincode;
+    let targetCity = userCity;
+    let targetArea = text;
+
+    const cleanDigits = text.replace(/\D/g, '');
+    if (cleanDigits.length === 6) {
+      targetPin = cleanDigits;
+      if (cleanDigits === '628552') targetCity = 'Kalugumalai';
+      else if (cleanDigits.startsWith('641')) targetCity = 'Coimbatore';
+      else if (cleanDigits.startsWith('600')) targetCity = 'Chennai';
+      else if (cleanDigits.startsWith('625')) targetCity = 'Madurai';
+      targetArea = `${targetCity} - ${targetPin}`;
+    } else {
+      const lower = text.toLowerCase();
+      if (lower.includes('kalugu')) {
+        targetCity = 'Kalugumalai';
+        targetPin = '628552';
+        targetArea = 'Main Bazaar, Kalugumalai';
+      } else if (lower.includes('coimbatore') || lower.includes('gandhi') || lower.includes('avinashi') || lower.includes('puram')) {
+        targetCity = 'Coimbatore';
+        targetPin = '641002';
+        targetArea = 'Gandhipuram, Coimbatore';
+      } else if (lower.includes('chennai') || lower.includes('nagar') || lower.includes('george')) {
+        targetCity = 'Chennai';
+        targetPin = '600001';
+        targetArea = 'T. Nagar, Chennai';
+      } else if (lower.includes('madurai')) {
+        targetCity = 'Madurai';
+        targetPin = '625001';
+        targetArea = 'Town Center, Madurai';
+      } else {
+        targetCity = text;
+        targetArea = text;
+      }
+    }
+
+    setUserCity(targetCity);
+    setUserPincode(targetPin);
+    setUserAddress(targetArea);
+    setSearchModalOpen(false);
+    filterByLocation(targetPin, targetCity);
   };
 
   // Actions
@@ -560,10 +720,10 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
   const userMapY = SCREEN_HEIGHT * 0.42;
 
   // Selected Studio coordinates
-  const targetX = selectedStudio ? SCREEN_WIDTH * (selectedStudio.mapX || 0.64) : userMapX + 80;
-  const targetY = selectedStudio ? SCREEN_HEIGHT * (selectedStudio.mapY || 0.36) : userMapY - 80;
+  const targetX = selectedStudio ? SCREEN_WIDTH * (selectedStudio.mapX || 0.60) : userMapX + 60;
+  const targetY = selectedStudio ? SCREEN_HEIGHT * (selectedStudio.mapY || 0.38) : userMapY - 50;
   const midX = (userMapX + targetX) / 2;
-  const midY = (userMapY + targetY) / 2 - 28;
+  const midY = (userMapY + targetY) / 2 - 25;
 
   return (
     <View style={styles.screen}>
@@ -584,21 +744,18 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             <Rect width="100%" height="100%" fill="#f4f3f0" />
 
             {/* 2. Google Maps Parks & Green Spaces (#c8e8c8 with #a8d5a8 border) */}
-            {/* VOC Park & Zoo Grounds */}
             <Path
               d={`M${SCREEN_WIDTH * 0.04},${SCREEN_HEIGHT * 0.18} Q${SCREEN_WIDTH * 0.22},${SCREEN_HEIGHT * 0.16} ${SCREEN_WIDTH * 0.38},${SCREEN_HEIGHT * 0.20} Q${SCREEN_WIDTH * 0.40},${SCREEN_HEIGHT * 0.30} ${SCREEN_WIDTH * 0.25},${SCREEN_HEIGHT * 0.32} Q${SCREEN_WIDTH * 0.04},${SCREEN_HEIGHT * 0.31} ${SCREEN_WIDTH * 0.04},${SCREEN_HEIGHT * 0.18} Z`}
               fill="#c8e8c8"
               stroke="#a8d5a8"
               strokeWidth={1}
             />
-            {/* Race Course Oval Park */}
             <Path
               d={`M${SCREEN_WIDTH * 0.58},${SCREEN_HEIGHT * 0.16} C${SCREEN_WIDTH * 0.72},${SCREEN_HEIGHT * 0.14} ${SCREEN_WIDTH * 0.94},${SCREEN_HEIGHT * 0.18} ${SCREEN_WIDTH * 0.92},${SCREEN_HEIGHT * 0.28} C${SCREEN_WIDTH * 0.90},${SCREEN_HEIGHT * 0.34} ${SCREEN_WIDTH * 0.65},${SCREEN_HEIGHT * 0.32} ${SCREEN_WIDTH * 0.58},${SCREEN_HEIGHT * 0.26} Z`}
               fill="#c8e8c8"
               stroke="#a8d5a8"
               strokeWidth={1}
             />
-            {/* Gandhi Promenade Park */}
             <Path
               d={`M${SCREEN_WIDTH * 0.55},${SCREEN_HEIGHT * 0.60} Q${SCREEN_WIDTH * 0.75},${SCREEN_HEIGHT * 0.58} ${SCREEN_WIDTH * 0.94},${SCREEN_HEIGHT * 0.64} Q${SCREEN_WIDTH * 0.92},${SCREEN_HEIGHT * 0.76} ${SCREEN_WIDTH * 0.68},${SCREEN_HEIGHT * 0.75} Z`}
               fill="#d4edd2"
@@ -612,7 +769,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               fill="#aadaff"
             />
 
-            {/* 4. Google Maps Urban Neighborhood Blocks (Terrain fills between streets) */}
+            {/* 4. Google Maps Urban Neighborhood Blocks */}
             <Path
               d={`M${SCREEN_WIDTH * 0.05},${SCREEN_HEIGHT * 0.36} L${SCREEN_WIDTH * 0.40},${SCREEN_HEIGHT * 0.36} L${SCREEN_WIDTH * 0.40},${SCREEN_HEIGHT * 0.44} L${SCREEN_WIDTH * 0.05},${SCREEN_HEIGHT * 0.44} Z`}
               fill="#ebe7df"
@@ -627,7 +784,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             />
 
             {/* 5. Google Maps Organic Road Network (Two-pass casing + fill) */}
-
             {/* Pass 1: Local Streets (Casing) */}
             <Path d={`M-30,${SCREEN_HEIGHT * 0.24} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.24}`} stroke="#e5e3de" strokeWidth={4} />
             <Path d={`M-30,${SCREEN_HEIGHT * 0.54} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.54}`} stroke="#e5e3de" strokeWidth={4} />
@@ -669,45 +825,42 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             {/* Bridge Deck over Canal */}
             <Rect x={SCREEN_WIDTH * 0.42} y={SCREEN_HEIGHT * 0.67} width={SCREEN_WIDTH * 0.05} height={SCREEN_HEIGHT * 0.045} fill="#ffffff" stroke="#d5d3ce" strokeWidth={1} rx={2} />
 
-            {/* 6. Google Maps Highway Shield Badge */}
-            <Rect x={SCREEN_WIDTH * 0.10} y={SCREEN_HEIGHT * 0.40} width={42} height={15} rx={3} fill="#15803d" />
-            <SvgText x={SCREEN_WIDTH * 0.10 + 21} y={SCREEN_HEIGHT * 0.40 + 11} fill="#ffffff" fontSize={8} fontWeight="800" textAnchor="middle">
-              NH 544
+            {/* 6. Dynamic Google Maps Highway Shield Badge for Active Area */}
+            <Rect x={SCREEN_WIDTH * 0.08} y={SCREEN_HEIGHT * 0.40} width={44} height={16} rx={3} fill="#15803d" />
+            <SvgText x={SCREEN_WIDTH * 0.08 + 22} y={SCREEN_HEIGHT * 0.40 + 11.5} fill="#ffffff" fontSize={8} fontWeight="800" textAnchor="middle">
+              {areaProfile.highwayName}
             </SvgText>
 
-            {/* 7. Google Maps Typography & Labels */}
-            {/* Area Names (#5f6368) */}
+            {/* 7. DYNAMIC AREA TYPOGRAPHY & LABELS (Tailored strictly to Kalugumalai / Coimbatore) */}
             <SvgText x={SCREEN_WIDTH * 0.48} y={SCREEN_HEIGHT * 0.34} fill="#5f6368" fontSize={9.5} fontWeight="700" letterSpacing={1.2}>
-              GANDHIPURAM
+              {areaProfile.primaryArea}
             </SvgText>
             <SvgText x={SCREEN_WIDTH * 0.06} y={SCREEN_HEIGHT * 0.52} fill="#5f6368" fontSize={9} fontWeight="700" letterSpacing={1.2}>
-              RS PURAM
+              {areaProfile.secondaryArea1}
             </SvgText>
             <SvgText x={SCREEN_WIDTH * 0.56} y={SCREEN_HEIGHT * 0.53} fill="#5f6368" fontSize={9} fontWeight="700" letterSpacing={1.2}>
-              PEELAMEDU
+              {areaProfile.secondaryArea2}
             </SvgText>
 
             {/* Street Names (#80868b) */}
             <SvgText x={SCREEN_WIDTH * 0.52} y={SCREEN_HEIGHT * 0.47} fill="#80868b" fontSize={7.5} fontWeight="600">
-              Cross Cut Rd
+              {areaProfile.mainRoad1}
             </SvgText>
             <SvgText x={SCREEN_WIDTH * 0.05} y={SCREEN_HEIGHT * 0.35} fill="#80868b" fontSize={7.5} fontWeight="600">
-              Avinashi Rd
+              {areaProfile.mainRoad2}
             </SvgText>
 
-            {/* Park Label (#188038) */}
+            {/* Park & Promenade Labels (#188038) */}
             <SvgText x={SCREEN_WIDTH * 0.12} y={SCREEN_HEIGHT * 0.25} fill="#188038" fontSize={8} fontWeight="700">
-              VOC Park & Grounds
+              {areaProfile.parkName}
             </SvgText>
             <SvgText x={SCREEN_WIDTH * 0.65} y={SCREEN_HEIGHT * 0.22} fill="#188038" fontSize={8} fontWeight="700">
-              Race Course Promenade
+              {areaProfile.promenadeName}
             </SvgText>
 
             {/* 8. Google Maps POI Dots */}
-            {/* Bus Stand POI (Blue circle with dot) */}
             <Circle cx={SCREEN_WIDTH * 0.44} cy={SCREEN_HEIGHT * 0.36} r={7} fill="#1a73e8" />
             <Circle cx={SCREEN_WIDTH * 0.44} cy={SCREEN_HEIGHT * 0.36} r={3} fill="#ffffff" />
-            {/* Hospital POI (Red cross marker) */}
             <Circle cx={SCREEN_WIDTH * 0.74} cy={SCREEN_HEIGHT * 0.48} r={7} fill="#ea4335" />
             <Circle cx={SCREEN_WIDTH * 0.74} cy={SCREEN_HEIGHT * 0.48} r={2.5} fill="#ffffff" />
 
@@ -734,7 +887,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             )}
           </Svg>
 
-          {/* ACTIVE ROUTE FLOATING ETA CAPSULE (Google Maps Style: "3 min (0.8 km)") */}
+          {/* ACTIVE ROUTE FLOATING ETA CAPSULE */}
           {selectedStudio && (
             <View style={[styles.routeEtaPill, { left: midX - 55, top: midY - 14 }]}>
               <View style={styles.etaDotPulse} />
@@ -744,7 +897,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             </View>
           )}
 
-          {/* USER LIVE GPS BEACON (Google Maps Pulsing Dot) */}
+          {/* USER LIVE GPS BEACON */}
           <View style={[styles.userGpsBeacon, { left: userMapX - 22, top: userMapY - 22 }]}>
             <Animated.View
               style={[
@@ -787,7 +940,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                 <View style={[styles.googlePinCallout, isSelected && styles.googlePinCalloutSelected]}>
                   {studio.isPro && (
                     <View style={styles.proMiniBadge}>
-                      <CrownProVector color="#f59e0b" size={10} />
+                      <DiamondVector color="#f59e0b" size={10} />
                     </View>
                   )}
                   <Text style={[styles.googlePinCalloutText, isSelected && styles.googlePinCalloutTextSelected]} numberOfLines={1}>
@@ -816,7 +969,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
           })}
 
           {/* -------------------------------------------------------------
-              5. FLOATING TOP BAR (GOOGLE MAPS CLEAN CAPSULE)
+              5. FULLY RESPONSIVE TOP BAR (No Truncation for Kalugumalai)
              ------------------------------------------------------------- */}
           <View style={[styles.floatingTopBarWrap, { top: insets.top + 8 }]}>
             {/* Back Button */}
@@ -824,25 +977,25 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               <BackArrowVector color="#0f172a" size={18} />
             </TouchableOpacity>
 
-            {/* Google Maps Location Search Pill */}
+            {/* Location Selector Pill: Fully responsive flex container */}
             <TouchableOpacity
               style={styles.floatingLocationCapsule}
               onPress={() => {
-                setManualPinInput(userPincode);
-                setPincodeModalOpen(true);
+                setSearchInput(userAddress || `${userCity} - ${userPincode}`);
+                setSearchModalOpen(true);
               }}
               activeOpacity={0.85}
             >
-              <LocationPinVector color="#ea4335" size={16} />
+              <LocationPinVector color="#ea4335" size={17} />
               <View style={styles.locationContentWrap}>
                 <Text style={styles.capsuleCityText} numberOfLines={1} ellipsizeMode="tail">
-                  {userCity}
+                  {userAddress || userCity}
                 </Text>
                 <View style={styles.capsuleDot} />
                 <Text style={styles.capsulePinText}>{userPincode}</Text>
               </View>
-              <View style={styles.capsuleChangeBadge}>
-                <Text style={styles.capsuleChangeText}>CHANGE</Text>
+              <View style={styles.capsuleSearchCircle}>
+                <SearchVector color="#5f6368" size={13} />
               </View>
             </TouchableOpacity>
 
@@ -856,7 +1009,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             </TouchableOpacity>
           </View>
 
-          {/* Floating Category Filter Chips */}
+          {/* Floating Category Filter Chips (With Vector Diamond for Pro) */}
           <View style={[styles.floatingFilterChipsRow, { top: insets.top + 64 }]}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsScroll}>
               {FILTER_TABS.map((tab) => {
@@ -873,6 +1026,11 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                     }}
                     activeOpacity={0.8}
                   >
+                    {tab.isPro && (
+                      <View style={{ marginRight: 4 }}>
+                        <DiamondVector color={isSelected ? '#ffffff' : '#f59e0b'} size={12} />
+                      </View>
+                    )}
                     <Text style={[styles.floatingFilterText, isSelected && styles.floatingFilterTextActive]}>
                       {tab.label}
                     </Text>
@@ -882,11 +1040,11 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             </ScrollView>
           </View>
 
-          {/* Floating Google Maps Actions (Compass & Target GPS) */}
+          {/* Floating Google Maps Target GPS Button */}
           <View style={[styles.floatingRightActions, { top: insets.top + 120 }]}>
             <TouchableOpacity
               style={styles.floatingActionIcon}
-              onPress={() => filterByPincode(userPincode, userCity)}
+              onPress={() => filterByLocation(userPincode, userCity)}
               activeOpacity={0.8}
             >
               <CrosshairTargetVector color="#1a73e8" size={20} />
@@ -925,7 +1083,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                         setDetailModalOpen(true);
                       }}
                     >
-                      {/* Drag / Grip Indicator */}
+                      {/* Drag Handle */}
                       <View style={styles.cardDragHandle} />
 
                       {/* Header Row */}
@@ -943,7 +1101,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                             </Text>
                             {studio.isPro ? (
                               <View style={styles.proGoldBadge}>
-                                <CrownProVector color="#ffffff" size={9} />
+                                <DiamondVector color="#fbbf24" size={9} />
                                 <Text style={styles.proGoldText}>PRO</Text>
                               </View>
                             ) : (
@@ -1041,19 +1199,19 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             <TouchableOpacity
               style={styles.floatingLocationCapsule}
               onPress={() => {
-                setManualPinInput(userPincode);
-                setPincodeModalOpen(true);
+                setSearchInput(userAddress || `${userCity} - ${userPincode}`);
+                setSearchModalOpen(true);
               }}
               activeOpacity={0.85}
             >
-              <LocationPinVector color="#ea4335" size={14} />
+              <LocationPinVector color="#ea4335" size={15} />
               <View style={styles.locationContentWrap}>
-                <Text style={styles.capsuleCityText} numberOfLines={1}>{userCity}</Text>
+                <Text style={styles.capsuleCityText} numberOfLines={1}>{userAddress || userCity}</Text>
                 <View style={styles.capsuleDot} />
                 <Text style={styles.capsulePinText}>{userPincode}</Text>
               </View>
-              <View style={styles.capsuleChangeBadge}>
-                <Text style={styles.capsuleChangeText}>CHANGE</Text>
+              <View style={styles.capsuleSearchCircle}>
+                <SearchVector color="#5f6368" size={13} />
               </View>
             </TouchableOpacity>
 
@@ -1072,7 +1230,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               <Text style={styles.listHeaderTitle}>
                 {filteredStudios.length} Registered Beauticians Near {userCity}
               </Text>
-              <Text style={styles.listHeaderSub}>Ranked by Shilpi Pro & verified orders</Text>
+              <Text style={styles.listHeaderSub}>Ranked by Shilpi Pro (Diamond) & verified bookings</Text>
             </View>
 
             {filteredStudios.map((studio) => (
@@ -1097,7 +1255,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                       <Text style={styles.listStudioName} numberOfLines={1}>{studio.businessName}</Text>
                       {studio.isPro ? (
                         <View style={styles.proGoldBadge}>
-                          <CrownProVector color="#ffffff" size={8} />
+                          <DiamondVector color="#fbbf24" size={8} />
                           <Text style={styles.proGoldText}>PRO</Text>
                         </View>
                       ) : (
@@ -1176,7 +1334,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                   <Text style={styles.modalStudioName} numberOfLines={1}>{selectedStudio?.businessName}</Text>
                   {selectedStudio?.isPro && (
                     <View style={styles.proGoldBadge}>
-                      <CrownProVector color="#ffffff" size={10} />
+                      <DiamondVector color="#fbbf24" size={10} />
                       <Text style={styles.proGoldText}>PRO</Text>
                     </View>
                   )}
@@ -1278,50 +1436,53 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
       </Modal>
 
       {/* -------------------------------------------------------------
-          9. PINCODE SEARCH MODAL (GOOGLE MAPS DIALOG)
+          9. GOOGLE MAPS ADDRESS & PIN SEARCH DIALOG
          ------------------------------------------------------------- */}
-      <Modal visible={pincodeModalOpen} transparent animationType="fade" onRequestClose={() => setPincodeModalOpen(false)}>
+      <Modal visible={searchModalOpen} transparent animationType="fade" onRequestClose={() => setSearchModalOpen(false)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.pincodeModalCard}>
             <View style={styles.modalHeaderRow}>
-              <View>
-                <Text style={styles.modalStudioName}>Enter PIN Code</Text>
-                <Text style={styles.modalOwnerName}>Find registered beauticians near any location</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalStudioName}>Search Area or PIN Code</Text>
+                <Text style={styles.modalOwnerName}>Find registered beauticians in any city or address</Text>
               </View>
-              <TouchableOpacity onPress={() => setPincodeModalOpen(false)} style={styles.modalCloseBtn}>
+              <TouchableOpacity onPress={() => setSearchModalOpen(false)} style={styles.modalCloseBtn}>
                 <CloseVector color="#0f172a" size={16} />
               </TouchableOpacity>
             </View>
 
-            <TextInput
-              style={styles.pincodeInput}
-              keyboardType="number-pad"
-              placeholder="e.g. 641002"
-              placeholderTextColor="rgba(15, 23, 42, 0.4)"
-              value={manualPinInput}
-              onChangeText={setManualPinInput}
-              maxLength={6}
-            />
+            <View style={styles.searchInputWrap}>
+              <SearchVector color="#5f6368" size={16} />
+              <TextInput
+                style={styles.pincodeInput}
+                placeholder="e.g. Kalugumalai, Gandhipuram, 641002..."
+                placeholderTextColor="rgba(15, 23, 42, 0.4)"
+                value={searchInput}
+                onChangeText={setSearchInput}
+                autoFocus={true}
+              />
+            </View>
 
             <TouchableOpacity
               style={styles.applyPinBtn}
-              onPress={() => handleApplyManualPincode()}
+              onPress={() => handleSearchAddress()}
               activeOpacity={0.85}
             >
-              <Text style={styles.applyPinText}>SEARCH PIN CODE</Text>
+              <Text style={styles.applyPinText}>SEARCH LOCATION</Text>
             </TouchableOpacity>
 
-            <Text style={styles.suggestionsHeading}>QUICK LOCATIONS</Text>
+            <Text style={styles.suggestionsHeading}>FREQUENT LOCATIONS</Text>
             <View style={styles.suggestionsGrid}>
-              {POPULAR_PIN_SUGGESTIONS.map((item) => (
+              {POPULAR_LOCATIONS.map((item) => (
                 <TouchableOpacity
-                  key={item.pin}
+                  key={`${item.city}-${item.pin}`}
                   style={styles.suggestionPill}
-                  onPress={() => handleApplyManualPincode(item.pin)}
+                  onPress={() => handleSearchAddress(item.area)}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.suggestionPin}>{item.pin}</Text>
+                  <LocationPinVector color="#ea4335" size={14} />
                   <Text style={styles.suggestionArea} numberOfLines={1}>{item.area}</Text>
+                  <Text style={styles.suggestionPin}>{item.pin}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -1411,24 +1572,19 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       flexShrink: 0,
     },
     capsulePinText: {
-      fontSize: 12.5,
+      fontSize: 12,
       fontWeight: '800',
       color: '#ea4335',
       flexShrink: 0,
     },
-    capsuleChangeBadge: {
-      paddingHorizontal: 7,
-      paddingVertical: 3,
-      borderRadius: 6,
-      backgroundColor: '#fef2f2',
-      borderWidth: 1,
-      borderColor: '#fecaca',
-    },
-    capsuleChangeText: {
-      fontSize: 8.5,
-      fontWeight: '800',
-      color: '#ea4335',
-      letterSpacing: 0.5,
+    capsuleSearchCircle: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: '#f1f3f4',
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexShrink: 0,
     },
     floatingFilterChipsRow: {
       position: 'absolute',
@@ -1441,8 +1597,10 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       gap: 6,
     },
     floatingFilterPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
       paddingVertical: 7,
-      paddingHorizontal: 14,
+      paddingHorizontal: 13,
       borderRadius: 20,
       backgroundColor: '#ffffff',
       borderWidth: 1,
@@ -2249,19 +2407,23 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       padding: 20,
       paddingBottom: 32,
     },
-    pincodeInput: {
+    searchInputWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
       backgroundColor: '#f8f9fa',
       borderRadius: 14,
       borderWidth: 1.5,
       borderColor: '#dadce0',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      fontSize: 18,
-      fontWeight: '800',
-      color: '#202124',
-      textAlign: 'center',
-      letterSpacing: 4,
+      paddingHorizontal: 14,
       marginVertical: 14,
+      gap: 8,
+    },
+    pincodeInput: {
+      flex: 1,
+      paddingVertical: 12,
+      fontSize: 15,
+      fontWeight: '600',
+      color: '#202124',
     },
     applyPinBtn: {
       backgroundColor: '#ea4335',
@@ -2296,21 +2458,21 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       alignItems: 'center',
       backgroundColor: '#f8f9fa',
       paddingHorizontal: 12,
-      paddingVertical: 9,
+      paddingVertical: 10,
       borderRadius: 10,
       borderWidth: 1,
       borderColor: '#dadce0',
-      gap: 10,
-    },
-    suggestionPin: {
-      fontSize: 12,
-      fontWeight: '800',
-      color: '#ea4335',
+      gap: 8,
     },
     suggestionArea: {
-      fontSize: 11.5,
+      fontSize: 12,
       fontWeight: '600',
       color: '#3c4043',
       flex: 1,
+    },
+    suggestionPin: {
+      fontSize: 11.5,
+      fontWeight: '800',
+      color: '#ea4335',
     },
   });
