@@ -9,9 +9,10 @@ import { LoginOtpScreen } from './src/screens/LoginOtpScreen';
 import { SetupScreen } from './src/screens/SetupScreen';
 import { MainAppContainer } from './src/screens/MainAppContainer';
 import { QrScannerScreen } from './src/screens/QrScannerScreen';
+import { NearestBeauticiansScreen } from './src/screens/NearestBeauticiansScreen';
 import { ThemeProvider } from './src/theme/ThemeContext';
 
-type ScreenState = 'splash' | 'login_phone' | 'login_otp' | 'setup' | 'dashboard' | 'qr_scanner';
+type ScreenState = 'splash' | 'login_phone' | 'login_otp' | 'setup' | 'dashboard' | 'qr_scanner' | 'nearest_beauticians';
 
 export default function App() {
   const [screen, setScreen] = useState<ScreenState>('splash');
@@ -50,6 +51,7 @@ export default function App() {
             setAuthPhone(phone);
             setScreen('login_otp');
           }}
+          onFindNearest={() => setScreen('nearest_beauticians')}
         />
       )}
 
@@ -101,6 +103,13 @@ export default function App() {
         <QrScannerScreen
           onSuccess={() => setScreen('dashboard')}
           onCancel={() => setScreen('dashboard')}
+        />
+      )}
+
+      {/* 7. Public Customer Discovery: Nearest Beautician Near You (No Login Required) */}
+      {screen === 'nearest_beauticians' && (
+        <NearestBeauticiansScreen
+          onGoBack={() => setScreen('login_phone')}
         />
       )}
       </SafeAreaView>

@@ -80,11 +80,31 @@ const SecurityLockIcon: React.FC = () => {
   );
 };
 
+const LocationPinVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ff2d75', size = 18 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
+      stroke={color}
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Circle cx={12} cy={10} r={3.2} stroke={color} strokeWidth={2} />
+  </Svg>
+);
+
+const ChevronRightVector: React.FC<{ color?: string; size?: number }> = ({ color = '#888888', size = 16 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M9 18l6-6-6-6" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
 interface LoginPhoneScreenProps {
   onOtpSent: (phone: string) => void;
+  onFindNearest?: () => void;
 }
 
-export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent }) => {
+export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent, onFindNearest }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -248,6 +268,43 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent })
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Customer Public Discovery Entry Point - No Login Required */}
+        {onFindNearest && (
+          <View style={styles.discoverySection}>
+            <View style={styles.discoveryDividerWrap}>
+              <View style={styles.discoveryDividerLine} />
+              <Text style={styles.discoveryDividerText}>LOOKING FOR A BEAUTICIAN?</Text>
+              <View style={styles.discoveryDividerLine} />
+            </View>
+
+            <TouchableOpacity
+              style={styles.findNearestCard}
+              onPress={onFindNearest}
+              activeOpacity={0.85}
+            >
+              <View style={styles.findNearestLeft}>
+                <View style={styles.findNearestIconCircle}>
+                  <LocationPinVector color="#ffffff" size={20} />
+                </View>
+                <View style={styles.findNearestTextWrap}>
+                  <View style={styles.findNearestHeaderRow}>
+                    <Text style={styles.findNearestTitle}>Find Nearest Beautician</Text>
+                    <View style={styles.guestBadge}>
+                      <Text style={styles.guestBadgeText}>NO LOGIN</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.findNearestSubtitle}>
+                    Locate top bridal, mehendi & hair artists around your PIN code with direct WhatsApp & call
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.findNearestChevronWrap}>
+                <ChevronRightVector color={colors.accent} size={18} />
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Trust Badges matching Prototype with Premium Vector Icons */}
         <View style={styles.trustContainer}>
@@ -476,5 +533,97 @@ const createStyles = (colors: ThemeColors) =>
     color: '#121212',
     fontWeight: '600',
     lineHeight: 18,
+  },
+  discoverySection: {
+    paddingHorizontal: 16,
+    marginTop: 18,
+  },
+  discoveryDividerWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 10,
+  },
+  discoveryDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.08)',
+  },
+  discoveryDividerText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+    color: 'rgba(18, 18, 18, 0.45)',
+  },
+  findNearestCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: colors.palePinkBorder,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  findNearestLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  findNearestIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  findNearestTextWrap: {
+    flex: 1,
+  },
+  findNearestHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 3,
+  },
+  findNearestTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#121212',
+    letterSpacing: -0.2,
+  },
+  guestBadge: {
+    backgroundColor: colors.tint2,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.palePinkBorder,
+  },
+  guestBadgeText: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    color: colors.accent,
+  },
+  findNearestSubtitle: {
+    fontSize: 11,
+    lineHeight: 15,
+    color: 'rgba(18, 18, 18, 0.6)',
+    fontWeight: '500',
+  },
+  findNearestChevronWrap: {
+    paddingLeft: 8,
   },
 });
