@@ -12,6 +12,7 @@ import {
   Platform,
   Dimensions,
   Alert,
+  FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -24,18 +25,21 @@ import Svg, {
   LinearGradient,
   Stop,
   G,
+  Text as SvgText,
 } from 'react-native-svg';
 import { ThemeColors } from '../theme/colors';
 import { useTheme } from '../theme/ThemeContext';
 import { apiClient } from '../services/apiClient';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const CARD_WIDTH = SCREEN_WIDTH - 36;
+const CARD_INTERVAL = CARD_WIDTH + 12;
 
 // -------------------------------------------------------------
 // 1. BESPOKE SVG VECTOR ICONS (Zero Emojis, Dribbble High-Craft)
 // -------------------------------------------------------------
 
-const BackArrowVector: React.FC<{ color?: string; size?: number }> = ({ color = '#111116', size = 18 }) => (
+const BackArrowVector: React.FC<{ color?: string; size?: number }> = ({ color = '#0f172a', size = 18 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M19 12H5M12 19l-7-7 7-7" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
@@ -66,7 +70,7 @@ const CrownProVector: React.FC<{ color?: string; size?: number }> = ({ color = '
   </Svg>
 );
 
-const VerifiedBadgeVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ff2d75', size = 13 }) => (
+const VerifiedBadgeVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ff2d75', size = 14 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
       d="M12 2l2.4 2.4 3.4-.4 1.4 3.1 3.1 1.4-.4 3.4 2.4 2.4-2.4 2.4.4 3.4-3.1 1.4-1.4 3.1-3.4-.4L12 22l-2.4-2.4-3.4.4-1.4-3.1-3.1-1.4.4-3.4L-0.3 12l2.4-2.4-.4-3.4 3.1-1.4 1.4-3.1 3.4.4L12 2z"
@@ -106,7 +110,7 @@ const MapNavigationVector: React.FC<{ color?: string; size?: number }> = ({ colo
   </Svg>
 );
 
-const CrosshairTargetVector: React.FC<{ color?: string; size?: number }> = ({ color = '#111116', size = 18 }) => (
+const CrosshairTargetVector: React.FC<{ color?: string; size?: number }> = ({ color = '#0f172a', size = 18 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Circle cx={12} cy={12} r={8} stroke={color} strokeWidth={2} />
     <Path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke={color} strokeWidth={2} strokeLinecap="round" />
@@ -114,20 +118,20 @@ const CrosshairTargetVector: React.FC<{ color?: string; size?: number }> = ({ co
   </Svg>
 );
 
-const CompassVector: React.FC<{ color?: string; size?: number }> = ({ color = '#111116', size = 16 }) => (
+const CompassVector: React.FC<{ color?: string; size?: number }> = ({ color = '#0f172a', size = 16 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Circle cx={12} cy={12} r={10} stroke={color} strokeWidth={1.8} />
     <Path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" stroke={color} strokeWidth={1.6} strokeLinejoin="round" />
   </Svg>
 );
 
-const ListVector: React.FC<{ color?: string; size?: number }> = ({ color = '#111116', size = 16 }) => (
+const ListVector: React.FC<{ color?: string; size?: number }> = ({ color = '#0f172a', size = 16 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
-const CloseVector: React.FC<{ color?: string; size?: number }> = ({ color = '#111116', size = 18 }) => (
+const CloseVector: React.FC<{ color?: string; size?: number }> = ({ color = '#0f172a', size = 18 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M18 6L6 18M6 6l12 12" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
   </Svg>
@@ -137,6 +141,30 @@ const EditPencilVector: React.FC<{ color?: string; size?: number }> = ({ color =
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke={color} strokeWidth={2} strokeLinecap="round" />
     <Path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke={color} strokeWidth={2} strokeLinecap="round" />
+  </Svg>
+);
+
+const ShieldCheckVector: React.FC<{ color?: string; size?: number }> = ({ color = '#10b981', size = 16 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+      stroke={color}
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path d="M9 12l2 2 4-4" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
+const SparkleVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ff2d75', size = 14 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 3v18M3 12h18M6.5 6.5l11 11M6.5 17.5l11-11"
+      stroke={color}
+      strokeWidth={2}
+      strokeLinecap="round"
+    />
   </Svg>
 );
 
@@ -190,8 +218,8 @@ const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
     services: ['HD Bridal Makeup', 'Muhurtham Saree Draping', 'Airbrush Makeup'],
     latitude: 11.0168,
     longitude: 76.9558,
-    mapX: 0.62,
-    mapY: 0.36,
+    mapX: 0.65,
+    mapY: 0.35,
   },
   {
     id: '2b919ddb-a83d-4cdd-b779-fb03b846b77c',
@@ -213,7 +241,7 @@ const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
     services: ['Bridal Makeover', 'Flower Hairstyling', 'Saree Pleating'],
     latitude: 11.0016,
     longitude: 76.9620,
-    mapX: 0.78,
+    mapX: 0.80,
     mapY: 0.48,
   },
   {
@@ -265,11 +293,19 @@ const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
 ];
 
 const FILTER_TABS = [
-  { id: 'all', label: 'All Makeovers' },
+  { id: 'all', label: 'All Studios' },
   { id: 'pro', label: '👑 Shilpi Pro' },
   { id: 'bridal', label: 'Bridal Artists' },
   { id: 'mehendi', label: 'Mehendi' },
   { id: 'hair', label: 'Hairstyling' },
+];
+
+const POPULAR_PIN_SUGGESTIONS = [
+  { pin: '641002', area: 'Gandhipuram, Coimbatore' },
+  { pin: '641018', area: 'Avinashi Road, Coimbatore' },
+  { pin: '628552', area: 'Kalugumalai, Kovilpatti' },
+  { pin: '600001', area: 'George Town, Chennai' },
+  { pin: '625001', area: 'Town Center, Madurai' },
 ];
 
 interface NearestBeauticiansScreenProps {
@@ -292,11 +328,12 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
   const [pincodeModalOpen, setPincodeModalOpen] = useState(false);
   const [manualPinInput, setManualPinInput] = useState('');
 
-  // Radar Pulse Animation
+  // Animation values
   const radarScale = useRef(new Animated.Value(1)).current;
   const pinSpring = useRef(new Animated.Value(1)).current;
-  const cardSlideAnim = useRef(new Animated.Value(0)).current;
+  const cardListRef = useRef<FlatList>(null);
 
+  // Radar Pulse Animation
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -363,7 +400,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             ...item,
             isExactPincode: isExact,
             mapX: 0.30 + ((i * 35) % 50) / 100,
-            mapY: 0.32 + ((i * 45) % 40) / 100,
+            mapY: 0.30 + ((i * 45) % 40) / 100,
           };
         });
         setStudios(mapped);
@@ -395,37 +432,6 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
     setLoading(false);
   };
 
-  const handleSelectPin = (studio: RegisteredMakeover) => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch {}
-    setSelectedStudio(studio);
-    pinSpring.setValue(0.8);
-    Animated.spring(pinSpring, {
-      toValue: 1,
-      friction: 4,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handleApplyManualPincode = () => {
-    const clean = manualPinInput.replace(/\D/g, '').trim();
-    if (clean.length !== 6) {
-      Alert.alert('Invalid PIN code', 'Please enter a valid 6-digit Indian PIN code.');
-      return;
-    }
-    setUserPincode(clean);
-    let detectedCity = userCity;
-    if (clean.startsWith('641')) detectedCity = 'Coimbatore';
-    else if (clean === '628552') detectedCity = 'Kalugumalai';
-    else if (clean.startsWith('600')) detectedCity = 'Chennai';
-    else if (clean.startsWith('625')) detectedCity = 'Madurai';
-
-    setUserCity(detectedCity);
-    setPincodeModalOpen(false);
-    filterByPincode(clean, detectedCity);
-  };
-
   // Filtered List based on Active Tab
   const filteredStudios = useMemo(() => {
     let list = [...studios];
@@ -453,20 +459,70 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
     return list;
   }, [studios, activeFilter]);
 
+  // Handle marker selection with spring & carousel synchronization
+  const handleSelectPin = (studio: RegisteredMakeover) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+    setSelectedStudio(studio);
+
+    // Spring animation on selected pin
+    pinSpring.setValue(0.7);
+    Animated.spring(pinSpring, {
+      toValue: 1,
+      friction: 4,
+      useNativeDriver: true,
+    }).start();
+
+    // Scroll carousel to the selected studio
+    const idx = filteredStudios.findIndex((s) => s.id === studio.id);
+    if (idx !== -1 && cardListRef.current) {
+      cardListRef.current.scrollToIndex({ index: idx, animated: true });
+    }
+  };
+
+  const handleApplyManualPincode = (pinToUse?: string) => {
+    const raw = pinToUse || manualPinInput;
+    const clean = raw.replace(/\D/g, '').trim();
+    if (clean.length !== 6) {
+      Alert.alert('Invalid PIN code', 'Please enter a valid 6-digit Indian PIN code.');
+      return;
+    }
+    setUserPincode(clean);
+    let detectedCity = userCity;
+    if (clean.startsWith('641')) detectedCity = 'Coimbatore';
+    else if (clean === '628552') detectedCity = 'Kalugumalai';
+    else if (clean.startsWith('600')) detectedCity = 'Chennai';
+    else if (clean.startsWith('625')) detectedCity = 'Madurai';
+
+    setUserCity(detectedCity);
+    setPincodeModalOpen(false);
+    filterByPincode(clean, detectedCity);
+  };
+
   // Actions
   const handleCall = (phone: string) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch {}
     Linking.openURL(`tel:${phone}`);
   };
 
   const handleWhatsApp = (studio: RegisteredMakeover) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch {}
     const cleanDigits = studio.phone.replace(/\D/g, '');
     const text = encodeURIComponent(
-      `Hello ${studio.businessName}, I found your studio on Shilpi. I would like to inquire about your bridal makeover services!`
+      `Hello ${studio.businessName}, I found your studio on Shilpi App. I would like to inquire about your bridal makeover packages!`
     );
     Linking.openURL(`https://wa.me/${cleanDigits}?text=${text}`);
   };
 
   const handleOpenMaps = (studio: RegisteredMakeover) => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
     const query = encodeURIComponent(`${studio.businessName}, ${studio.address}`);
     const url = Platform.select({
       ios: `maps:0,0?q=${query}`,
@@ -477,77 +533,111 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
   };
 
   // User coordinate on map canvas
-  const userMapX = SCREEN_WIDTH * 0.46;
-  const userMapY = SCREEN_HEIGHT * 0.45;
+  const userMapX = SCREEN_WIDTH * 0.44;
+  const userMapY = SCREEN_HEIGHT * 0.42;
+
+  // Selected Studio coordinates
+  const targetX = selectedStudio ? SCREEN_WIDTH * (selectedStudio.mapX || 0.65) : userMapX + 80;
+  const targetY = selectedStudio ? SCREEN_HEIGHT * (selectedStudio.mapY || 0.35) : userMapY - 80;
+  const midX = (userMapX + targetX) / 2;
+  const midY = (userMapY + targetY) / 2 - 35;
 
   return (
     <View style={styles.screen}>
       {viewMode === 'map' ? (
         // -------------------------------------------------------------
-        // 3. DRIBBLE NIXTIO STYLE FULL-BLEED INTERACTIVE MAP CANVAS
+        // 3. DRIBBBLE NIXTIO STYLE FULL-BLEED ARCHITECTURAL VECTOR MAP
         // -------------------------------------------------------------
         <View style={styles.fullBleedMapContainer}>
           <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT} style={StyleSheet.absoluteFill}>
             <Defs>
               <LinearGradient id="mapCanvasBg" x1="0%" y1="0%" x2="100%" y2="100%">
-                <Stop offset="0%" stopColor="#f4f6fa" />
-                <Stop offset="50%" stopColor="#f8f9fc" />
-                <Stop offset="100%" stopColor="#f1f3f8" />
+                <Stop offset="0%" stopColor="#f8fafc" />
+                <Stop offset="50%" stopColor="#f1f5f9" />
+                <Stop offset="100%" stopColor="#eef2f6" />
               </LinearGradient>
-              <LinearGradient id="riverPinkSoft" x1="0%" y1="0%" x2="100%" y2="100%">
-                <Stop offset="0%" stopColor="#ffeef4" stopOpacity="0.85" />
-                <Stop offset="100%" stopColor="#ffdce8" stopOpacity="0.45" />
+              <LinearGradient id="riverBlueSoft" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor="#e0f2fe" stopOpacity="0.85" />
+                <Stop offset="100%" stopColor="#bae6fd" stopOpacity="0.55" />
               </LinearGradient>
               <LinearGradient id="routePinkGlow" x1="0%" y1="0%" x2="100%" y2="100%">
                 <Stop offset="0%" stopColor="#ff2d75" />
-                <Stop offset="100%" stopColor="#e8276b" />
+                <Stop offset="100%" stopColor="#e11d48" />
+              </LinearGradient>
+              <LinearGradient id="parkGreenSoft" x1="0%" y1="0%" x2="100%" y2="100%">
+                <Stop offset="0%" stopColor="#ecfdf5" />
+                <Stop offset="100%" stopColor="#d1fae5" />
               </LinearGradient>
             </Defs>
 
             {/* Base Canvas */}
             <Rect width="100%" height="100%" fill="url(#mapCanvasBg)" />
 
-            {/* Architectural Urban City Blocks (Soft 3D Parcels) */}
-            <Rect x={SCREEN_WIDTH * 0.08} y={SCREEN_HEIGHT * 0.18} width={SCREEN_WIDTH * 0.35} height={SCREEN_HEIGHT * 0.10} rx={12} fill="#edf2f7" />
-            <Rect x={SCREEN_WIDTH * 0.52} y={SCREEN_HEIGHT * 0.16} width={SCREEN_WIDTH * 0.40} height={SCREEN_HEIGHT * 0.12} rx={12} fill="#edf2f7" />
-            <Rect x={SCREEN_WIDTH * 0.06} y={SCREEN_HEIGHT * 0.52} width={SCREEN_WIDTH * 0.36} height={SCREEN_HEIGHT * 0.12} rx={12} fill="#edf2f7" />
-            <Rect x={SCREEN_WIDTH * 0.50} y={SCREEN_HEIGHT * 0.54} width={SCREEN_WIDTH * 0.44} height={SCREEN_HEIGHT * 0.14} rx={12} fill="#edf2f7" />
+            {/* Urban Parcels & Architectural City Blocks (Subtle Shadows & Off-White Depth) */}
+            <Rect x={SCREEN_WIDTH * 0.05} y={SCREEN_HEIGHT * 0.16} width={SCREEN_WIDTH * 0.38} height={SCREEN_HEIGHT * 0.11} rx={16} fill="#ffffff" stroke="#e2e8f0" strokeWidth={1} />
+            <Rect x={SCREEN_WIDTH * 0.52} y={SCREEN_HEIGHT * 0.14} width={SCREEN_WIDTH * 0.42} height={SCREEN_HEIGHT * 0.12} rx={16} fill="#ffffff" stroke="#e2e8f0" strokeWidth={1} />
+            <Rect x={SCREEN_WIDTH * 0.04} y={SCREEN_HEIGHT * 0.48} width={SCREEN_WIDTH * 0.36} height={SCREEN_HEIGHT * 0.13} rx={16} fill="#ffffff" stroke="#e2e8f0" strokeWidth={1} />
+            <Rect x={SCREEN_WIDTH * 0.50} y={SCREEN_HEIGHT * 0.52} width={SCREEN_WIDTH * 0.44} height={SCREEN_HEIGHT * 0.15} rx={16} fill="#ffffff" stroke="#e2e8f0" strokeWidth={1} />
 
-            {/* Soft Ambient River Contour */}
+            {/* Botanical Parks & Green Oasis Enclaves (Signature Dribbble Touch) */}
+            <Rect x={SCREEN_WIDTH * 0.08} y={SCREEN_HEIGHT * 0.32} width={SCREEN_WIDTH * 0.30} height={SCREEN_HEIGHT * 0.09} rx={18} fill="url(#parkGreenSoft)" stroke="#a7f3d0" strokeWidth={1} />
+            <SvgText x={SCREEN_WIDTH * 0.11} y={SCREEN_HEIGHT * 0.37} fill="#059669" fontSize={8.5} fontWeight="700" letterSpacing={0.5}>
+              RACE COURSE GARDEN
+            </SvgText>
+
+            {/* Curved Waterway / Scenic Canal */}
             <Path
-              d={`M0,${SCREEN_HEIGHT * 0.68} C${SCREEN_WIDTH * 0.3},${SCREEN_HEIGHT * 0.62} ${SCREEN_WIDTH * 0.6},${SCREEN_HEIGHT * 0.74} ${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.65} L${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.72} C${SCREEN_WIDTH * 0.6},${SCREEN_HEIGHT * 0.80} ${SCREEN_WIDTH * 0.3},${SCREEN_HEIGHT * 0.68} 0,${SCREEN_HEIGHT * 0.74} Z`}
-              fill="url(#riverPinkSoft)"
+              d={`M0,${SCREEN_HEIGHT * 0.68} C${SCREEN_WIDTH * 0.32},${SCREEN_HEIGHT * 0.63} ${SCREEN_WIDTH * 0.65},${SCREEN_HEIGHT * 0.74} ${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.67} L${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.73} C${SCREEN_WIDTH * 0.65},${SCREEN_HEIGHT * 0.80} ${SCREEN_WIDTH * 0.32},${SCREEN_HEIGHT * 0.69} 0,${SCREEN_HEIGHT * 0.74} Z`}
+              fill="url(#riverBlueSoft)"
             />
 
-            {/* Secondary Street Road Grid (Slate / Charcoal) */}
-            <Path d={`M-30,${SCREEN_HEIGHT * 0.30} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.30}`} stroke="#e2e8f0" strokeWidth={3} />
-            <Path d={`M-30,${SCREEN_HEIGHT * 0.48} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.48}`} stroke="#e2e8f0" strokeWidth={3} />
-            <Path d={`M${SCREEN_WIDTH * 0.46},0 L${SCREEN_WIDTH * 0.46},${SCREEN_HEIGHT}`} stroke="#cbd5e1" strokeWidth={3.5} />
-            <Path d={`M${SCREEN_WIDTH * 0.85},0 L${SCREEN_WIDTH * 0.85},${SCREEN_HEIGHT}`} stroke="#e2e8f0" strokeWidth={2.5} />
+            {/* Bridge Decks Crossing Canal */}
+            <Rect x={SCREEN_WIDTH * 0.44} y={SCREEN_HEIGHT * 0.68} width={SCREEN_WIDTH * 0.08} height={SCREEN_HEIGHT * 0.035} rx={4} fill="#cbd5e1" />
 
-            {/* Primary Jet Black Dual-Carriageway Arterials */}
+            {/* Secondary Street Road Network */}
+            <Path d={`M-30,${SCREEN_HEIGHT * 0.28} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.28}`} stroke="#e2e8f0" strokeWidth={3} />
+            <Path d={`M-30,${SCREEN_HEIGHT * 0.45} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.45}`} stroke="#e2e8f0" strokeWidth={3} />
+            <Path d={`M${SCREEN_WIDTH * 0.44},0 L${SCREEN_WIDTH * 0.44},${SCREEN_HEIGHT}`} stroke="#cbd5e1" strokeWidth={4} />
+            <Path d={`M${SCREEN_WIDTH * 0.84},0 L${SCREEN_WIDTH * 0.84},${SCREEN_HEIGHT}`} stroke="#e2e8f0" strokeWidth={2.8} />
+
+            {/* Major Primary Dual-Carriageway Arterial (Jet Black / Midnight Slate) */}
             <Path
-              d={`M0,${SCREEN_HEIGHT * 0.38} Q${SCREEN_WIDTH * 0.45},${SCREEN_HEIGHT * 0.38} ${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.44}`}
+              d={`M0,${SCREEN_HEIGHT * 0.38} Q${SCREEN_WIDTH * 0.44},${SCREEN_HEIGHT * 0.38} ${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.44}`}
               stroke="#0f172a"
-              strokeWidth={4.5}
+              strokeWidth={5}
             />
+            {/* White Dashed Center Lane Marking */}
+            <Path
+              d={`M0,${SCREEN_HEIGHT * 0.38} Q${SCREEN_WIDTH * 0.44},${SCREEN_HEIGHT * 0.38} ${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.44}`}
+              stroke="#ffffff"
+              strokeWidth={1.2}
+              strokeDasharray="6, 6"
+            />
+
+            {/* Authentic Street Names Overlay (Clean Micro-Typography) */}
+            <SvgText x={SCREEN_WIDTH * 0.06} y={SCREEN_HEIGHT * 0.365} fill="#64748b" fontSize={8} fontWeight="700" letterSpacing={0.8}>
+              AVINASHI ARTERIAL
+            </SvgText>
+            <SvgText x={SCREEN_WIDTH * 0.54} y={SCREEN_HEIGHT * 0.425} fill="#64748b" fontSize={8} fontWeight="700" letterSpacing={0.8}>
+              CROSS CUT ROAD
+            </SvgText>
 
             {/* ACTIVE DRIBBLE NIXTIO STYLE NAVIGATION ROUTE POLYLINE (From user to selected studio) */}
             {selectedStudio && (
               <G>
                 {/* Route Glow Shadow */}
                 <Path
-                  d={`M${userMapX},${userMapY} Q${(userMapX + SCREEN_WIDTH * (selectedStudio.mapX || 0.6)) / 2},${userMapY - 30} ${SCREEN_WIDTH * (selectedStudio.mapX || 0.6)},${SCREEN_HEIGHT * (selectedStudio.mapY || 0.4)}`}
-                  stroke="rgba(255, 45, 117, 0.25)"
-                  strokeWidth={8}
+                  d={`M${userMapX},${userMapY} Q${midX},${midY} ${targetX},${targetY}`}
+                  stroke="rgba(255, 45, 117, 0.22)"
+                  strokeWidth={10}
                   fill="none"
                   strokeLinecap="round"
                 />
                 {/* Sharp Vibrant Core Route */}
                 <Path
-                  d={`M${userMapX},${userMapY} Q${(userMapX + SCREEN_WIDTH * (selectedStudio.mapX || 0.6)) / 2},${userMapY - 30} ${SCREEN_WIDTH * (selectedStudio.mapX || 0.6)},${SCREEN_HEIGHT * (selectedStudio.mapY || 0.4)}`}
+                  d={`M${userMapX},${userMapY} Q${midX},${midY} ${targetX},${targetY}`}
                   stroke="url(#routePinkGlow)"
-                  strokeWidth={4}
+                  strokeWidth={4.5}
                   fill="none"
                   strokeLinecap="round"
                 />
@@ -555,9 +645,19 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             )}
 
             {/* Intersections Indicator Dots */}
-            <Circle cx={SCREEN_WIDTH * 0.46} cy={SCREEN_HEIGHT * 0.38} r={3} fill="#ff2d75" />
-            <Circle cx={SCREEN_WIDTH * 0.85} cy={SCREEN_HEIGHT * 0.44} r={3} fill="#0f172a" />
+            <Circle cx={SCREEN_WIDTH * 0.44} cy={SCREEN_HEIGHT * 0.38} r={3.5} fill="#ff2d75" />
+            <Circle cx={SCREEN_WIDTH * 0.84} cy={SCREEN_HEIGHT * 0.44} r={3.5} fill="#0f172a" />
           </Svg>
+
+          {/* ACTIVE ROUTE FLOATING ETA & DISTANCE CAPSULE (Pinned on Route Curve) */}
+          {selectedStudio && (
+            <View style={[styles.routeEtaPill, { left: midX - 44, top: midY - 14 }]}>
+              <View style={styles.etaDotPulse} />
+              <Text style={styles.routeEtaPillText}>
+                {Math.max(2, Math.round(selectedStudio.distanceKm * 2.5))} MIN · {selectedStudio.distanceKm} KM
+              </Text>
+            </View>
+          )}
 
           {/* USER LIVE GPS BEACON (Pulsing Sonar & Hot Pink Dot) */}
           <View style={[styles.userGpsBeacon, { left: userMapX - 22, top: userMapY - 22 }]}>
@@ -592,7 +692,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                 key={studio.id}
                 style={[
                   styles.nixtioPinAnchor,
-                  { left: pinX - 30, top: pinY - 50 },
+                  { left: pinX - 34, top: pinY - 54 },
                   isSelected && styles.nixtioPinAnchorSelected,
                 ]}
                 onPress={() => handleSelectPin(studio)}
@@ -609,7 +709,9 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                     {studio.businessName}
                   </Text>
                   <View style={styles.pinDistDot} />
-                  <Text style={styles.pinDistText}>{studio.distanceKm}km</Text>
+                  <Text style={[styles.pinDistText, isSelected && styles.pinDistTextSelected]}>
+                    ₹{(studio.startingPrice / 1000).toFixed(1)}k
+                  </Text>
                 </View>
 
                 {/* 3D Elevated Pin Marker Head */}
@@ -630,7 +732,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                   </View>
                 </Animated.View>
 
-                {/* Pin Tip */}
+                {/* Pin Tip Anchor */}
                 <View style={[styles.nixtioPinTip, isSelected && { borderTopColor: '#ff2d75' }]} />
               </TouchableOpacity>
             );
@@ -642,7 +744,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
           <View style={[styles.floatingTopBarWrap, { top: insets.top + 8 }]}>
             {/* Back Button (Floating Circle) */}
             <TouchableOpacity style={styles.floatingCircleBtn} onPress={onGoBack} activeOpacity={0.82}>
-              <BackArrowVector color="#111116" size={18} />
+              <BackArrowVector color="#0f172a" size={18} />
             </TouchableOpacity>
 
             {/* Location Selector Pill (Zero Overflows: Flex Shrink city, PIN pinned) */}
@@ -662,7 +764,9 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                 <View style={styles.capsuleDot} />
                 <Text style={styles.capsulePinText}>{userPincode}</Text>
               </View>
-              <EditPencilVector color="#ff2d75" size={12} />
+              <View style={styles.capsuleChangeBadge}>
+                <Text style={styles.capsuleChangeText}>CHANGE</Text>
+              </View>
             </TouchableOpacity>
 
             {/* View Switcher Toggle */}
@@ -671,12 +775,12 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               onPress={() => setViewMode('list')}
               activeOpacity={0.82}
             >
-              <ListVector color="#111116" size={16} />
+              <ListVector color="#0f172a" size={16} />
             </TouchableOpacity>
           </View>
 
           {/* Floating Category Filter Chips (Right Below Header) */}
-          <View style={[styles.floatingFilterChipsRow, { top: insets.top + 62 }]}>
+          <View style={[styles.floatingFilterChipsRow, { top: insets.top + 64 }]}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsScroll}>
               {FILTER_TABS.map((tab) => {
                 const isSelected = activeFilter === tab.id;
@@ -684,7 +788,12 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                   <TouchableOpacity
                     key={tab.id}
                     style={[styles.floatingFilterPill, isSelected && styles.floatingFilterPillActive]}
-                    onPress={() => setActiveFilter(tab.id)}
+                    onPress={() => {
+                      try {
+                        Haptics.selectionAsync();
+                      } catch {}
+                      setActiveFilter(tab.id);
+                    }}
                     activeOpacity={0.8}
                   >
                     <Text style={[styles.floatingFilterText, isSelected && styles.floatingFilterTextActive]}>
@@ -697,124 +806,149 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
           </View>
 
           {/* Floating Right Map Actions (Re-center location) */}
-          <View style={[styles.floatingRightActions, { top: insets.top + 116 }]}>
+          <View style={[styles.floatingRightActions, { top: insets.top + 120 }]}>
             <TouchableOpacity
               style={styles.floatingActionIcon}
               onPress={() => filterByPincode(userPincode, userCity)}
               activeOpacity={0.8}
             >
-              <CrosshairTargetVector color="#111116" size={18} />
+              <CrosshairTargetVector color="#0f172a" size={18} />
             </TouchableOpacity>
           </View>
 
           {/* -------------------------------------------------------------
-              5. DRIBBLE NIXTIO STYLE BOTTOM FLOATING STUDIO PREVIEW CARD
+              5. DRIBBLE NIXTIO STYLE HORIZONTAL STUDIO CAROUSEL DECK
              ------------------------------------------------------------- */}
-          {selectedStudio && (
-            <View style={[styles.nixtioBottomCardContainer, { bottom: insets.bottom + 12 }]}>
-              <TouchableOpacity
-                style={styles.nixtioCardSurface}
-                onPress={() => setDetailModalOpen(true)}
-                activeOpacity={0.94}
-              >
-                {/* Drag Handle Indicator */}
-                <View style={styles.cardDragHandle} />
+          <View style={[styles.carouselContainer, { bottom: insets.bottom + 10 }]}>
+            <FlatList
+              ref={cardListRef}
+              data={filteredStudios}
+              keyExtractor={(item) => item.id}
+              horizontal
+              pagingEnabled={false}
+              snapToInterval={CARD_INTERVAL}
+              decelerationRate="fast"
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.carouselScrollPadding}
+              onMomentumScrollEnd={(e) => {
+                const offset = e.nativeEvent.contentOffset.x;
+                const index = Math.round(offset / CARD_INTERVAL);
+                if (filteredStudios[index] && filteredStudios[index].id !== selectedStudio.id) {
+                  setSelectedStudio(filteredStudios[index]);
+                }
+              }}
+              renderItem={({ item: studio }) => {
+                const isSelected = selectedStudio?.id === studio.id;
+                return (
+                  <View style={[styles.carouselCardItem, isSelected && styles.carouselCardItemSelected]}>
+                    <TouchableOpacity
+                      activeOpacity={0.94}
+                      onPress={() => {
+                        setSelectedStudio(studio);
+                        setDetailModalOpen(true);
+                      }}
+                    >
+                      {/* Drag / Grip Indicator */}
+                      <View style={styles.cardDragHandle} />
 
-                {/* Studio Header Row */}
-                <View style={styles.cardHeaderRow}>
-                  <View style={styles.cardAvatar}>
-                    <Text style={styles.cardAvatarText}>
-                      {selectedStudio.businessName.charAt(0)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.cardInfoCol}>
-                    <View style={styles.cardTitleWrap}>
-                      <Text style={styles.cardTitleText} numberOfLines={1}>
-                        {selectedStudio.businessName}
-                      </Text>
-                      {selectedStudio.isPro ? (
-                        <View style={styles.proGoldBadge}>
-                          <CrownProVector color="#ffffff" size={9} />
-                          <Text style={styles.proGoldText}>PRO</Text>
+                      {/* Header Row */}
+                      <View style={styles.cardHeaderRow}>
+                        <View style={[styles.cardAvatar, studio.isPro && styles.cardAvatarPro]}>
+                          <Text style={[styles.cardAvatarText, studio.isPro && styles.cardAvatarTextPro]}>
+                            {studio.businessName.charAt(0)}
+                          </Text>
                         </View>
-                      ) : (
-                        <VerifiedBadgeVector color="#ff2d75" size={13} />
-                      )}
-                    </View>
 
-                    <Text style={styles.cardOwnerSub} numberOfLines={1}>
-                      By {selectedStudio.ownerName} · {selectedStudio.city}
-                    </Text>
+                        <View style={styles.cardInfoCol}>
+                          <View style={styles.cardTitleWrap}>
+                            <Text style={styles.cardTitleText} numberOfLines={1}>
+                              {studio.businessName}
+                            </Text>
+                            {studio.isPro ? (
+                              <View style={styles.proGoldBadge}>
+                                <CrownProVector color="#ffffff" size={9} />
+                                <Text style={styles.proGoldText}>PRO</Text>
+                              </View>
+                            ) : (
+                              <VerifiedBadgeVector color="#ff2d75" size={13} />
+                            )}
+                          </View>
 
-                    {/* Meta Indicators: Distance, Estimated Time, PIN match */}
-                    <View style={styles.cardMetaRow}>
-                      <View style={styles.distanceBadgePill}>
-                        <LocationPinVector color="#ff2d75" size={10} />
-                        <Text style={styles.distanceBadgeText}>{selectedStudio.distanceKm} km</Text>
+                          <Text style={styles.cardOwnerSub} numberOfLines={1}>
+                            By {studio.ownerName} · {studio.city}
+                          </Text>
+
+                          {/* Meta Indicators: Distance, Estimated Time, PIN match */}
+                          <View style={styles.cardMetaRow}>
+                            <View style={styles.distanceBadgePill}>
+                              <LocationPinVector color="#ff2d75" size={10} />
+                              <Text style={styles.distanceBadgeText}>{studio.distanceKm} km</Text>
+                            </View>
+
+                            <View style={styles.etaBadgePill}>
+                              <Text style={styles.etaBadgeText}>~{Math.max(2, Math.round(studio.distanceKm * 2.5))} min</Text>
+                            </View>
+
+                            <View style={[styles.pinBadgePill, studio.isExactPincode && styles.pinExactBadgePill]}>
+                              <Text style={[styles.pinBadgeText, studio.isExactPincode && styles.pinExactBadgeText]}>
+                                {studio.isExactPincode ? `Exact PIN ${studio.pincode}` : `PIN ${studio.pincode}`}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
                       </View>
 
-                      <View style={styles.etaBadgePill}>
-                        <Text style={styles.etaBadgeText}>~{Math.max(2, Math.round(selectedStudio.distanceKm * 2.5))} min</Text>
-                      </View>
-
-                      <View style={[styles.pinBadgePill, selectedStudio.isExactPincode && styles.pinExactBadgePill]}>
-                        <Text style={[styles.pinBadgeText, selectedStudio.isExactPincode && styles.pinExactBadgeText]}>
-                          PIN {selectedStudio.pincode}
+                      {/* Real Services & Pricing Row */}
+                      <View style={styles.cardServicesRow}>
+                        <View style={styles.chipsWrap}>
+                          {studio.services.slice(0, 2).map((srv: string, idx: number) => (
+                            <View key={`srv-${idx}`} style={styles.servicePill}>
+                              <Text style={styles.servicePillText} numberOfLines={1}>
+                                {srv}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                        <Text style={styles.priceHighlight}>
+                          From ₹{studio.startingPrice.toLocaleString('en-IN')}
                         </Text>
                       </View>
-                    </View>
-                  </View>
-                </View>
 
-                {/* Real Services & Pricing Row */}
-                <View style={styles.cardServicesRow}>
-                  <View style={styles.chipsWrap}>
-                    {selectedStudio.services.slice(0, 2).map((srv, idx) => (
-                      <View key={`srv-${idx}`} style={styles.servicePill}>
-                        <Text style={styles.servicePillText} numberOfLines={1}>
-                          {srv}
-                        </Text>
+                      {/* Action Buttons Row: Black Call, Green WhatsApp, Directions */}
+                      <View style={styles.cardActionsRow}>
+                        <TouchableOpacity
+                          style={styles.actionBtnCall}
+                          onPress={() => handleCall(studio.phone)}
+                          activeOpacity={0.82}
+                        >
+                          <PhoneCallVector color="#ffffff" size={13} />
+                          <Text style={styles.actionBtnCallText}>Call</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.actionBtnWhatsApp}
+                          onPress={() => handleWhatsApp(studio)}
+                          activeOpacity={0.82}
+                        >
+                          <WhatsAppVector color="#ffffff" size={14} />
+                          <Text style={styles.actionBtnWhatsAppText}>WhatsApp</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.actionBtnDirections}
+                          onPress={() => handleOpenMaps(studio)}
+                          activeOpacity={0.82}
+                        >
+                          <MapNavigationVector color="#ff2d75" size={13} />
+                          <Text style={styles.actionBtnDirectionsText}>Directions</Text>
+                        </TouchableOpacity>
                       </View>
-                    ))}
+                    </TouchableOpacity>
                   </View>
-                  <Text style={styles.priceHighlight}>
-                    From ₹{selectedStudio.startingPrice.toLocaleString('en-IN')}
-                  </Text>
-                </View>
-
-                {/* Action Buttons Row: Black Call, Green WhatsApp, Soft Pink Directions */}
-                <View style={styles.cardActionsRow}>
-                  <TouchableOpacity
-                    style={styles.actionBtnCall}
-                    onPress={() => handleCall(selectedStudio.phone)}
-                    activeOpacity={0.82}
-                  >
-                    <PhoneCallVector color="#ffffff" size={13} />
-                    <Text style={styles.actionBtnCallText}>Call</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.actionBtnWhatsApp}
-                    onPress={() => handleWhatsApp(selectedStudio)}
-                    activeOpacity={0.82}
-                  >
-                    <WhatsAppVector color="#ffffff" size={14} />
-                    <Text style={styles.actionBtnWhatsAppText}>WhatsApp</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.actionBtnDirections}
-                    onPress={() => handleOpenMaps(selectedStudio)}
-                    activeOpacity={0.82}
-                  >
-                    <MapNavigationVector color="#ff2d75" size={13} />
-                    <Text style={styles.actionBtnDirectionsText}>Directions</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            </View>
-          )}
+                );
+              }}
+            />
+          </View>
         </View>
       ) : (
         // -------------------------------------------------------------
@@ -824,7 +958,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
           {/* List Top Bar */}
           <View style={styles.listTopBar}>
             <TouchableOpacity style={styles.floatingCircleBtn} onPress={onGoBack} activeOpacity={0.8}>
-              <BackArrowVector color="#111116" size={18} />
+              <BackArrowVector color="#0f172a" size={18} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -841,7 +975,9 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                 <View style={styles.capsuleDot} />
                 <Text style={styles.capsulePinText}>{userPincode}</Text>
               </View>
-              <EditPencilVector color="#ff2d75" size={12} />
+              <View style={styles.capsuleChangeBadge}>
+                <Text style={styles.capsuleChangeText}>CHANGE</Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -855,9 +991,12 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
 
           {/* List Content */}
           <ScrollView contentContainerStyle={styles.listScrollContent} showsVerticalScrollIndicator={false}>
-            <Text style={styles.listHeaderTitle}>
-              {filteredStudios.length} Registered Beauticians Near {userCity}
-            </Text>
+            <View style={styles.listHeaderBadgeRow}>
+              <Text style={styles.listHeaderTitle}>
+                {filteredStudios.length} Registered Beauticians Near {userCity}
+              </Text>
+              <Text style={styles.listHeaderSub}>Ranked by Shilpi Pro & verified orders</Text>
+            </View>
 
             {filteredStudios.map((studio) => (
               <TouchableOpacity
@@ -870,8 +1009,10 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                 activeOpacity={0.88}
               >
                 <View style={styles.listCardTop}>
-                  <View style={styles.listAvatar}>
-                    <Text style={styles.listAvatarText}>{studio.businessName.charAt(0)}</Text>
+                  <View style={[styles.listAvatar, studio.isPro && styles.listAvatarPro]}>
+                    <Text style={[styles.listAvatarText, studio.isPro && styles.listAvatarTextPro]}>
+                      {studio.businessName.charAt(0)}
+                    </Text>
                   </View>
 
                   <View style={styles.listInfoWrap}>
@@ -967,11 +1108,11 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               </View>
 
               <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setDetailModalOpen(false)}>
-                <CloseVector color="#111116" size={16} />
+                <CloseVector color="#0f172a" size={16} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: SCREEN_HEIGHT * 0.50 }}>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: SCREEN_HEIGHT * 0.52 }}>
               {/* Real Verified Information Card */}
               <View style={styles.modalStatsCard}>
                 <View style={styles.modalStatCol}>
@@ -1022,6 +1163,17 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                   </View>
                 ))}
               </View>
+
+              {/* Verified Shilpi Partner Guarantee Card */}
+              <View style={styles.modalGuaranteeCard}>
+                <ShieldCheckVector color="#10b981" size={18} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.modalGuaranteeTitle}>Verified Shilpi Partner Studio</Text>
+                  <Text style={styles.modalGuaranteeDesc}>
+                    KYC verified, authenticated phone identity, and certified bridal makeover provider.
+                  </Text>
+                </View>
+              </View>
             </ScrollView>
 
             {/* Bottom CTA Row */}
@@ -1032,7 +1184,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                 activeOpacity={0.82}
               >
                 <PhoneCallVector color="#ffffff" size={15} />
-                <Text style={styles.modalCallBtnText}>Call</Text>
+                <Text style={styles.modalCallBtnText}>Call Studio</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -1055,21 +1207,20 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
         <View style={styles.modalBackdrop}>
           <View style={styles.pincodeModalCard}>
             <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalStudioName}>Enter 6-Digit PIN Code</Text>
-              <TouchableOpacity onPress={() => setPincodeModalOpen(false)}>
-                <CloseVector color="#111116" size={16} />
+              <View>
+                <Text style={styles.modalStudioName}>Enter PIN Code</Text>
+                <Text style={styles.modalOwnerName}>Find registered beauticians near any location</Text>
+              </View>
+              <TouchableOpacity onPress={() => setPincodeModalOpen(false)} style={styles.modalCloseBtn}>
+                <CloseVector color="#0f172a" size={16} />
               </TouchableOpacity>
             </View>
-
-            <Text style={styles.pincodePromptText}>
-              Locate registered makeover artists by postal PIN code:
-            </Text>
 
             <TextInput
               style={styles.pincodeInput}
               keyboardType="number-pad"
-              placeholder="e.g. 641002, 628552, 600001"
-              placeholderTextColor="rgba(0, 0, 0, 0.4)"
+              placeholder="e.g. 641002"
+              placeholderTextColor="rgba(15, 23, 42, 0.4)"
               value={manualPinInput}
               onChangeText={setManualPinInput}
               maxLength={6}
@@ -1077,11 +1228,26 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
 
             <TouchableOpacity
               style={styles.applyPinBtn}
-              onPress={handleApplyManualPincode}
+              onPress={() => handleApplyManualPincode()}
               activeOpacity={0.85}
             >
-              <Text style={styles.applyPinText}>SEARCH BEAUTICIANS</Text>
+              <Text style={styles.applyPinText}>SEARCH PIN CODE</Text>
             </TouchableOpacity>
+
+            <Text style={styles.suggestionsHeading}>QUICK LOCATIONS</Text>
+            <View style={styles.suggestionsGrid}>
+              {POPULAR_PIN_SUGGESTIONS.map((item) => (
+                <TouchableOpacity
+                  key={item.pin}
+                  style={styles.suggestionPill}
+                  onPress={() => handleApplyManualPincode(item.pin)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.suggestionPin}>{item.pin}</Text>
+                  <Text style={styles.suggestionArea} numberOfLines={1}>{item.area}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
       </Modal>
@@ -1114,19 +1280,19 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       zIndex: 50,
     },
     floatingCircleBtn: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: '#ffffff',
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 3 },
+      shadowColor: '#0f172a',
+      shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.10,
-      shadowRadius: 8,
-      elevation: 4,
+      shadowRadius: 10,
+      elevation: 5,
       borderWidth: 1,
-      borderColor: 'rgba(0, 0, 0, 0.05)',
+      borderColor: '#e2e8f0',
       flexShrink: 0,
     },
     floatingLocationCapsule: {
@@ -1138,13 +1304,13 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       paddingHorizontal: 12,
       borderRadius: 22,
       borderWidth: 1.5,
-      borderColor: '#ffd6e4',
-      shadowColor: '#000000',
+      borderColor: '#ffe4ee',
+      shadowColor: '#0f172a',
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.08,
+      shadowOpacity: 0.10,
       shadowRadius: 10,
-      elevation: 4,
-      minWidth: 0, // CRITICAL FOR TEXT OVERFLOW
+      elevation: 5,
+      minWidth: 0,
       gap: 6,
     },
     locationContentWrap: {
@@ -1157,14 +1323,14 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     capsuleCityText: {
       fontSize: 12,
       fontWeight: '700',
-      color: '#111116',
+      color: '#0f172a',
       flexShrink: 1,
     },
     capsuleDot: {
       width: 3,
       height: 3,
       borderRadius: 1.5,
-      backgroundColor: 'rgba(0, 0, 0, 0.3)',
+      backgroundColor: '#94a3b8',
       flexShrink: 0,
     },
     capsulePinText: {
@@ -1172,6 +1338,20 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       fontWeight: '800',
       color: '#ff2d75',
       flexShrink: 0,
+    },
+    capsuleChangeBadge: {
+      paddingHorizontal: 6,
+      paddingVertical: 2.5,
+      borderRadius: 6,
+      backgroundColor: '#fff1f6',
+      borderWidth: 1,
+      borderColor: '#ffd2e3',
+    },
+    capsuleChangeText: {
+      fontSize: 8.5,
+      fontWeight: '800',
+      color: '#ff2d75',
+      letterSpacing: 0.5,
     },
     floatingFilterChipsRow: {
       position: 'absolute',
@@ -1184,26 +1364,26 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       gap: 6,
     },
     floatingFilterPill: {
-      paddingVertical: 6,
-      paddingHorizontal: 12,
-      borderRadius: 16,
+      paddingVertical: 7,
+      paddingHorizontal: 14,
+      borderRadius: 18,
       backgroundColor: '#ffffff',
       borderWidth: 1,
-      borderColor: 'rgba(0, 0, 0, 0.06)',
-      shadowColor: '#000000',
+      borderColor: '#e2e8f0',
+      shadowColor: '#0f172a',
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.06,
-      shadowRadius: 5,
+      shadowOpacity: 0.08,
+      shadowRadius: 6,
       elevation: 3,
     },
     floatingFilterPillActive: {
-      backgroundColor: '#ff2d75',
-      borderColor: '#ff2d75',
+      backgroundColor: '#0f172a',
+      borderColor: '#0f172a',
     },
     floatingFilterText: {
-      fontSize: 11,
+      fontSize: 11.5,
       fontWeight: '700',
-      color: '#334155',
+      color: '#475569',
     },
     floatingFilterTextActive: {
       color: '#ffffff',
@@ -1214,19 +1394,47 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       zIndex: 48,
     },
     floatingActionIcon: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: '#ffffff',
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.10,
-      shadowRadius: 8,
-      elevation: 4,
+      shadowColor: '#0f172a',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.12,
+      shadowRadius: 10,
+      elevation: 5,
       borderWidth: 1,
-      borderColor: 'rgba(0, 0, 0, 0.05)',
+      borderColor: '#e2e8f0',
+    },
+    routeEtaPill: {
+      position: 'absolute',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: '#0f172a',
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 10,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      elevation: 6,
+      zIndex: 15,
+    },
+    etaDotPulse: {
+      width: 5,
+      height: 5,
+      borderRadius: 2.5,
+      backgroundColor: '#ff2d75',
+    },
+    routeEtaPillText: {
+      fontSize: 8.5,
+      fontWeight: '800',
+      color: '#ffffff',
+      letterSpacing: 0.4,
     },
     userGpsBeacon: {
       position: 'absolute',
@@ -1238,10 +1446,10 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     },
     userGpsSonarWave: {
       position: 'absolute',
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: 'rgba(255, 45, 117, 0.22)',
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: 'rgba(255, 45, 117, 0.25)',
     },
     userGpsCorePoint: {
       width: 18,
@@ -1304,12 +1512,12 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       borderWidth: 1.2,
       borderColor: '#e2e8f0',
       marginBottom: 3,
-      shadowColor: '#000000',
+      shadowColor: '#0f172a',
       shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.12,
       shadowRadius: 6,
       elevation: 4,
-      maxWidth: 120,
+      maxWidth: 130,
     },
     nixtioPinPillSelected: {
       borderColor: '#ff2d75',
@@ -1321,7 +1529,7 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     nixtioPinPillText: {
       fontSize: 9.5,
       fontWeight: '700',
-      color: '#111116',
+      color: '#0f172a',
       flexShrink: 1,
     },
     nixtioPinPillTextSelected: {
@@ -1331,34 +1539,37 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       width: 2.5,
       height: 2.5,
       borderRadius: 1.25,
-      backgroundColor: 'rgba(0, 0, 0, 0.25)',
+      backgroundColor: '#94a3b8',
       flexShrink: 0,
     },
     pinDistText: {
       fontSize: 9,
       fontWeight: '800',
-      color: '#ff2d75',
+      color: '#0f172a',
       flexShrink: 0,
     },
+    pinDistTextSelected: {
+      color: '#ff2d75',
+    },
     nixtioPinHead: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      backgroundColor: '#111116',
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: '#0f172a',
       borderWidth: 2,
-      borderColor: '#ff2d75',
+      borderColor: '#e2e8f0',
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 3 },
+      shadowColor: '#0f172a',
+      shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.25,
-      shadowRadius: 5,
-      elevation: 5,
+      shadowRadius: 6,
+      elevation: 6,
     },
     nixtioPinInner: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
       backgroundColor: '#ffffff',
       justifyContent: 'center',
       alignItems: 'center',
@@ -1367,9 +1578,9 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       backgroundColor: '#ffffff',
     },
     nixtioPinChar: {
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: '900',
-      color: '#111116',
+      color: '#0f172a',
     },
     nixtioPinCharSelected: {
       color: '#ff2d75',
@@ -1377,58 +1588,74 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     nixtioPinTip: {
       width: 0,
       height: 0,
-      borderLeftWidth: 4,
-      borderRightWidth: 4,
-      borderTopWidth: 5,
+      borderLeftWidth: 5,
+      borderRightWidth: 5,
+      borderTopWidth: 6,
       borderLeftColor: 'transparent',
       borderRightColor: 'transparent',
-      borderTopColor: '#111116',
+      borderTopColor: '#0f172a',
     },
-    nixtioBottomCardContainer: {
+    carouselContainer: {
       position: 'absolute',
-      left: 14,
-      right: 14,
+      left: 0,
+      right: 0,
       zIndex: 60,
     },
-    nixtioCardSurface: {
+    carouselScrollPadding: {
+      paddingHorizontal: 18,
+      gap: 12,
+    },
+    carouselCardItem: {
+      width: CARD_WIDTH,
       backgroundColor: '#ffffff',
       borderRadius: 24,
       padding: 16,
       borderWidth: 1.5,
-      borderColor: '#ffd6e4',
-      shadowColor: '#000000',
+      borderColor: '#e2e8f0',
+      shadowColor: '#0f172a',
       shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.12,
+      shadowOpacity: 0.14,
       shadowRadius: 20,
-      elevation: 8,
+      elevation: 10,
+    },
+    carouselCardItemSelected: {
+      borderColor: '#ff2d75',
     },
     cardDragHandle: {
-      width: 34,
+      width: 36,
       height: 4,
       borderRadius: 2,
       backgroundColor: '#e2e8f0',
       alignSelf: 'center',
-      marginBottom: 12,
+      marginBottom: 10,
     },
     cardHeaderRow: {
       flexDirection: 'row',
+      alignItems: 'center',
       gap: 12,
+      marginBottom: 10,
     },
     cardAvatar: {
       width: 48,
       height: 48,
-      borderRadius: 16,
-      backgroundColor: '#fff0f5',
+      borderRadius: 24,
+      backgroundColor: '#f1f5f9',
       borderWidth: 1.5,
-      borderColor: '#ff2d75',
+      borderColor: '#cbd5e1',
       justifyContent: 'center',
       alignItems: 'center',
-      flexShrink: 0,
+    },
+    cardAvatarPro: {
+      borderColor: '#f59e0b',
+      backgroundColor: '#fef3c7',
     },
     cardAvatarText: {
-      fontSize: 19,
-      fontWeight: '800',
-      color: '#ff2d75',
+      fontSize: 18,
+      fontWeight: '900',
+      color: '#0f172a',
+    },
+    cardAvatarTextPro: {
+      color: '#b45309',
     },
     cardInfoCol: {
       flex: 1,
@@ -1438,62 +1665,67 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      minWidth: 0,
+      marginBottom: 2,
     },
     cardTitleText: {
       fontSize: 15,
       fontWeight: '800',
-      color: '#111116',
+      color: '#0f172a',
       letterSpacing: -0.3,
       flexShrink: 1,
     },
     proGoldBadge: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 2.5,
-      backgroundColor: '#f59e0b',
-      paddingVertical: 2,
+      gap: 3,
+      backgroundColor: '#0f172a',
       paddingHorizontal: 6,
+      paddingVertical: 2,
       borderRadius: 6,
-      flexShrink: 0,
+      borderWidth: 1,
+      borderColor: '#f59e0b',
     },
     proGoldText: {
       fontSize: 8.5,
       fontWeight: '900',
-      color: '#ffffff',
+      color: '#fbbf24',
       letterSpacing: 0.5,
     },
     cardOwnerSub: {
-      fontSize: 11,
-      color: 'rgba(17, 17, 22, 0.6)',
-      marginTop: 2,
+      fontSize: 11.5,
+      fontWeight: '500',
+      color: '#64748b',
+      marginBottom: 6,
     },
     cardMetaRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
-      marginTop: 6,
       flexWrap: 'wrap',
+      gap: 6,
     },
     distanceBadgePill: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 3,
-      backgroundColor: '#fff0f5',
-      paddingVertical: 2,
+      backgroundColor: '#fff1f6',
       paddingHorizontal: 6,
+      paddingVertical: 2,
       borderRadius: 6,
+      borderWidth: 1,
+      borderColor: '#ffd2e3',
     },
     distanceBadgeText: {
-      fontSize: 10,
-      fontWeight: '700',
+      fontSize: 9.5,
+      fontWeight: '800',
       color: '#ff2d75',
     },
     etaBadgePill: {
       backgroundColor: '#f1f5f9',
-      paddingVertical: 2,
       paddingHorizontal: 6,
+      paddingVertical: 2,
       borderRadius: 6,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
     },
     etaBadgeText: {
       fontSize: 9.5,
@@ -1502,47 +1734,50 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     },
     pinBadgePill: {
       backgroundColor: '#f8fafc',
-      paddingVertical: 2,
       paddingHorizontal: 6,
+      paddingVertical: 2,
       borderRadius: 6,
       borderWidth: 1,
       borderColor: '#e2e8f0',
+    },
+    pinExactBadgePill: {
+      backgroundColor: '#ecfdf5',
+      borderColor: '#a7f3d0',
     },
     pinBadgeText: {
       fontSize: 9.5,
       fontWeight: '700',
       color: '#64748b',
     },
-    pinExactBadgePill: {
-      backgroundColor: '#ecfdf5',
-      borderColor: '#a7f3d0',
-    },
     pinExactBadgeText: {
       color: '#059669',
+      fontWeight: '800',
     },
     cardServicesRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginTop: 12,
-      paddingTop: 10,
+      paddingTop: 8,
+      paddingBottom: 10,
       borderTopWidth: 1,
       borderTopColor: '#f1f5f9',
-      gap: 8,
+      gap: 6,
     },
     chipsWrap: {
-      flex: 1,
       flexDirection: 'row',
-      gap: 5,
+      alignItems: 'center',
+      gap: 4,
+      flex: 1,
       minWidth: 0,
-      overflow: 'hidden',
     },
     servicePill: {
-      backgroundColor: '#f1f5f9',
-      paddingVertical: 3.5,
+      backgroundColor: '#f8fafc',
       paddingHorizontal: 7,
+      paddingVertical: 3,
       borderRadius: 6,
-      maxWidth: 115,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+      maxWidth: 110,
     },
     servicePillText: {
       fontSize: 9.5,
@@ -1557,22 +1792,23 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     },
     cardActionsRow: {
       flexDirection: 'row',
+      alignItems: 'center',
       gap: 8,
-      marginTop: 12,
+      marginTop: 2,
     },
     actionBtnCall: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
+      gap: 5,
       backgroundColor: '#0f172a',
       paddingVertical: 10,
       borderRadius: 12,
-      gap: 5,
     },
     actionBtnCallText: {
       fontSize: 11.5,
-      fontWeight: '700',
+      fontWeight: '800',
       color: '#ffffff',
     },
     actionBtnWhatsApp: {
@@ -1580,10 +1816,15 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#25D366',
+      gap: 5,
+      backgroundColor: '#ff2d75',
       paddingVertical: 10,
       borderRadius: 12,
-      gap: 5,
+      shadowColor: '#ff2d75',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.35,
+      shadowRadius: 6,
+      elevation: 4,
     },
     actionBtnWhatsAppText: {
       fontSize: 11.5,
@@ -1591,74 +1832,88 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       color: '#ffffff',
     },
     actionBtnDirections: {
-      flex: 1.1,
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#fff0f5',
+      gap: 5,
+      backgroundColor: '#ffffff',
+      paddingVertical: 9,
       borderRadius: 12,
-      borderWidth: 1,
-      borderColor: '#ffd6e4',
-      paddingVertical: 10,
-      gap: 4,
+      borderWidth: 1.2,
+      borderColor: '#e2e8f0',
     },
     actionBtnDirectionsText: {
-      fontSize: 11.5,
-      fontWeight: '700',
+      fontSize: 11,
+      fontWeight: '800',
       color: '#ff2d75',
     },
     listTopBar: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 14,
-      paddingVertical: 10,
       gap: 8,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
       backgroundColor: '#ffffff',
       borderBottomWidth: 1,
-      borderBottomColor: '#ebecef',
+      borderBottomColor: '#f1f5f9',
     },
     listScrollContent: {
       padding: 14,
-      gap: 10,
+      gap: 12,
+    },
+    listHeaderBadgeRow: {
+      marginBottom: 4,
     },
     listHeaderTitle: {
-      fontSize: 11.5,
-      fontWeight: '700',
-      letterSpacing: 0.5,
+      fontSize: 15,
+      fontWeight: '800',
+      color: '#0f172a',
+      letterSpacing: -0.3,
+    },
+    listHeaderSub: {
+      fontSize: 11,
+      fontWeight: '500',
       color: '#64748b',
-      marginBottom: 2,
+      marginTop: 2,
     },
     listCard: {
       backgroundColor: '#ffffff',
       borderRadius: 18,
       padding: 14,
-      borderWidth: 1.5,
-      borderColor: '#ffd6e4',
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.05,
-      shadowRadius: 5,
-      elevation: 2,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+      shadowColor: '#0f172a',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
+      elevation: 3,
     },
     listCardTop: {
       flexDirection: 'row',
-      gap: 10,
+      gap: 12,
     },
     listAvatar: {
       width: 44,
       height: 44,
-      borderRadius: 14,
-      backgroundColor: '#fff0f5',
+      borderRadius: 22,
+      backgroundColor: '#f1f5f9',
       borderWidth: 1.5,
-      borderColor: '#ff2d75',
+      borderColor: '#cbd5e1',
       justifyContent: 'center',
       alignItems: 'center',
-      flexShrink: 0,
+    },
+    listAvatarPro: {
+      borderColor: '#f59e0b',
+      backgroundColor: '#fef3c7',
     },
     listAvatarText: {
       fontSize: 16,
-      fontWeight: '800',
-      color: '#ff2d75',
+      fontWeight: '900',
+      color: '#0f172a',
+    },
+    listAvatarTextPro: {
+      color: '#b45309',
     },
     listInfoWrap: {
       flex: 1,
@@ -1667,17 +1922,19 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     listStudioName: {
       fontSize: 14,
       fontWeight: '800',
-      color: '#111116',
+      color: '#0f172a',
       flexShrink: 1,
     },
     listOwnerName: {
       fontSize: 11,
-      color: 'rgba(17, 17, 22, 0.6)',
+      fontWeight: '500',
+      color: '#64748b',
       marginTop: 1,
     },
     listAddress: {
-      fontSize: 10,
-      color: 'rgba(17, 17, 22, 0.5)',
+      fontSize: 10.5,
+      fontWeight: '400',
+      color: '#94a3b8',
       marginTop: 2,
     },
     listBadgesRow: {
@@ -1685,18 +1942,17 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       alignItems: 'center',
       gap: 6,
       marginTop: 6,
-      flexWrap: 'wrap',
     },
     ordersBadgePill: {
-      backgroundColor: '#eff6ff',
-      paddingVertical: 2,
+      backgroundColor: '#f1f5f9',
       paddingHorizontal: 6,
+      paddingVertical: 2,
       borderRadius: 6,
     },
     ordersBadgeText: {
       fontSize: 9.5,
       fontWeight: '700',
-      color: '#2563eb',
+      color: '#334155',
     },
     listCardDivider: {
       height: 1,
@@ -1705,21 +1961,22 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     },
     listActionsRow: {
       flexDirection: 'row',
-      gap: 6,
+      alignItems: 'center',
+      gap: 8,
     },
     btnCallSmall: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#0f172a',
-      paddingVertical: 8,
-      borderRadius: 8,
       gap: 4,
+      backgroundColor: '#0f172a',
+      paddingVertical: 7,
+      borderRadius: 10,
     },
     btnCallSmallText: {
-      fontSize: 10.5,
-      fontWeight: '700',
+      fontSize: 11,
+      fontWeight: '800',
       color: '#ffffff',
     },
     btnWaSmall: {
@@ -1727,27 +1984,27 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#25D366',
-      paddingVertical: 8,
-      borderRadius: 8,
       gap: 4,
+      backgroundColor: '#ff2d75',
+      paddingVertical: 7,
+      borderRadius: 10,
     },
     btnWaSmallText: {
-      fontSize: 10.5,
+      fontSize: 11,
       fontWeight: '800',
       color: '#ffffff',
     },
     btnDirectionsSmall: {
-      flex: 1.2,
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#fff0f5',
-      paddingVertical: 8,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: '#ffd6e4',
       gap: 4,
+      backgroundColor: '#ffffff',
+      paddingVertical: 6,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
     },
     btnDirectionsSmallText: {
       fontSize: 10.5,
@@ -1756,22 +2013,22 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     },
     modalBackdrop: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.55)',
+      backgroundColor: 'rgba(15, 23, 42, 0.65)',
       justifyContent: 'flex-end',
     },
     modalSheetContainer: {
       backgroundColor: '#ffffff',
-      borderTopLeftRadius: 26,
-      borderTopRightRadius: 26,
-      padding: 18,
-      borderWidth: 1,
-      borderColor: '#e5e7eb',
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      padding: 20,
+      paddingBottom: 28,
+      maxHeight: SCREEN_HEIGHT * 0.82,
     },
     modalSheetHandle: {
-      width: 36,
+      width: 40,
       height: 4,
       borderRadius: 2,
-      backgroundColor: '#d1d5db',
+      backgroundColor: '#e2e8f0',
       alignSelf: 'center',
       marginBottom: 14,
     },
@@ -1782,20 +2039,21 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       marginBottom: 14,
     },
     modalStudioName: {
-      fontSize: 16,
+      fontSize: 18,
       fontWeight: '800',
-      color: '#111116',
-      flexShrink: 1,
+      color: '#0f172a',
+      letterSpacing: -0.4,
     },
     modalOwnerName: {
-      fontSize: 11.5,
-      color: 'rgba(17, 17, 22, 0.6)',
+      fontSize: 12,
+      fontWeight: '500',
+      color: '#64748b',
       marginTop: 2,
     },
     modalCloseBtn: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       backgroundColor: '#f1f5f9',
       justifyContent: 'center',
       alignItems: 'center',
@@ -1803,25 +2061,27 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     modalStatsCard: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-around',
       backgroundColor: '#f8fafc',
-      borderRadius: 14,
+      borderRadius: 16,
       paddingVertical: 12,
-      marginBottom: 14,
+      paddingHorizontal: 8,
       borderWidth: 1,
       borderColor: '#e2e8f0',
+      marginBottom: 14,
     },
     modalStatCol: {
+      flex: 1,
       alignItems: 'center',
     },
     modalStatVal: {
       fontSize: 14,
-      fontWeight: '800',
-      color: '#111116',
+      fontWeight: '900',
+      color: '#0f172a',
     },
     modalStatLabel: {
-      fontSize: 9,
-      color: 'rgba(17, 17, 22, 0.55)',
+      fontSize: 9.5,
+      fontWeight: '600',
+      color: '#64748b',
       marginTop: 2,
     },
     modalStatDivider: {
@@ -1830,136 +2090,194 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       backgroundColor: '#e2e8f0',
     },
     modalSectionCard: {
-      backgroundColor: '#f8fafc',
-      borderRadius: 14,
-      padding: 12,
-      marginBottom: 12,
+      backgroundColor: '#ffffff',
+      borderRadius: 16,
+      padding: 14,
       borderWidth: 1,
       borderColor: '#f1f5f9',
+      marginBottom: 12,
     },
     modalSectionHeading: {
-      fontSize: 9.5,
+      fontSize: 10,
       fontWeight: '800',
+      color: '#94a3b8',
       letterSpacing: 0.8,
-      color: '#ff2d75',
-      marginBottom: 6,
+      marginBottom: 8,
     },
     modalAddressText: {
-      fontSize: 11.5,
+      fontSize: 12.5,
+      fontWeight: '500',
       color: '#334155',
-      lineHeight: 16,
+      lineHeight: 18,
+      marginBottom: 10,
     },
     modalDirectionsBtn: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 5,
-      marginTop: 8,
+      justifyContent: 'center',
+      gap: 6,
+      backgroundColor: '#fff1f6',
+      paddingVertical: 9,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#ffd2e3',
     },
     modalDirectionsText: {
-      fontSize: 11,
-      fontWeight: '700',
+      fontSize: 11.5,
+      fontWeight: '800',
       color: '#ff2d75',
     },
     modalServiceRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingVertical: 7,
+      paddingVertical: 6,
       borderBottomWidth: 1,
-      borderBottomColor: '#f1f5f9',
+      borderBottomColor: '#f8fafc',
     },
     modalServiceName: {
-      fontSize: 11.5,
-      color: '#111116',
+      fontSize: 12,
       fontWeight: '600',
+      color: '#1e293b',
       flex: 1,
       paddingRight: 8,
     },
     modalServicePrice: {
-      fontSize: 11.5,
+      fontSize: 12,
       fontWeight: '800',
       color: '#ff2d75',
     },
+    modalGuaranteeCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      backgroundColor: '#ecfdf5',
+      borderRadius: 14,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: '#a7f3d0',
+      marginBottom: 14,
+    },
+    modalGuaranteeTitle: {
+      fontSize: 11.5,
+      fontWeight: '800',
+      color: '#065f46',
+    },
+    modalGuaranteeDesc: {
+      fontSize: 10,
+      fontWeight: '500',
+      color: '#047857',
+      marginTop: 2,
+    },
     modalFooterRow: {
       flexDirection: 'row',
-      gap: 8,
-      marginTop: 12,
-      paddingTop: 10,
-      borderTopWidth: 1,
-      borderTopColor: '#f1f5f9',
+      gap: 10,
+      marginTop: 10,
     },
     modalCallBtn: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#0f172a',
-      paddingVertical: 12,
-      borderRadius: 12,
       gap: 6,
+      backgroundColor: '#0f172a',
+      paddingVertical: 13,
+      borderRadius: 14,
     },
     modalCallBtnText: {
-      fontSize: 11.5,
-      fontWeight: '700',
+      fontSize: 13,
+      fontWeight: '800',
       color: '#ffffff',
     },
     modalWaBtn: {
-      flex: 1.6,
+      flex: 1.5,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#25D366',
-      paddingVertical: 12,
-      borderRadius: 12,
       gap: 6,
+      backgroundColor: '#ff2d75',
+      paddingVertical: 13,
+      borderRadius: 14,
+      shadowColor: '#ff2d75',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.35,
+      shadowRadius: 8,
+      elevation: 5,
     },
     modalWaBtnText: {
-      fontSize: 11.5,
+      fontSize: 13,
       fontWeight: '800',
       color: '#ffffff',
     },
     pincodeModalCard: {
       backgroundColor: '#ffffff',
-      margin: 20,
-      borderRadius: 20,
-      padding: 18,
-      borderWidth: 1.5,
-      borderColor: '#ffd6e4',
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 10,
-      elevation: 6,
-    },
-    pincodePromptText: {
-      fontSize: 11.5,
-      color: '#475569',
-      lineHeight: 16,
-      marginBottom: 12,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      padding: 20,
+      paddingBottom: 32,
     },
     pincodeInput: {
       backgroundColor: '#f8fafc',
-      borderRadius: 10,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      fontSize: 15,
-      fontWeight: '700',
-      color: '#111116',
-      letterSpacing: 2,
+      borderRadius: 14,
       borderWidth: 1.5,
-      borderColor: '#ff2d75',
+      borderColor: '#cbd5e1',
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 18,
+      fontWeight: '800',
+      color: '#0f172a',
+      textAlign: 'center',
+      letterSpacing: 4,
+      marginVertical: 14,
     },
     applyPinBtn: {
       backgroundColor: '#ff2d75',
-      borderRadius: 10,
-      paddingVertical: 12,
+      borderRadius: 14,
+      paddingVertical: 13,
       alignItems: 'center',
-      marginTop: 12,
+      shadowColor: '#ff2d75',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.30,
+      shadowRadius: 8,
+      elevation: 4,
+      marginBottom: 16,
     },
     applyPinText: {
-      fontSize: 11.5,
-      fontWeight: '800',
+      fontSize: 12,
+      fontWeight: '900',
       color: '#ffffff',
-      letterSpacing: 0.6,
+      letterSpacing: 0.8,
+    },
+    suggestionsHeading: {
+      fontSize: 10,
+      fontWeight: '800',
+      color: '#94a3b8',
+      letterSpacing: 0.8,
+      marginBottom: 8,
+    },
+    suggestionsGrid: {
+      gap: 6,
+    },
+    suggestionPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#f8fafc',
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+      gap: 10,
+    },
+    suggestionPin: {
+      fontSize: 12,
+      fontWeight: '800',
+      color: '#ff2d75',
+    },
+    suggestionArea: {
+      fontSize: 11.5,
+      fontWeight: '600',
+      color: '#475569',
+      flex: 1,
     },
   });

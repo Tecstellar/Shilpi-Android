@@ -255,17 +255,23 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent, o
                 activeOpacity={0.85}
               >
                 <View style={styles.discoveryIconCircle}>
-                  <MapCompassVector color={colors.accent} size={18} />
+                  <MapCompassVector color="#ff2d75" size={20} />
                 </View>
                 <View style={styles.discoveryContent}>
-                  <Text style={styles.discoveryTitle}>Find Nearest Beautician</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                    <Text style={styles.discoveryTitle}>Find Nearest Beautician</Text>
+                    <View style={styles.liveMapBadge}>
+                      <View style={styles.liveGreenDot} />
+                      <Text style={styles.liveMapBadgeText}>LIVE MAP</Text>
+                    </View>
+                  </View>
                   <Text style={styles.discoverySubtitle}>
-                    Locate registered bridal & makeover artists on a live map
+                    Locate registered bridal & makeover artists near your PIN
                   </Text>
                 </View>
                 <View style={styles.discoveryActionPill}>
-                  <Text style={styles.discoveryActionText}>OPEN MAP</Text>
-                  <ChevronRightVector color={colors.accent} size={11} />
+                  <Text style={styles.discoveryActionText}>EXPLORE</Text>
+                  <ChevronRightVector color="#ff2d75" size={11} />
                 </View>
               </TouchableOpacity>
             </View>
@@ -457,54 +463,81 @@ const createStyles = (colors: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: '#ffffff',
-      borderRadius: 18,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-      borderWidth: 1,
-      borderColor: 'rgba(0, 0, 0, 0.06)',
-      shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.04,
-      shadowRadius: 8,
-      elevation: 2,
+      borderRadius: 20,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderWidth: 1.5,
+      borderColor: '#ffe4ee',
+      shadowColor: '#0f172a',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 4,
       gap: 12,
     },
     discoveryIconCircle: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
-      backgroundColor: colors.tint2,
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      backgroundColor: '#fff1f6',
+      borderWidth: 1,
+      borderColor: '#ffd2e3',
       justifyContent: 'center',
       alignItems: 'center',
     },
     discoveryContent: {
       flex: 1,
+      minWidth: 0,
     },
     discoveryTitle: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: '#111116',
-      letterSpacing: -0.2,
+      fontSize: 13.5,
+      fontWeight: '800',
+      color: '#0f172a',
+      letterSpacing: -0.3,
+    },
+    liveMapBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: '#ecfdf5',
+      paddingHorizontal: 5,
+      paddingVertical: 2,
+      borderRadius: 4,
+      borderWidth: 1,
+      borderColor: '#a7f3d0',
+    },
+    liveGreenDot: {
+      width: 4,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: '#10b981',
+    },
+    liveMapBadgeText: {
+      fontSize: 7.5,
+      fontWeight: '800',
+      color: '#047857',
+      letterSpacing: 0.4,
     },
     discoverySubtitle: {
       fontSize: 10.5,
       lineHeight: 14,
-      color: 'rgba(17, 17, 22, 0.55)',
-      marginTop: 2,
+      color: '#64748b',
     },
     discoveryActionPill: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
-      paddingVertical: 5,
-      paddingHorizontal: 8,
+      gap: 3,
+      paddingVertical: 6,
+      paddingHorizontal: 9,
       borderRadius: 8,
-      backgroundColor: colors.tint2,
+      backgroundColor: '#fff1f6',
+      borderWidth: 1,
+      borderColor: '#ffd2e3',
     },
     discoveryActionText: {
       fontSize: 9.5,
       fontWeight: '800',
-      color: colors.accent,
+      color: '#ff2d75',
       letterSpacing: 0.5,
     },
     securityRow: {
