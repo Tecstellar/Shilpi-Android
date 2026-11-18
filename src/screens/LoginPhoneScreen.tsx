@@ -148,28 +148,13 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent, o
         keyboardDismissMode="interactive"
         automaticallyAdjustKeyboardInsets={true}
       >
-        {/* Curved Obsidian Header with Shilpi Branding & Floating Concierge Pill */}
+        {/* Curved Obsidian Header with Shilpi Branding */}
         <View style={styles.headerBlack}>
-          <View style={styles.headerTopRow}>
-            <Image
-              source={require('../../assets/shilpi-lockup-black.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-
-            {/* Subtle Luxury Floating Concierge Button in Header */}
-            {onFindNearest && (
-              <TouchableOpacity
-                style={styles.headerDiscoveryPill}
-                onPress={onFindNearest}
-                activeOpacity={0.82}
-              >
-                <LocationPinVector color={colors.accent} size={13} />
-                <Text style={styles.headerDiscoveryText}>Explore Artists</Text>
-                <ChevronRightVector color="rgba(255, 255, 255, 0.6)" size={11} />
-              </TouchableOpacity>
-            )}
-          </View>
+          <Image
+            source={require('../../assets/shilpi-lockup-black.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
 
         {/* Clean, Focused Input Card */}
@@ -285,12 +270,6 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent, o
               </TouchableOpacity>
             </View>
           )}
-
-          {/* Minimalist Security Footnote */}
-          <View style={styles.securityRow}>
-            <SecurityShieldVector color="#8e8e99" size={13} />
-            <Text style={styles.securityText}>256-Bit Encrypted · SMS Verification Only</Text>
-          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -308,39 +287,18 @@ const createStyles = (colors: ThemeColors) =>
       paddingBottom: 40,
     },
     headerBlack: {
-      backgroundColor: '#0a0a0e',
-      paddingTop: Platform.OS === 'ios' ? 52 : 36,
-      paddingBottom: 24,
+      backgroundColor: '#000000',
+      paddingTop: Platform.OS === 'ios' ? 56 : 42,
+      paddingBottom: 28,
       paddingHorizontal: 20,
-      borderBottomLeftRadius: 26,
-      borderBottomRightRadius: 26,
-    },
-    headerTopRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      borderBottomLeftRadius: 28,
+      borderBottomRightRadius: 28,
+      alignItems: 'flex-start',
     },
     logo: {
-      width: 170,
-      height: 68,
-      marginLeft: -6,
-    },
-    headerDiscoveryPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      backgroundColor: 'rgba(255, 255, 255, 0.08)',
-      paddingVertical: 7,
-      paddingHorizontal: 11,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
-    },
-    headerDiscoveryText: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: '#ffffff',
-      letterSpacing: 0.2,
+      width: 260,
+      height: 104,
+      marginLeft: -8,
     },
     cardContainer: {
       paddingHorizontal: 18,
