@@ -36,7 +36,7 @@ const CARD_WIDTH = SCREEN_WIDTH - 36;
 const CARD_INTERVAL = CARD_WIDTH + 12;
 
 // -------------------------------------------------------------
-// 1. BESPOKE SVG VECTOR ICONS (Zero Emojis, Dribbble High-Craft)
+// 1. BESPOKE SVG VECTOR ICONS (Zero Emojis, Google Maps High Craft)
 // -------------------------------------------------------------
 
 const BackArrowVector: React.FC<{ color?: string; size?: number }> = ({ color = '#0f172a', size = 18 }) => (
@@ -45,7 +45,7 @@ const BackArrowVector: React.FC<{ color?: string; size?: number }> = ({ color = 
   </Svg>
 );
 
-const LocationPinVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ff2d75', size = 16 }) => (
+const LocationPinVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ea4335', size = 16 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
       d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"
@@ -110,18 +110,19 @@ const MapNavigationVector: React.FC<{ color?: string; size?: number }> = ({ colo
   </Svg>
 );
 
-const CrosshairTargetVector: React.FC<{ color?: string; size?: number }> = ({ color = '#0f172a', size = 18 }) => (
+const CrosshairTargetVector: React.FC<{ color?: string; size?: number }> = ({ color = '#1a73e8', size = 20 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Circle cx={12} cy={12} r={8} stroke={color} strokeWidth={2} />
     <Path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    <Circle cx={12} cy={12} r={2.5} fill={color} />
+    <Circle cx={12} cy={12} r={3} fill={color} />
   </Svg>
 );
 
-const CompassVector: React.FC<{ color?: string; size?: number }> = ({ color = '#0f172a', size = 16 }) => (
+const CompassVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ea4335', size = 18 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Circle cx={12} cy={12} r={10} stroke={color} strokeWidth={1.8} />
-    <Path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z" stroke={color} strokeWidth={1.6} strokeLinejoin="round" />
+    <Circle cx={12} cy={12} r={10} stroke="#d5d3ce" strokeWidth={1.8} fill="#ffffff" />
+    <Path d="M12 4l3 8-3-2-3 2 3-8z" fill={color} />
+    <Path d="M12 20l-3-8 3 2 3-2-3 8z" fill="#70757a" />
   </Svg>
 );
 
@@ -134,13 +135,6 @@ const ListVector: React.FC<{ color?: string; size?: number }> = ({ color = '#0f1
 const CloseVector: React.FC<{ color?: string; size?: number }> = ({ color = '#0f172a', size = 18 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M18 6L6 18M6 6l12 12" stroke={color} strokeWidth={2.2} strokeLinecap="round" />
-  </Svg>
-);
-
-const EditPencilVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ff2d75', size = 12 }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke={color} strokeWidth={2} strokeLinecap="round" />
-    <Path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke={color} strokeWidth={2} strokeLinecap="round" />
   </Svg>
 );
 
@@ -157,19 +151,48 @@ const ShieldCheckVector: React.FC<{ color?: string; size?: number }> = ({ color 
   </Svg>
 );
 
-const SparkleVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ff2d75', size = 14 }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M12 3v18M3 12h18M6.5 6.5l11 11M6.5 17.5l11-11"
-      stroke={color}
-      strokeWidth={2}
-      strokeLinecap="round"
-    />
-  </Svg>
-);
+// -------------------------------------------------------------
+// 2. AUTHENTIC GOOGLE MAPS TEARDROP PIN COMPONENT
+// -------------------------------------------------------------
+
+const GoogleMapsPinIcon: React.FC<{
+  color?: string;
+  size?: number;
+  isSelected?: boolean;
+  isPro?: boolean;
+  char?: string;
+}> = ({ color = '#ff2d75', size = 36, isSelected = false, isPro = false, char = 'S' }) => {
+  const pinFill = isPro ? '#f59e0b' : color;
+  return (
+    <Svg width={size} height={size * 1.25} viewBox="0 0 36 45" fill="none">
+      {/* Drop Shadow beneath tip */}
+      <Circle cx={18} cy={42} r={isSelected ? 5.5 : 4} fill="rgba(0, 0, 0, 0.25)" />
+      {/* Google Maps Teardrop Shape */}
+      <Path
+        d="M18 2C9.716 2 3 8.716 3 17c0 11.25 15 25 15 25s15-13.75 15-25c0-8.284-6.716-15-15-15z"
+        fill={pinFill}
+        stroke="#ffffff"
+        strokeWidth={isSelected ? 2.5 : 1.8}
+      />
+      {/* Inner White Disc */}
+      <Circle cx={18} cy={17} r={8} fill="#ffffff" />
+      {/* Character inside Disc */}
+      <SvgText
+        x={18}
+        y={21}
+        textAnchor="middle"
+        fill={pinFill}
+        fontSize={10.5}
+        fontWeight="900"
+      >
+        {isPro ? '★' : char}
+      </SvgText>
+    </Svg>
+  );
+};
 
 // -------------------------------------------------------------
-// 2. REAL REGISTERED BEAUTICIANS INTERFACE & FALLBACK DATA
+// 3. REAL REGISTERED BEAUTICIANS INTERFACE & FALLBACK DATA
 // -------------------------------------------------------------
 
 export interface RegisteredMakeover {
@@ -218,8 +241,8 @@ const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
     services: ['HD Bridal Makeup', 'Muhurtham Saree Draping', 'Airbrush Makeup'],
     latitude: 11.0168,
     longitude: 76.9558,
-    mapX: 0.65,
-    mapY: 0.35,
+    mapX: 0.64,
+    mapY: 0.36,
   },
   {
     id: '2b919ddb-a83d-4cdd-b779-fb03b846b77c',
@@ -241,8 +264,8 @@ const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
     services: ['Bridal Makeover', 'Flower Hairstyling', 'Saree Pleating'],
     latitude: 11.0016,
     longitude: 76.9620,
-    mapX: 0.80,
-    mapY: 0.48,
+    mapX: 0.82,
+    mapY: 0.46,
   },
   {
     id: 'add09d3c-707a-4a01-9787-0932a837b0e2',
@@ -264,7 +287,7 @@ const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
     services: ['South Indian Bridal', 'Mehendi Design', 'Reception Look'],
     latitude: 9.1447,
     longitude: 77.7081,
-    mapX: 0.28,
+    mapX: 0.26,
     mapY: 0.58,
   },
   {
@@ -287,7 +310,7 @@ const REAL_REGISTERED_STUDIOS: RegisteredMakeover[] = [
     services: ['Party Makeover', 'Facials & Skincare', 'Hair Styling'],
     latitude: 9.1480,
     longitude: 77.7120,
-    mapX: 0.35,
+    mapX: 0.32,
     mapY: 0.72,
   },
 ];
@@ -399,8 +422,8 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
           return {
             ...item,
             isExactPincode: isExact,
-            mapX: 0.30 + ((i * 35) % 50) / 100,
-            mapY: 0.30 + ((i * 45) % 40) / 100,
+            mapX: 0.28 + ((i * 35) % 52) / 100,
+            mapY: 0.32 + ((i * 42) % 38) / 100,
           };
         });
         setStudios(mapped);
@@ -537,92 +560,158 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
   const userMapY = SCREEN_HEIGHT * 0.42;
 
   // Selected Studio coordinates
-  const targetX = selectedStudio ? SCREEN_WIDTH * (selectedStudio.mapX || 0.65) : userMapX + 80;
-  const targetY = selectedStudio ? SCREEN_HEIGHT * (selectedStudio.mapY || 0.35) : userMapY - 80;
+  const targetX = selectedStudio ? SCREEN_WIDTH * (selectedStudio.mapX || 0.64) : userMapX + 80;
+  const targetY = selectedStudio ? SCREEN_HEIGHT * (selectedStudio.mapY || 0.36) : userMapY - 80;
   const midX = (userMapX + targetX) / 2;
-  const midY = (userMapY + targetY) / 2 - 35;
+  const midY = (userMapY + targetY) / 2 - 28;
 
   return (
     <View style={styles.screen}>
       {viewMode === 'map' ? (
         // -------------------------------------------------------------
-        // 3. DRIBBBLE NIXTIO STYLE FULL-BLEED ARCHITECTURAL VECTOR MAP
+        // 4. AUTHENTIC GOOGLE MAPS UI VECTOR ENGINE
         // -------------------------------------------------------------
         <View style={styles.fullBleedMapContainer}>
           <Svg width={SCREEN_WIDTH} height={SCREEN_HEIGHT} style={StyleSheet.absoluteFill}>
             <Defs>
-              <LinearGradient id="mapCanvasBg" x1="0%" y1="0%" x2="100%" y2="100%">
-                <Stop offset="0%" stopColor="#f8fafc" />
-                <Stop offset="50%" stopColor="#f1f5f9" />
-                <Stop offset="100%" stopColor="#eef2f6" />
-              </LinearGradient>
-              <LinearGradient id="riverBlueSoft" x1="0%" y1="0%" x2="100%" y2="100%">
-                <Stop offset="0%" stopColor="#e0f2fe" stopOpacity="0.85" />
-                <Stop offset="100%" stopColor="#bae6fd" stopOpacity="0.55" />
-              </LinearGradient>
               <LinearGradient id="routePinkGlow" x1="0%" y1="0%" x2="100%" y2="100%">
                 <Stop offset="0%" stopColor="#ff2d75" />
                 <Stop offset="100%" stopColor="#e11d48" />
               </LinearGradient>
-              <LinearGradient id="parkGreenSoft" x1="0%" y1="0%" x2="100%" y2="100%">
-                <Stop offset="0%" stopColor="#ecfdf5" />
-                <Stop offset="100%" stopColor="#d1fae5" />
-              </LinearGradient>
             </Defs>
 
-            {/* Base Canvas */}
-            <Rect width="100%" height="100%" fill="url(#mapCanvasBg)" />
+            {/* 1. Google Maps Base Land Terrain (Signature #f4f3f0) */}
+            <Rect width="100%" height="100%" fill="#f4f3f0" />
 
-            {/* Urban Parcels & Architectural City Blocks (Subtle Shadows & Off-White Depth) */}
-            <Rect x={SCREEN_WIDTH * 0.05} y={SCREEN_HEIGHT * 0.16} width={SCREEN_WIDTH * 0.38} height={SCREEN_HEIGHT * 0.11} rx={16} fill="#ffffff" stroke="#e2e8f0" strokeWidth={1} />
-            <Rect x={SCREEN_WIDTH * 0.52} y={SCREEN_HEIGHT * 0.14} width={SCREEN_WIDTH * 0.42} height={SCREEN_HEIGHT * 0.12} rx={16} fill="#ffffff" stroke="#e2e8f0" strokeWidth={1} />
-            <Rect x={SCREEN_WIDTH * 0.04} y={SCREEN_HEIGHT * 0.48} width={SCREEN_WIDTH * 0.36} height={SCREEN_HEIGHT * 0.13} rx={16} fill="#ffffff" stroke="#e2e8f0" strokeWidth={1} />
-            <Rect x={SCREEN_WIDTH * 0.50} y={SCREEN_HEIGHT * 0.52} width={SCREEN_WIDTH * 0.44} height={SCREEN_HEIGHT * 0.15} rx={16} fill="#ffffff" stroke="#e2e8f0" strokeWidth={1} />
-
-            {/* Botanical Parks & Green Oasis Enclaves (Signature Dribbble Touch) */}
-            <Rect x={SCREEN_WIDTH * 0.08} y={SCREEN_HEIGHT * 0.32} width={SCREEN_WIDTH * 0.30} height={SCREEN_HEIGHT * 0.09} rx={18} fill="url(#parkGreenSoft)" stroke="#a7f3d0" strokeWidth={1} />
-            <SvgText x={SCREEN_WIDTH * 0.11} y={SCREEN_HEIGHT * 0.37} fill="#059669" fontSize={8.5} fontWeight="700" letterSpacing={0.5}>
-              RACE COURSE GARDEN
-            </SvgText>
-
-            {/* Curved Waterway / Scenic Canal */}
+            {/* 2. Google Maps Parks & Green Spaces (#c8e8c8 with #a8d5a8 border) */}
+            {/* VOC Park & Zoo Grounds */}
             <Path
-              d={`M0,${SCREEN_HEIGHT * 0.68} C${SCREEN_WIDTH * 0.32},${SCREEN_HEIGHT * 0.63} ${SCREEN_WIDTH * 0.65},${SCREEN_HEIGHT * 0.74} ${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.67} L${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.73} C${SCREEN_WIDTH * 0.65},${SCREEN_HEIGHT * 0.80} ${SCREEN_WIDTH * 0.32},${SCREEN_HEIGHT * 0.69} 0,${SCREEN_HEIGHT * 0.74} Z`}
-              fill="url(#riverBlueSoft)"
+              d={`M${SCREEN_WIDTH * 0.04},${SCREEN_HEIGHT * 0.18} Q${SCREEN_WIDTH * 0.22},${SCREEN_HEIGHT * 0.16} ${SCREEN_WIDTH * 0.38},${SCREEN_HEIGHT * 0.20} Q${SCREEN_WIDTH * 0.40},${SCREEN_HEIGHT * 0.30} ${SCREEN_WIDTH * 0.25},${SCREEN_HEIGHT * 0.32} Q${SCREEN_WIDTH * 0.04},${SCREEN_HEIGHT * 0.31} ${SCREEN_WIDTH * 0.04},${SCREEN_HEIGHT * 0.18} Z`}
+              fill="#c8e8c8"
+              stroke="#a8d5a8"
+              strokeWidth={1}
+            />
+            {/* Race Course Oval Park */}
+            <Path
+              d={`M${SCREEN_WIDTH * 0.58},${SCREEN_HEIGHT * 0.16} C${SCREEN_WIDTH * 0.72},${SCREEN_HEIGHT * 0.14} ${SCREEN_WIDTH * 0.94},${SCREEN_HEIGHT * 0.18} ${SCREEN_WIDTH * 0.92},${SCREEN_HEIGHT * 0.28} C${SCREEN_WIDTH * 0.90},${SCREEN_HEIGHT * 0.34} ${SCREEN_WIDTH * 0.65},${SCREEN_HEIGHT * 0.32} ${SCREEN_WIDTH * 0.58},${SCREEN_HEIGHT * 0.26} Z`}
+              fill="#c8e8c8"
+              stroke="#a8d5a8"
+              strokeWidth={1}
+            />
+            {/* Gandhi Promenade Park */}
+            <Path
+              d={`M${SCREEN_WIDTH * 0.55},${SCREEN_HEIGHT * 0.60} Q${SCREEN_WIDTH * 0.75},${SCREEN_HEIGHT * 0.58} ${SCREEN_WIDTH * 0.94},${SCREEN_HEIGHT * 0.64} Q${SCREEN_WIDTH * 0.92},${SCREEN_HEIGHT * 0.76} ${SCREEN_WIDTH * 0.68},${SCREEN_HEIGHT * 0.75} Z`}
+              fill="#d4edd2"
+              stroke="#bbf2b6"
+              strokeWidth={1}
             />
 
-            {/* Bridge Decks Crossing Canal */}
-            <Rect x={SCREEN_WIDTH * 0.44} y={SCREEN_HEIGHT * 0.68} width={SCREEN_WIDTH * 0.08} height={SCREEN_HEIGHT * 0.035} rx={4} fill="#cbd5e1" />
-
-            {/* Secondary Street Road Network */}
-            <Path d={`M-30,${SCREEN_HEIGHT * 0.28} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.28}`} stroke="#e2e8f0" strokeWidth={3} />
-            <Path d={`M-30,${SCREEN_HEIGHT * 0.45} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.45}`} stroke="#e2e8f0" strokeWidth={3} />
-            <Path d={`M${SCREEN_WIDTH * 0.44},0 L${SCREEN_WIDTH * 0.44},${SCREEN_HEIGHT}`} stroke="#cbd5e1" strokeWidth={4} />
-            <Path d={`M${SCREEN_WIDTH * 0.84},0 L${SCREEN_WIDTH * 0.84},${SCREEN_HEIGHT}`} stroke="#e2e8f0" strokeWidth={2.8} />
-
-            {/* Major Primary Dual-Carriageway Arterial (Jet Black / Midnight Slate) */}
+            {/* 3. Google Maps Waterway / Canal (#aadaff) */}
             <Path
-              d={`M0,${SCREEN_HEIGHT * 0.38} Q${SCREEN_WIDTH * 0.44},${SCREEN_HEIGHT * 0.38} ${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.44}`}
-              stroke="#0f172a"
-              strokeWidth={5}
-            />
-            {/* White Dashed Center Lane Marking */}
-            <Path
-              d={`M0,${SCREEN_HEIGHT * 0.38} Q${SCREEN_WIDTH * 0.44},${SCREEN_HEIGHT * 0.38} ${SCREEN_WIDTH},${SCREEN_HEIGHT * 0.44}`}
-              stroke="#ffffff"
-              strokeWidth={1.2}
-              strokeDasharray="6, 6"
+              d={`M-10,${SCREEN_HEIGHT * 0.67} C${SCREEN_WIDTH * 0.30},${SCREEN_HEIGHT * 0.62} ${SCREEN_WIDTH * 0.62},${SCREEN_HEIGHT * 0.72} ${SCREEN_WIDTH + 10},${SCREEN_HEIGHT * 0.66} L${SCREEN_WIDTH + 10},${SCREEN_HEIGHT * 0.72} C${SCREEN_WIDTH * 0.62},${SCREEN_HEIGHT * 0.78} ${SCREEN_WIDTH * 0.30},${SCREEN_HEIGHT * 0.68} -10,${SCREEN_HEIGHT * 0.73} Z`}
+              fill="#aadaff"
             />
 
-            {/* Authentic Street Names Overlay (Clean Micro-Typography) */}
-            <SvgText x={SCREEN_WIDTH * 0.06} y={SCREEN_HEIGHT * 0.365} fill="#64748b" fontSize={8} fontWeight="700" letterSpacing={0.8}>
-              AVINASHI ARTERIAL
-            </SvgText>
-            <SvgText x={SCREEN_WIDTH * 0.54} y={SCREEN_HEIGHT * 0.425} fill="#64748b" fontSize={8} fontWeight="700" letterSpacing={0.8}>
-              CROSS CUT ROAD
+            {/* 4. Google Maps Urban Neighborhood Blocks (Terrain fills between streets) */}
+            <Path
+              d={`M${SCREEN_WIDTH * 0.05},${SCREEN_HEIGHT * 0.36} L${SCREEN_WIDTH * 0.40},${SCREEN_HEIGHT * 0.36} L${SCREEN_WIDTH * 0.40},${SCREEN_HEIGHT * 0.44} L${SCREEN_WIDTH * 0.05},${SCREEN_HEIGHT * 0.44} Z`}
+              fill="#ebe7df"
+            />
+            <Path
+              d={`M${SCREEN_WIDTH * 0.50},${SCREEN_HEIGHT * 0.36} L${SCREEN_WIDTH * 0.95},${SCREEN_HEIGHT * 0.36} L${SCREEN_WIDTH * 0.95},${SCREEN_HEIGHT * 0.46} L${SCREEN_WIDTH * 0.50},${SCREEN_HEIGHT * 0.46} Z`}
+              fill="#ebe7df"
+            />
+            <Path
+              d={`M${SCREEN_WIDTH * 0.05},${SCREEN_HEIGHT * 0.50} L${SCREEN_WIDTH * 0.42},${SCREEN_HEIGHT * 0.50} L${SCREEN_WIDTH * 0.42},${SCREEN_HEIGHT * 0.62} L${SCREEN_WIDTH * 0.05},${SCREEN_HEIGHT * 0.62} Z`}
+              fill="#ebe7df"
+            />
+
+            {/* 5. Google Maps Organic Road Network (Two-pass casing + fill) */}
+
+            {/* Pass 1: Local Streets (Casing) */}
+            <Path d={`M-30,${SCREEN_HEIGHT * 0.24} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.24}`} stroke="#e5e3de" strokeWidth={4} />
+            <Path d={`M-30,${SCREEN_HEIGHT * 0.54} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.54}`} stroke="#e5e3de" strokeWidth={4} />
+            <Path d={`M${SCREEN_WIDTH * 0.22},0 L${SCREEN_WIDTH * 0.22},${SCREEN_HEIGHT}`} stroke="#e5e3de" strokeWidth={4} />
+            <Path d={`M${SCREEN_WIDTH * 0.74},0 L${SCREEN_WIDTH * 0.74},${SCREEN_HEIGHT}`} stroke="#e5e3de" strokeWidth={4} />
+
+            {/* Pass 1: Major Arterial Roads (Casing) */}
+            <Path d={`M-30,${SCREEN_HEIGHT * 0.36} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.36}`} stroke="#d5d3ce" strokeWidth={7} />
+            <Path d={`M-30,${SCREEN_HEIGHT * 0.48} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.48}`} stroke="#d5d3ce" strokeWidth={7} />
+            <Path d={`M${SCREEN_WIDTH * 0.44},0 L${SCREEN_WIDTH * 0.44},${SCREEN_HEIGHT}`} stroke="#d5d3ce" strokeWidth={7} />
+            <Path d={`M${SCREEN_WIDTH * 0.86},0 L${SCREEN_WIDTH * 0.86},${SCREEN_HEIGHT}`} stroke="#d5d3ce" strokeWidth={6} />
+
+            {/* Pass 1: Highway Expressway (Casing #f59e0b) */}
+            <Path
+              d={`M-30,${SCREEN_HEIGHT * 0.42} Q${SCREEN_WIDTH * 0.45},${SCREEN_HEIGHT * 0.40} ${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.48}`}
+              stroke="#f59e0b"
+              strokeWidth={9}
+            />
+
+            {/* Pass 2: Local Streets (Pure White Fill #ffffff) */}
+            <Path d={`M-30,${SCREEN_HEIGHT * 0.24} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.24}`} stroke="#ffffff" strokeWidth={2.8} />
+            <Path d={`M-30,${SCREEN_HEIGHT * 0.54} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.54}`} stroke="#ffffff" strokeWidth={2.8} />
+            <Path d={`M${SCREEN_WIDTH * 0.22},0 L${SCREEN_WIDTH * 0.22},${SCREEN_HEIGHT}`} stroke="#ffffff" strokeWidth={2.8} />
+            <Path d={`M${SCREEN_WIDTH * 0.74},0 L${SCREEN_WIDTH * 0.74},${SCREEN_HEIGHT}`} stroke="#ffffff" strokeWidth={2.8} />
+
+            {/* Pass 2: Major Arterial Roads (Pure White Fill #ffffff) */}
+            <Path d={`M-30,${SCREEN_HEIGHT * 0.36} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.36}`} stroke="#ffffff" strokeWidth={5} />
+            <Path d={`M-30,${SCREEN_HEIGHT * 0.48} L${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.48}`} stroke="#ffffff" strokeWidth={5} />
+            <Path d={`M${SCREEN_WIDTH * 0.44},0 L${SCREEN_WIDTH * 0.44},${SCREEN_HEIGHT}`} stroke="#ffffff" strokeWidth={5} />
+            <Path d={`M${SCREEN_WIDTH * 0.86},0 L${SCREEN_WIDTH * 0.86},${SCREEN_HEIGHT}`} stroke="#ffffff" strokeWidth={4.5} />
+
+            {/* Pass 2: Highway Expressway Fill (Google Signature #fed7aa) */}
+            <Path
+              d={`M-30,${SCREEN_HEIGHT * 0.42} Q${SCREEN_WIDTH * 0.45},${SCREEN_HEIGHT * 0.40} ${SCREEN_WIDTH + 30},${SCREEN_HEIGHT * 0.48}`}
+              stroke="#fed7aa"
+              strokeWidth={6.5}
+            />
+
+            {/* Bridge Deck over Canal */}
+            <Rect x={SCREEN_WIDTH * 0.42} y={SCREEN_HEIGHT * 0.67} width={SCREEN_WIDTH * 0.05} height={SCREEN_HEIGHT * 0.045} fill="#ffffff" stroke="#d5d3ce" strokeWidth={1} rx={2} />
+
+            {/* 6. Google Maps Highway Shield Badge */}
+            <Rect x={SCREEN_WIDTH * 0.10} y={SCREEN_HEIGHT * 0.40} width={42} height={15} rx={3} fill="#15803d" />
+            <SvgText x={SCREEN_WIDTH * 0.10 + 21} y={SCREEN_HEIGHT * 0.40 + 11} fill="#ffffff" fontSize={8} fontWeight="800" textAnchor="middle">
+              NH 544
             </SvgText>
 
-            {/* ACTIVE DRIBBLE NIXTIO STYLE NAVIGATION ROUTE POLYLINE (From user to selected studio) */}
+            {/* 7. Google Maps Typography & Labels */}
+            {/* Area Names (#5f6368) */}
+            <SvgText x={SCREEN_WIDTH * 0.48} y={SCREEN_HEIGHT * 0.34} fill="#5f6368" fontSize={9.5} fontWeight="700" letterSpacing={1.2}>
+              GANDHIPURAM
+            </SvgText>
+            <SvgText x={SCREEN_WIDTH * 0.06} y={SCREEN_HEIGHT * 0.52} fill="#5f6368" fontSize={9} fontWeight="700" letterSpacing={1.2}>
+              RS PURAM
+            </SvgText>
+            <SvgText x={SCREEN_WIDTH * 0.56} y={SCREEN_HEIGHT * 0.53} fill="#5f6368" fontSize={9} fontWeight="700" letterSpacing={1.2}>
+              PEELAMEDU
+            </SvgText>
+
+            {/* Street Names (#80868b) */}
+            <SvgText x={SCREEN_WIDTH * 0.52} y={SCREEN_HEIGHT * 0.47} fill="#80868b" fontSize={7.5} fontWeight="600">
+              Cross Cut Rd
+            </SvgText>
+            <SvgText x={SCREEN_WIDTH * 0.05} y={SCREEN_HEIGHT * 0.35} fill="#80868b" fontSize={7.5} fontWeight="600">
+              Avinashi Rd
+            </SvgText>
+
+            {/* Park Label (#188038) */}
+            <SvgText x={SCREEN_WIDTH * 0.12} y={SCREEN_HEIGHT * 0.25} fill="#188038" fontSize={8} fontWeight="700">
+              VOC Park & Grounds
+            </SvgText>
+            <SvgText x={SCREEN_WIDTH * 0.65} y={SCREEN_HEIGHT * 0.22} fill="#188038" fontSize={8} fontWeight="700">
+              Race Course Promenade
+            </SvgText>
+
+            {/* 8. Google Maps POI Dots */}
+            {/* Bus Stand POI (Blue circle with dot) */}
+            <Circle cx={SCREEN_WIDTH * 0.44} cy={SCREEN_HEIGHT * 0.36} r={7} fill="#1a73e8" />
+            <Circle cx={SCREEN_WIDTH * 0.44} cy={SCREEN_HEIGHT * 0.36} r={3} fill="#ffffff" />
+            {/* Hospital POI (Red cross marker) */}
+            <Circle cx={SCREEN_WIDTH * 0.74} cy={SCREEN_HEIGHT * 0.48} r={7} fill="#ea4335" />
+            <Circle cx={SCREEN_WIDTH * 0.74} cy={SCREEN_HEIGHT * 0.48} r={2.5} fill="#ffffff" />
+
+            {/* 9. ACTIVE GOOGLE MAPS NAVIGATION ROUTE */}
             {selectedStudio && (
               <G>
                 {/* Route Glow Shadow */}
@@ -633,33 +722,29 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                   fill="none"
                   strokeLinecap="round"
                 />
-                {/* Sharp Vibrant Core Route */}
+                {/* Sharp Core Route */}
                 <Path
                   d={`M${userMapX},${userMapY} Q${midX},${midY} ${targetX},${targetY}`}
                   stroke="url(#routePinkGlow)"
-                  strokeWidth={4.5}
+                  strokeWidth={5}
                   fill="none"
                   strokeLinecap="round"
                 />
               </G>
             )}
-
-            {/* Intersections Indicator Dots */}
-            <Circle cx={SCREEN_WIDTH * 0.44} cy={SCREEN_HEIGHT * 0.38} r={3.5} fill="#ff2d75" />
-            <Circle cx={SCREEN_WIDTH * 0.84} cy={SCREEN_HEIGHT * 0.44} r={3.5} fill="#0f172a" />
           </Svg>
 
-          {/* ACTIVE ROUTE FLOATING ETA & DISTANCE CAPSULE (Pinned on Route Curve) */}
+          {/* ACTIVE ROUTE FLOATING ETA CAPSULE (Google Maps Style: "3 min (0.8 km)") */}
           {selectedStudio && (
-            <View style={[styles.routeEtaPill, { left: midX - 44, top: midY - 14 }]}>
+            <View style={[styles.routeEtaPill, { left: midX - 55, top: midY - 14 }]}>
               <View style={styles.etaDotPulse} />
               <Text style={styles.routeEtaPillText}>
-                {Math.max(2, Math.round(selectedStudio.distanceKm * 2.5))} MIN · {selectedStudio.distanceKm} KM
+                {Math.max(2, Math.round(selectedStudio.distanceKm * 2.5))} min ({selectedStudio.distanceKm} km)
               </Text>
             </View>
           )}
 
-          {/* USER LIVE GPS BEACON (Pulsing Sonar & Hot Pink Dot) */}
+          {/* USER LIVE GPS BEACON (Google Maps Pulsing Dot) */}
           <View style={[styles.userGpsBeacon, { left: userMapX - 22, top: userMapY - 22 }]}>
             <Animated.View
               style={[
@@ -681,7 +766,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             </View>
           </View>
 
-          {/* DRIBBLE NIXTIO STYLE ELEVATED 3D LOCATION PINS */}
+          {/* AUTHENTIC GOOGLE MAPS TEARDROP LOCATION PINS */}
           {filteredStudios.map((studio) => {
             const pinX = SCREEN_WIDTH * studio.mapX;
             const pinY = SCREEN_HEIGHT * studio.mapY;
@@ -691,63 +776,55 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               <TouchableOpacity
                 key={studio.id}
                 style={[
-                  styles.nixtioPinAnchor,
-                  { left: pinX - 34, top: pinY - 54 },
-                  isSelected && styles.nixtioPinAnchorSelected,
+                  styles.googlePinAnchor,
+                  { left: pinX - 30, top: pinY - 56 },
+                  isSelected && styles.googlePinAnchorSelected,
                 ]}
                 onPress={() => handleSelectPin(studio)}
                 activeOpacity={0.88}
               >
-                {/* Floating Capsule Label on Top of Pin */}
-                <View style={[styles.nixtioPinPill, isSelected && styles.nixtioPinPillSelected]}>
+                {/* Floating Callout Capsule on Top of Pin */}
+                <View style={[styles.googlePinCallout, isSelected && styles.googlePinCalloutSelected]}>
                   {studio.isPro && (
                     <View style={styles.proMiniBadge}>
                       <CrownProVector color="#f59e0b" size={10} />
                     </View>
                   )}
-                  <Text style={[styles.nixtioPinPillText, isSelected && styles.nixtioPinPillTextSelected]} numberOfLines={1}>
+                  <Text style={[styles.googlePinCalloutText, isSelected && styles.googlePinCalloutTextSelected]} numberOfLines={1}>
                     {studio.businessName}
                   </Text>
                   <View style={styles.pinDistDot} />
-                  <Text style={[styles.pinDistText, isSelected && styles.pinDistTextSelected]}>
+                  <Text style={[styles.pinPriceText, isSelected && styles.pinPriceTextSelected]}>
                     ₹{(studio.startingPrice / 1000).toFixed(1)}k
                   </Text>
                 </View>
 
-                {/* 3D Elevated Pin Marker Head */}
+                {/* Google Maps Teardrop Marker */}
                 <Animated.View
-                  style={[
-                    styles.nixtioPinHead,
-                    isSelected && {
-                      transform: [{ scale: pinSpring }],
-                      backgroundColor: '#ff2d75',
-                      borderColor: '#ffffff',
-                    },
-                  ]}
+                  style={isSelected ? { transform: [{ scale: pinSpring }] } : undefined}
                 >
-                  <View style={[styles.nixtioPinInner, isSelected && styles.nixtioPinInnerSelected]}>
-                    <Text style={[styles.nixtioPinChar, isSelected && styles.nixtioPinCharSelected]}>
-                      {studio.businessName.charAt(0)}
-                    </Text>
-                  </View>
+                  <GoogleMapsPinIcon
+                    color="#ff2d75"
+                    size={isSelected ? 40 : 34}
+                    isSelected={isSelected}
+                    isPro={studio.isPro}
+                    char={studio.businessName.charAt(0)}
+                  />
                 </Animated.View>
-
-                {/* Pin Tip Anchor */}
-                <View style={[styles.nixtioPinTip, isSelected && { borderTopColor: '#ff2d75' }]} />
               </TouchableOpacity>
             );
           })}
 
           {/* -------------------------------------------------------------
-              4. FLOATING TOP CONTROLS (TRANSLUCENT GLASS & CLEAN WHITE)
+              5. FLOATING TOP BAR (GOOGLE MAPS CLEAN CAPSULE)
              ------------------------------------------------------------- */}
           <View style={[styles.floatingTopBarWrap, { top: insets.top + 8 }]}>
-            {/* Back Button (Floating Circle) */}
+            {/* Back Button */}
             <TouchableOpacity style={styles.floatingCircleBtn} onPress={onGoBack} activeOpacity={0.82}>
               <BackArrowVector color="#0f172a" size={18} />
             </TouchableOpacity>
 
-            {/* Location Selector Pill (Zero Overflows: Flex Shrink city, PIN pinned) */}
+            {/* Google Maps Location Search Pill */}
             <TouchableOpacity
               style={styles.floatingLocationCapsule}
               onPress={() => {
@@ -756,7 +833,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               }}
               activeOpacity={0.85}
             >
-              <LocationPinVector color="#ff2d75" size={15} />
+              <LocationPinVector color="#ea4335" size={16} />
               <View style={styles.locationContentWrap}>
                 <Text style={styles.capsuleCityText} numberOfLines={1} ellipsizeMode="tail">
                   {userCity}
@@ -779,7 +856,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             </TouchableOpacity>
           </View>
 
-          {/* Floating Category Filter Chips (Right Below Header) */}
+          {/* Floating Category Filter Chips */}
           <View style={[styles.floatingFilterChipsRow, { top: insets.top + 64 }]}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsScroll}>
               {FILTER_TABS.map((tab) => {
@@ -805,19 +882,19 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             </ScrollView>
           </View>
 
-          {/* Floating Right Map Actions (Re-center location) */}
+          {/* Floating Google Maps Actions (Compass & Target GPS) */}
           <View style={[styles.floatingRightActions, { top: insets.top + 120 }]}>
             <TouchableOpacity
               style={styles.floatingActionIcon}
               onPress={() => filterByPincode(userPincode, userCity)}
               activeOpacity={0.8}
             >
-              <CrosshairTargetVector color="#0f172a" size={18} />
+              <CrosshairTargetVector color="#1a73e8" size={20} />
             </TouchableOpacity>
           </View>
 
           {/* -------------------------------------------------------------
-              5. DRIBBLE NIXTIO STYLE HORIZONTAL STUDIO CAROUSEL DECK
+              6. HORIZONTAL SNAPPING STUDIO CARD DECK
              ------------------------------------------------------------- */}
           <View style={[styles.carouselContainer, { bottom: insets.bottom + 10 }]}>
             <FlatList
@@ -881,7 +958,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                           {/* Meta Indicators: Distance, Estimated Time, PIN match */}
                           <View style={styles.cardMetaRow}>
                             <View style={styles.distanceBadgePill}>
-                              <LocationPinVector color="#ff2d75" size={10} />
+                              <LocationPinVector color="#ea4335" size={10} />
                               <Text style={styles.distanceBadgeText}>{studio.distanceKm} km</Text>
                             </View>
 
@@ -939,7 +1016,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                           onPress={() => handleOpenMaps(studio)}
                           activeOpacity={0.82}
                         >
-                          <MapNavigationVector color="#ff2d75" size={13} />
+                          <MapNavigationVector color="#ea4335" size={13} />
                           <Text style={styles.actionBtnDirectionsText}>Directions</Text>
                         </TouchableOpacity>
                       </View>
@@ -952,7 +1029,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
         </View>
       ) : (
         // -------------------------------------------------------------
-        // 6. HIGH-DENSITY LIST VIEW (MATCHING WHITE & PINK THEME)
+        // 7. HIGH-DENSITY LIST VIEW (MATCHING THEME)
         // -------------------------------------------------------------
         <View style={[styles.screen, { paddingTop: insets.top }]}>
           {/* List Top Bar */}
@@ -969,7 +1046,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               }}
               activeOpacity={0.85}
             >
-              <LocationPinVector color="#ff2d75" size={14} />
+              <LocationPinVector color="#ea4335" size={14} />
               <View style={styles.locationContentWrap}>
                 <Text style={styles.capsuleCityText} numberOfLines={1}>{userCity}</Text>
                 <View style={styles.capsuleDot} />
@@ -1074,7 +1151,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                     onPress={() => handleOpenMaps(studio)}
                     activeOpacity={0.8}
                   >
-                    <MapNavigationVector color="#ff2d75" size={12} />
+                    <MapNavigationVector color="#ea4335" size={12} />
                     <Text style={styles.btnDirectionsSmallText}>Directions</Text>
                   </TouchableOpacity>
                 </View>
@@ -1086,7 +1163,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
       )}
 
       {/* -------------------------------------------------------------
-          7. FULL STUDIO DETAILS MODAL (WHITE, BLACK & PINK)
+          8. FULL STUDIO DETAILS MODAL (GOOGLE MAPS CARD)
          ------------------------------------------------------------- */}
       <Modal visible={detailModalOpen} transparent animationType="slide" onRequestClose={() => setDetailModalOpen(false)}>
         <View style={styles.modalBackdrop}>
@@ -1146,7 +1223,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                   onPress={() => selectedStudio && handleOpenMaps(selectedStudio)}
                   activeOpacity={0.8}
                 >
-                  <MapNavigationVector color="#ff2d75" size={14} />
+                  <MapNavigationVector color="#ea4335" size={14} />
                   <Text style={styles.modalDirectionsText}>Open in Google Maps</Text>
                 </TouchableOpacity>
               </View>
@@ -1201,7 +1278,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
       </Modal>
 
       {/* -------------------------------------------------------------
-          8. PINCODE SEARCH MODAL (WHITE & PINK)
+          9. PINCODE SEARCH MODAL (GOOGLE MAPS DIALOG)
          ------------------------------------------------------------- */}
       <Modal visible={pincodeModalOpen} transparent animationType="fade" onRequestClose={() => setPincodeModalOpen(false)}>
         <View style={styles.modalBackdrop}>
@@ -1256,19 +1333,19 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
 };
 
 // -------------------------------------------------------------
-// 9. DRIBBLE NIXTIO STYLE STYLESHEET
+// 10. AUTHENTIC GOOGLE MAPS THEME STYLESHEET
 // -------------------------------------------------------------
 
 const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number }) =>
   StyleSheet.create({
     screen: {
       flex: 1,
-      backgroundColor: '#f8fafc',
+      backgroundColor: '#f4f3f0',
     },
     fullBleedMapContainer: {
       flex: 1,
       position: 'relative',
-      backgroundColor: '#f8fafc',
+      backgroundColor: '#f4f3f0',
     },
     floatingTopBarWrap: {
       position: 'absolute',
@@ -1286,13 +1363,13 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       backgroundColor: '#ffffff',
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: '#0f172a',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.10,
-      shadowRadius: 10,
-      elevation: 5,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 4,
       borderWidth: 1,
-      borderColor: '#e2e8f0',
+      borderColor: 'rgba(0, 0, 0, 0.08)',
       flexShrink: 0,
     },
     floatingLocationCapsule: {
@@ -1302,55 +1379,55 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       backgroundColor: '#ffffff',
       paddingVertical: 10,
       paddingHorizontal: 12,
-      borderRadius: 22,
-      borderWidth: 1.5,
-      borderColor: '#ffe4ee',
-      shadowColor: '#0f172a',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.10,
-      shadowRadius: 10,
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: 'rgba(0, 0, 0, 0.10)',
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.16,
+      shadowRadius: 8,
       elevation: 5,
       minWidth: 0,
-      gap: 6,
+      gap: 8,
     },
     locationContentWrap: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       minWidth: 0,
-      gap: 4,
+      gap: 5,
     },
     capsuleCityText: {
-      fontSize: 12,
+      fontSize: 12.5,
       fontWeight: '700',
-      color: '#0f172a',
+      color: '#202124',
       flexShrink: 1,
     },
     capsuleDot: {
       width: 3,
       height: 3,
       borderRadius: 1.5,
-      backgroundColor: '#94a3b8',
+      backgroundColor: '#70757a',
       flexShrink: 0,
     },
     capsulePinText: {
-      fontSize: 12,
+      fontSize: 12.5,
       fontWeight: '800',
-      color: '#ff2d75',
+      color: '#ea4335',
       flexShrink: 0,
     },
     capsuleChangeBadge: {
-      paddingHorizontal: 6,
-      paddingVertical: 2.5,
+      paddingHorizontal: 7,
+      paddingVertical: 3,
       borderRadius: 6,
-      backgroundColor: '#fff1f6',
+      backgroundColor: '#fef2f2',
       borderWidth: 1,
-      borderColor: '#ffd2e3',
+      borderColor: '#fecaca',
     },
     capsuleChangeText: {
       fontSize: 8.5,
       fontWeight: '800',
-      color: '#ff2d75',
+      color: '#ea4335',
       letterSpacing: 0.5,
     },
     floatingFilterChipsRow: {
@@ -1366,24 +1443,24 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     floatingFilterPill: {
       paddingVertical: 7,
       paddingHorizontal: 14,
-      borderRadius: 18,
+      borderRadius: 20,
       backgroundColor: '#ffffff',
       borderWidth: 1,
-      borderColor: '#e2e8f0',
-      shadowColor: '#0f172a',
+      borderColor: '#dadce0',
+      shadowColor: '#000000',
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 6,
+      shadowOpacity: 0.10,
+      shadowRadius: 4,
       elevation: 3,
     },
     floatingFilterPillActive: {
-      backgroundColor: '#0f172a',
-      borderColor: '#0f172a',
+      backgroundColor: '#202124',
+      borderColor: '#202124',
     },
     floatingFilterText: {
       fontSize: 11.5,
       fontWeight: '700',
-      color: '#475569',
+      color: '#3c4043',
     },
     floatingFilterTextActive: {
       color: '#ffffff',
@@ -1400,41 +1477,41 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       backgroundColor: '#ffffff',
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: '#0f172a',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.12,
-      shadowRadius: 10,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.18,
+      shadowRadius: 8,
       elevation: 5,
       borderWidth: 1,
-      borderColor: '#e2e8f0',
+      borderColor: 'rgba(0, 0, 0, 0.08)',
     },
     routeEtaPill: {
       position: 'absolute',
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
-      backgroundColor: '#0f172a',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 10,
+      gap: 5,
+      backgroundColor: '#202124',
+      paddingHorizontal: 9,
+      paddingVertical: 4.5,
+      borderRadius: 12,
       shadowColor: '#000000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.25,
-      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.30,
+      shadowRadius: 5,
       elevation: 6,
       zIndex: 15,
     },
     etaDotPulse: {
-      width: 5,
-      height: 5,
-      borderRadius: 2.5,
+      width: 6,
+      height: 6,
+      borderRadius: 3,
       backgroundColor: '#ff2d75',
     },
     routeEtaPillText: {
-      fontSize: 8.5,
+      fontSize: 9,
       fontWeight: '800',
       color: '#ffffff',
-      letterSpacing: 0.4,
+      letterSpacing: 0.3,
     },
     userGpsBeacon: {
       position: 'absolute',
@@ -1446,21 +1523,21 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     },
     userGpsSonarWave: {
       position: 'absolute',
-      width: 50,
-      height: 50,
-      borderRadius: 25,
-      backgroundColor: 'rgba(255, 45, 117, 0.25)',
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: 'rgba(66, 133, 244, 0.25)',
     },
     userGpsCorePoint: {
       width: 18,
       height: 18,
       borderRadius: 9,
-      backgroundColor: '#ff2d75',
+      backgroundColor: '#1a73e8',
       justifyContent: 'center',
       alignItems: 'center',
       borderWidth: 3,
       borderColor: '#ffffff',
-      shadowColor: '#ff2d75',
+      shadowColor: '#1a73e8',
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.45,
       shadowRadius: 4,
@@ -1480,7 +1557,7 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       paddingVertical: 2,
       borderRadius: 6,
       borderWidth: 1,
-      borderColor: '#ff2d75',
+      borderColor: '#1a73e8',
       shadowColor: '#000000',
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.1,
@@ -1491,17 +1568,17 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       fontSize: 8,
       fontWeight: '800',
       letterSpacing: 0.4,
-      color: '#ff2d75',
+      color: '#1a73e8',
     },
-    nixtioPinAnchor: {
+    googlePinAnchor: {
       position: 'absolute',
       alignItems: 'center',
       zIndex: 20,
     },
-    nixtioPinAnchorSelected: {
+    googlePinAnchorSelected: {
       zIndex: 99,
     },
-    nixtioPinPill: {
+    googlePinCallout: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
@@ -1509,91 +1586,47 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       paddingHorizontal: 8,
       paddingVertical: 3.5,
       borderRadius: 12,
-      borderWidth: 1.2,
-      borderColor: '#e2e8f0',
+      borderWidth: 1,
+      borderColor: '#dadce0',
       marginBottom: 3,
-      shadowColor: '#0f172a',
-      shadowOffset: { width: 0, height: 3 },
-      shadowOpacity: 0.12,
-      shadowRadius: 6,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.18,
+      shadowRadius: 4,
       elevation: 4,
       maxWidth: 130,
     },
-    nixtioPinPillSelected: {
+    googlePinCalloutSelected: {
       borderColor: '#ff2d75',
-      backgroundColor: '#fff0f5',
+      backgroundColor: '#fff1f6',
     },
     proMiniBadge: {
       flexShrink: 0,
     },
-    nixtioPinPillText: {
+    googlePinCalloutText: {
       fontSize: 9.5,
       fontWeight: '700',
-      color: '#0f172a',
+      color: '#202124',
       flexShrink: 1,
     },
-    nixtioPinPillTextSelected: {
+    googlePinCalloutTextSelected: {
       color: '#ff2d75',
     },
     pinDistDot: {
       width: 2.5,
       height: 2.5,
       borderRadius: 1.25,
-      backgroundColor: '#94a3b8',
+      backgroundColor: '#70757a',
       flexShrink: 0,
     },
-    pinDistText: {
-      fontSize: 9,
+    pinPriceText: {
+      fontSize: 9.5,
       fontWeight: '800',
-      color: '#0f172a',
+      color: '#188038',
       flexShrink: 0,
     },
-    pinDistTextSelected: {
+    pinPriceTextSelected: {
       color: '#ff2d75',
-    },
-    nixtioPinHead: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: '#0f172a',
-      borderWidth: 2,
-      borderColor: '#e2e8f0',
-      justifyContent: 'center',
-      alignItems: 'center',
-      shadowColor: '#0f172a',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.25,
-      shadowRadius: 6,
-      elevation: 6,
-    },
-    nixtioPinInner: {
-      width: 26,
-      height: 26,
-      borderRadius: 13,
-      backgroundColor: '#ffffff',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    nixtioPinInnerSelected: {
-      backgroundColor: '#ffffff',
-    },
-    nixtioPinChar: {
-      fontSize: 12,
-      fontWeight: '900',
-      color: '#0f172a',
-    },
-    nixtioPinCharSelected: {
-      color: '#ff2d75',
-    },
-    nixtioPinTip: {
-      width: 0,
-      height: 0,
-      borderLeftWidth: 5,
-      borderRightWidth: 5,
-      borderTopWidth: 6,
-      borderLeftColor: 'transparent',
-      borderRightColor: 'transparent',
-      borderTopColor: '#0f172a',
     },
     carouselContainer: {
       position: 'absolute',
@@ -1610,12 +1643,12 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       backgroundColor: '#ffffff',
       borderRadius: 24,
       padding: 16,
-      borderWidth: 1.5,
-      borderColor: '#e2e8f0',
-      shadowColor: '#0f172a',
+      borderWidth: 1,
+      borderColor: '#dadce0',
+      shadowColor: '#000000',
       shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.14,
-      shadowRadius: 20,
+      shadowOpacity: 0.18,
+      shadowRadius: 18,
       elevation: 10,
     },
     carouselCardItemSelected: {
@@ -1625,7 +1658,7 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       width: 36,
       height: 4,
       borderRadius: 2,
-      backgroundColor: '#e2e8f0',
+      backgroundColor: '#dadce0',
       alignSelf: 'center',
       marginBottom: 10,
     },
@@ -1639,9 +1672,9 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       width: 48,
       height: 48,
       borderRadius: 24,
-      backgroundColor: '#f1f5f9',
+      backgroundColor: '#f1f3f4',
       borderWidth: 1.5,
-      borderColor: '#cbd5e1',
+      borderColor: '#dadce0',
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -1652,7 +1685,7 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     cardAvatarText: {
       fontSize: 18,
       fontWeight: '900',
-      color: '#0f172a',
+      color: '#202124',
     },
     cardAvatarTextPro: {
       color: '#b45309',
@@ -1670,7 +1703,7 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     cardTitleText: {
       fontSize: 15,
       fontWeight: '800',
-      color: '#0f172a',
+      color: '#202124',
       letterSpacing: -0.3,
       flexShrink: 1,
     },
@@ -1678,7 +1711,7 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       flexDirection: 'row',
       alignItems: 'center',
       gap: 3,
-      backgroundColor: '#0f172a',
+      backgroundColor: '#202124',
       paddingHorizontal: 6,
       paddingVertical: 2,
       borderRadius: 6,
@@ -1694,7 +1727,7 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     cardOwnerSub: {
       fontSize: 11.5,
       fontWeight: '500',
-      color: '#64748b',
+      color: '#5f6368',
       marginBottom: 6,
     },
     cardMetaRow: {
@@ -1707,30 +1740,30 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       flexDirection: 'row',
       alignItems: 'center',
       gap: 3,
-      backgroundColor: '#fff1f6',
+      backgroundColor: '#fef2f2',
       paddingHorizontal: 6,
       paddingVertical: 2,
       borderRadius: 6,
       borderWidth: 1,
-      borderColor: '#ffd2e3',
+      borderColor: '#fecaca',
     },
     distanceBadgeText: {
       fontSize: 9.5,
       fontWeight: '800',
-      color: '#ff2d75',
+      color: '#ea4335',
     },
     etaBadgePill: {
-      backgroundColor: '#f1f5f9',
+      backgroundColor: '#f1f3f4',
       paddingHorizontal: 6,
       paddingVertical: 2,
       borderRadius: 6,
       borderWidth: 1,
-      borderColor: '#e2e8f0',
+      borderColor: '#dadce0',
     },
     etaBadgeText: {
       fontSize: 9.5,
       fontWeight: '700',
-      color: '#475569',
+      color: '#3c4043',
     },
     pinBadgePill: {
       backgroundColor: '#f8fafc',
@@ -1738,19 +1771,19 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       paddingVertical: 2,
       borderRadius: 6,
       borderWidth: 1,
-      borderColor: '#e2e8f0',
+      borderColor: '#dadce0',
     },
     pinExactBadgePill: {
-      backgroundColor: '#ecfdf5',
-      borderColor: '#a7f3d0',
+      backgroundColor: '#e6f4ea',
+      borderColor: '#a8dab5',
     },
     pinBadgeText: {
       fontSize: 9.5,
       fontWeight: '700',
-      color: '#64748b',
+      color: '#5f6368',
     },
     pinExactBadgeText: {
-      color: '#059669',
+      color: '#137333',
       fontWeight: '800',
     },
     cardServicesRow: {
@@ -1760,7 +1793,7 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       paddingTop: 8,
       paddingBottom: 10,
       borderTopWidth: 1,
-      borderTopColor: '#f1f5f9',
+      borderTopColor: '#f1f3f4',
       gap: 6,
     },
     chipsWrap: {
@@ -1771,23 +1804,23 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       minWidth: 0,
     },
     servicePill: {
-      backgroundColor: '#f8fafc',
+      backgroundColor: '#f8f9fa',
       paddingHorizontal: 7,
       paddingVertical: 3,
       borderRadius: 6,
       borderWidth: 1,
-      borderColor: '#e2e8f0',
+      borderColor: '#dadce0',
       maxWidth: 110,
     },
     servicePillText: {
       fontSize: 9.5,
       fontWeight: '600',
-      color: '#334155',
+      color: '#3c4043',
     },
     priceHighlight: {
       fontSize: 12,
       fontWeight: '800',
-      color: '#ff2d75',
+      color: '#188038',
       flexShrink: 0,
     },
     cardActionsRow: {
@@ -1802,7 +1835,7 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       alignItems: 'center',
       justifyContent: 'center',
       gap: 5,
-      backgroundColor: '#0f172a',
+      backgroundColor: '#202124',
       paddingVertical: 10,
       borderRadius: 12,
     },
@@ -1841,12 +1874,12 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       paddingVertical: 9,
       borderRadius: 12,
       borderWidth: 1.2,
-      borderColor: '#e2e8f0',
+      borderColor: '#dadce0',
     },
     actionBtnDirectionsText: {
       fontSize: 11,
       fontWeight: '800',
-      color: '#ff2d75',
+      color: '#ea4335',
     },
     listTopBar: {
       flexDirection: 'row',
@@ -1856,7 +1889,7 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       paddingVertical: 8,
       backgroundColor: '#ffffff',
       borderBottomWidth: 1,
-      borderBottomColor: '#f1f5f9',
+      borderBottomColor: '#f1f3f4',
     },
     listScrollContent: {
       padding: 14,
@@ -1868,13 +1901,13 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     listHeaderTitle: {
       fontSize: 15,
       fontWeight: '800',
-      color: '#0f172a',
+      color: '#202124',
       letterSpacing: -0.3,
     },
     listHeaderSub: {
       fontSize: 11,
       fontWeight: '500',
-      color: '#64748b',
+      color: '#5f6368',
       marginTop: 2,
     },
     listCard: {
@@ -1882,11 +1915,11 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       borderRadius: 18,
       padding: 14,
       borderWidth: 1,
-      borderColor: '#e2e8f0',
-      shadowColor: '#0f172a',
-      shadowOffset: { width: 0, height: 3 },
+      borderColor: '#dadce0',
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.08,
-      shadowRadius: 8,
+      shadowRadius: 6,
       elevation: 3,
     },
     listCardTop: {
@@ -1897,9 +1930,9 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       width: 44,
       height: 44,
       borderRadius: 22,
-      backgroundColor: '#f1f5f9',
+      backgroundColor: '#f1f3f4',
       borderWidth: 1.5,
-      borderColor: '#cbd5e1',
+      borderColor: '#dadce0',
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -1910,7 +1943,7 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     listAvatarText: {
       fontSize: 16,
       fontWeight: '900',
-      color: '#0f172a',
+      color: '#202124',
     },
     listAvatarTextPro: {
       color: '#b45309',
@@ -1922,19 +1955,19 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     listStudioName: {
       fontSize: 14,
       fontWeight: '800',
-      color: '#0f172a',
+      color: '#202124',
       flexShrink: 1,
     },
     listOwnerName: {
       fontSize: 11,
       fontWeight: '500',
-      color: '#64748b',
+      color: '#5f6368',
       marginTop: 1,
     },
     listAddress: {
       fontSize: 10.5,
       fontWeight: '400',
-      color: '#94a3b8',
+      color: '#70757a',
       marginTop: 2,
     },
     listBadgesRow: {
@@ -1944,7 +1977,7 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       marginTop: 6,
     },
     ordersBadgePill: {
-      backgroundColor: '#f1f5f9',
+      backgroundColor: '#f1f3f4',
       paddingHorizontal: 6,
       paddingVertical: 2,
       borderRadius: 6,
@@ -1952,11 +1985,11 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     ordersBadgeText: {
       fontSize: 9.5,
       fontWeight: '700',
-      color: '#334155',
+      color: '#3c4043',
     },
     listCardDivider: {
       height: 1,
-      backgroundColor: '#f1f5f9',
+      backgroundColor: '#f1f3f4',
       marginVertical: 10,
     },
     listActionsRow: {
@@ -1970,7 +2003,7 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       alignItems: 'center',
       justifyContent: 'center',
       gap: 4,
-      backgroundColor: '#0f172a',
+      backgroundColor: '#202124',
       paddingVertical: 7,
       borderRadius: 10,
     },
@@ -2004,16 +2037,16 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       paddingVertical: 6,
       borderRadius: 10,
       borderWidth: 1,
-      borderColor: '#e2e8f0',
+      borderColor: '#dadce0',
     },
     btnDirectionsSmallText: {
       fontSize: 10.5,
       fontWeight: '700',
-      color: '#ff2d75',
+      color: '#ea4335',
     },
     modalBackdrop: {
       flex: 1,
-      backgroundColor: 'rgba(15, 23, 42, 0.65)',
+      backgroundColor: 'rgba(32, 33, 36, 0.65)',
       justifyContent: 'flex-end',
     },
     modalSheetContainer: {
@@ -2028,7 +2061,7 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       width: 40,
       height: 4,
       borderRadius: 2,
-      backgroundColor: '#e2e8f0',
+      backgroundColor: '#dadce0',
       alignSelf: 'center',
       marginBottom: 14,
     },
@@ -2041,32 +2074,32 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     modalStudioName: {
       fontSize: 18,
       fontWeight: '800',
-      color: '#0f172a',
+      color: '#202124',
       letterSpacing: -0.4,
     },
     modalOwnerName: {
       fontSize: 12,
       fontWeight: '500',
-      color: '#64748b',
+      color: '#5f6368',
       marginTop: 2,
     },
     modalCloseBtn: {
       width: 36,
       height: 36,
       borderRadius: 18,
-      backgroundColor: '#f1f5f9',
+      backgroundColor: '#f1f3f4',
       justifyContent: 'center',
       alignItems: 'center',
     },
     modalStatsCard: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#f8fafc',
+      backgroundColor: '#f8f9fa',
       borderRadius: 16,
       paddingVertical: 12,
       paddingHorizontal: 8,
       borderWidth: 1,
-      borderColor: '#e2e8f0',
+      borderColor: '#dadce0',
       marginBottom: 14,
     },
     modalStatCol: {
@@ -2076,38 +2109,38 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     modalStatVal: {
       fontSize: 14,
       fontWeight: '900',
-      color: '#0f172a',
+      color: '#202124',
     },
     modalStatLabel: {
       fontSize: 9.5,
       fontWeight: '600',
-      color: '#64748b',
+      color: '#5f6368',
       marginTop: 2,
     },
     modalStatDivider: {
       width: 1,
       height: 24,
-      backgroundColor: '#e2e8f0',
+      backgroundColor: '#dadce0',
     },
     modalSectionCard: {
       backgroundColor: '#ffffff',
       borderRadius: 16,
       padding: 14,
       borderWidth: 1,
-      borderColor: '#f1f5f9',
+      borderColor: '#f1f3f4',
       marginBottom: 12,
     },
     modalSectionHeading: {
       fontSize: 10,
       fontWeight: '800',
-      color: '#94a3b8',
+      color: '#70757a',
       letterSpacing: 0.8,
       marginBottom: 8,
     },
     modalAddressText: {
       fontSize: 12.5,
       fontWeight: '500',
-      color: '#334155',
+      color: '#3c4043',
       lineHeight: 18,
       marginBottom: 10,
     },
@@ -2116,16 +2149,16 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,
-      backgroundColor: '#fff1f6',
+      backgroundColor: '#fef2f2',
       paddingVertical: 9,
       borderRadius: 10,
       borderWidth: 1,
-      borderColor: '#ffd2e3',
+      borderColor: '#fecaca',
     },
     modalDirectionsText: {
       fontSize: 11.5,
       fontWeight: '800',
-      color: '#ff2d75',
+      color: '#ea4335',
     },
     modalServiceRow: {
       flexDirection: 'row',
@@ -2133,40 +2166,40 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       alignItems: 'center',
       paddingVertical: 6,
       borderBottomWidth: 1,
-      borderBottomColor: '#f8fafc',
+      borderBottomColor: '#f8f9fa',
     },
     modalServiceName: {
       fontSize: 12,
       fontWeight: '600',
-      color: '#1e293b',
+      color: '#202124',
       flex: 1,
       paddingRight: 8,
     },
     modalServicePrice: {
       fontSize: 12,
       fontWeight: '800',
-      color: '#ff2d75',
+      color: '#188038',
     },
     modalGuaranteeCard: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
-      backgroundColor: '#ecfdf5',
+      backgroundColor: '#e6f4ea',
       borderRadius: 14,
       padding: 12,
       borderWidth: 1,
-      borderColor: '#a7f3d0',
+      borderColor: '#a8dab5',
       marginBottom: 14,
     },
     modalGuaranteeTitle: {
       fontSize: 11.5,
       fontWeight: '800',
-      color: '#065f46',
+      color: '#137333',
     },
     modalGuaranteeDesc: {
       fontSize: 10,
       fontWeight: '500',
-      color: '#047857',
+      color: '#137333',
       marginTop: 2,
     },
     modalFooterRow: {
@@ -2180,7 +2213,7 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,
-      backgroundColor: '#0f172a',
+      backgroundColor: '#202124',
       paddingVertical: 13,
       borderRadius: 14,
     },
@@ -2217,25 +2250,25 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
       paddingBottom: 32,
     },
     pincodeInput: {
-      backgroundColor: '#f8fafc',
+      backgroundColor: '#f8f9fa',
       borderRadius: 14,
       borderWidth: 1.5,
-      borderColor: '#cbd5e1',
+      borderColor: '#dadce0',
       paddingHorizontal: 16,
       paddingVertical: 12,
       fontSize: 18,
       fontWeight: '800',
-      color: '#0f172a',
+      color: '#202124',
       textAlign: 'center',
       letterSpacing: 4,
       marginVertical: 14,
     },
     applyPinBtn: {
-      backgroundColor: '#ff2d75',
+      backgroundColor: '#ea4335',
       borderRadius: 14,
       paddingVertical: 13,
       alignItems: 'center',
-      shadowColor: '#ff2d75',
+      shadowColor: '#ea4335',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.30,
       shadowRadius: 8,
@@ -2251,7 +2284,7 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     suggestionsHeading: {
       fontSize: 10,
       fontWeight: '800',
-      color: '#94a3b8',
+      color: '#70757a',
       letterSpacing: 0.8,
       marginBottom: 8,
     },
@@ -2261,23 +2294,23 @@ const createStyles = (colors: ThemeColors, insets: { top: number; bottom: number
     suggestionPill: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#f8fafc',
+      backgroundColor: '#f8f9fa',
       paddingHorizontal: 12,
       paddingVertical: 9,
       borderRadius: 10,
       borderWidth: 1,
-      borderColor: '#e2e8f0',
+      borderColor: '#dadce0',
       gap: 10,
     },
     suggestionPin: {
       fontSize: 12,
       fontWeight: '800',
-      color: '#ff2d75',
+      color: '#ea4335',
     },
     suggestionArea: {
       fontSize: 11.5,
       fontWeight: '600',
-      color: '#475569',
+      color: '#3c4043',
       flex: 1,
     },
   });

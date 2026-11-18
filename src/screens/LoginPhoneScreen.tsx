@@ -258,20 +258,13 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent, o
                   <MapCompassVector color="#ff2d75" size={20} />
                 </View>
                 <View style={styles.discoveryContent}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                    <Text style={styles.discoveryTitle}>Find Nearest Beautician</Text>
-                    <View style={styles.liveMapBadge}>
-                      <View style={styles.liveGreenDot} />
-                      <Text style={styles.liveMapBadgeText}>LIVE MAP</Text>
-                    </View>
-                  </View>
+                  <Text style={styles.discoveryTitle}>Find Nearest Beautician</Text>
                   <Text style={styles.discoverySubtitle}>
-                    Locate registered bridal & makeover artists near your PIN
+                    Locate registered makeover artists near your PIN code
                   </Text>
                 </View>
-                <View style={styles.discoveryActionPill}>
-                  <Text style={styles.discoveryActionText}>EXPLORE</Text>
-                  <ChevronRightVector color="#ff2d75" size={11} />
+                <View style={styles.arrowCircle}>
+                  <ChevronRightVector color="#0f172a" size={16} />
                 </View>
               </TouchableOpacity>
             </View>
@@ -495,50 +488,19 @@ const createStyles = (colors: ThemeColors) =>
       color: '#0f172a',
       letterSpacing: -0.3,
     },
-    liveMapBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      backgroundColor: '#ecfdf5',
-      paddingHorizontal: 5,
-      paddingVertical: 2,
-      borderRadius: 4,
-      borderWidth: 1,
-      borderColor: '#a7f3d0',
-    },
-    liveGreenDot: {
-      width: 4,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: '#10b981',
-    },
-    liveMapBadgeText: {
-      fontSize: 7.5,
-      fontWeight: '800',
-      color: '#047857',
-      letterSpacing: 0.4,
-    },
     discoverySubtitle: {
-      fontSize: 10.5,
-      lineHeight: 14,
+      fontSize: 11,
+      lineHeight: 15,
       color: '#64748b',
+      marginTop: 2,
     },
-    discoveryActionPill: {
-      flexDirection: 'row',
+    arrowCircle: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: '#f1f5f9',
+      justifyContent: 'center',
       alignItems: 'center',
-      gap: 3,
-      paddingVertical: 6,
-      paddingHorizontal: 9,
-      borderRadius: 8,
-      backgroundColor: '#fff1f6',
-      borderWidth: 1,
-      borderColor: '#ffd2e3',
-    },
-    discoveryActionText: {
-      fontSize: 9.5,
-      fontWeight: '800',
-      color: '#ff2d75',
-      letterSpacing: 0.5,
     },
     securityRow: {
       flexDirection: 'row',
