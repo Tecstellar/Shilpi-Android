@@ -11,9 +11,9 @@ import {
   Linking,
   Platform,
   Dimensions,
-  SafeAreaView,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import Svg, {
