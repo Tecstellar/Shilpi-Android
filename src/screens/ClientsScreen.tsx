@@ -63,6 +63,20 @@ const UsersEmptyVectorIcon = () => {
   );
 };
 
+const SearchVectorIcon = ({ color = '#121212', size = 18 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
+    <Circle cx="11" cy="11" r="7.5" />
+    <Line x1="16.65" y1="16.65" x2="21.5" y2="21.5" strokeLinecap="round" />
+  </Svg>
+);
+
+const CloseVectorIcon = ({ color = '#121212', size = 14 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2}>
+    <Line x1="18" y1="6" x2="6" y2="18" strokeLinecap="round" strokeLinejoin="round" />
+    <Line x1="6" y1="6" x2="18" y2="18" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
 const HeartVectorIcon = ({ filled }: { filled: boolean }) => {
   const { colors } = useTheme();
   return (
@@ -100,6 +114,7 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'active' | 'vip' | 'inactive'>('active');
+  const [showAllWhenEmpty, setShowAllWhenEmpty] = useState(false);
 
   const activeClients = clients.filter((c) => c.isActive !== false);
   const inactiveClients = clients.filter((c) => c.isActive === false);
@@ -121,13 +136,25 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
       {/* Search Bar + Add Client (+) Icon + Active/VIP/Inactive filters */}
       <View style={styles.searchContainer}>
         <View style={styles.searchRow}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search clients..."
-            placeholderTextColor="rgba(18, 18, 18, 0.4)"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+          <View style={styles.searchInputWrap}>
+            <SearchVectorIcon color="rgba(18, 18, 18, 0.4)" size={18} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search clients..."
+              placeholderTextColor="rgba(18, 18, 18, 0.4)"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <CloseVectorIcon color="rgba(18, 18, 18, 0.45)" size={14} />
+              </TouchableOpacity>
+            )}
+          </View>
           {onStartNewClient && (
             <TouchableOpacity
               style={styles.addPlusBtn}
@@ -176,8 +203,41 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       >
-        {filtered.length > 0 ? (
-          filtered.map((c, index) => {
+        {searchQuery.trim().length === 0 && !showAllWhenEmpty ? (
+          <View style={styles.searchGuideWrap}>
+            <View style={styles.searchGuideIconCircle}>
+              <SearchVectorIcon color={colors.accent} size={30} />
+            </View>
+            <Text style={styles.searchGuideTitle}>Search Client Directory</Text>
+            <Text style={styles.searchGuideSub}>
+              Type any character to find clients by name or phone number.
+            </Text>
+            <TouchableOpacity
+              style={styles.browseAllBtn}
+              onPress={() => setShowAllWhenEmpty(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.browseAllBtnText}>
+                View All Clients ({filtered.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : filtered.length > 0 ? (
+          <>
+            {showAllWhenEmpty && searchQuery.trim().length === 0 && (
+              <View style={styles.allClientsHeaderBar}>
+                <Text style={styles.allClientsCountText}>
+                  Showing all {filtered.length} {filterMode} clients
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowAllWhenEmpty(false)}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <Text style={styles.hideAllText}>Hide</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {filtered.map((c, index) => {
             const initial = c.name.charAt(0);
             const isAccentChip = index % 2 === 0;
 
@@ -255,7 +315,8 @@ export const ClientsScreen: React.FC<ClientsScreenProps> = ({
                 )}
               </TouchableOpacity>
             );
-          })
+          })}
+          </>
         ) : (
           <View style={styles.emptyContainer}>
             <View style={styles.emptyIconCircle}>
@@ -311,16 +372,23 @@ const createStyles = (colors: ThemeColors) =>
     alignItems: 'center',
     gap: 10,
   },
-  searchInput: {
+  searchInputWrap: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.tint,
     borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: '#121212',
+    paddingHorizontal: 14,
+    minHeight: 46,
     borderWidth: 1,
     borderColor: 'rgba(18, 18, 18, 0.06)',
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#121212',
+    paddingVertical: 10,
   },
   addPlusBtn: {
     width: 46,
@@ -522,5 +590,63 @@ const createStyles = (colors: ThemeColors) =>
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
+  },
+  searchGuideWrap: {
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  searchGuideIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#fff1f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  searchGuideTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#121212',
+    marginBottom: 6,
+  },
+  searchGuideSub: {
+    fontSize: 13,
+    color: 'rgba(18, 18, 18, 0.55)',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 20,
+    maxWidth: 280,
+  },
+  browseAllBtn: {
+    backgroundColor: '#121212',
+    paddingHorizontal: 20,
+    paddingVertical: 11,
+    borderRadius: 999,
+  },
+  browseAllBtnText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  allClientsHeaderBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    paddingBottom: 10,
+  },
+  allClientsCountText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: 'rgba(18, 18, 18, 0.5)',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  hideAllText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.accent,
   },
 });

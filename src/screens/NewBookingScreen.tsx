@@ -106,6 +106,20 @@ const PlusSmallVectorIcon = () => {
   );
 };
 
+const SearchVectorIcon = ({ color = '#121212', size = 16 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.1}>
+    <Circle cx="11" cy="11" r="7.5" />
+    <Line x1="16.65" y1="16.65" x2="21.5" y2="21.5" strokeLinecap="round" />
+  </Svg>
+);
+
+const CloseSmallVectorIcon = ({ color = '#121212', size = 14 }: { color?: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2}>
+    <Line x1="18" y1="6" x2="6" y2="18" strokeLinecap="round" strokeLinejoin="round" />
+    <Line x1="6" y1="6" x2="18" y2="18" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
 const MONTH_SHORT = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
@@ -165,8 +179,9 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
   const resolvedInitYear = initialYear || currentYear;
 
   const [selectedClient, setSelectedClient] = useState<string>(
-    initialClientName || clients[0]?.name || ''
+    initialClientName || ''
   );
+  const [clientSearchQuery, setClientSearchQuery] = useState('');
   const [monthOffset, setMonthOffset] = useState<number>(
     initialMonth || initialYear
       ? (resolvedInitYear - currentYear) * 12 + (resolvedInitMonthIdx - currentMonthIdx)
@@ -210,10 +225,18 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
   useEffect(() => {
     if (initialClientName) {
       setSelectedClient(initialClientName);
-    } else if (!selectedClient && clients.length > 0) {
-      setSelectedClient(clients[0].name);
     }
-  }, [initialClientName, clients]);
+  }, [initialClientName]);
+
+  const filteredClients = useMemo(() => {
+    const q = clientSearchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return clients.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.phone && c.phone.includes(q))
+    );
+  }, [clients, clientSearchQuery]);
 
   useEffect(() => {
     if (initialDay) {
@@ -348,49 +371,142 @@ export const NewBookingScreen: React.FC<NewBookingScreenProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.responsiveInner}>
-        {/* 1. Client Selector + New Client */}
+        {/* 1. Client Search & Selector + New Client */}
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>CLIENT</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipsRow}
-          >
-            {clients.map((c) => {
-              const isSel = selectedClient === c.name;
-              return (
-                <TouchableOpacity
-                  key={String(c.id)}
-                  style={[styles.clientChip, isSel && styles.clientChipActive]}
-                  onPress={() => setSelectedClient(c.name)}
-                  hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
-                  activeOpacity={0.8}
-                >
-                  <Text
-                    style={[
-                      styles.clientChipText,
-                      isSel && styles.clientChipTextActive,
-                    ]}
-                  >
-                    {first(c.name)}
+          <View style={styles.clientHeaderRow}>
+            <Text style={styles.sectionTitle}>CLIENT</Text>
+            {onStartNewClient && (
+              <TouchableOpacity
+                style={styles.newClientHeaderBtn}
+                onPress={onStartNewClient}
+                activeOpacity={0.75}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <PlusSmallVectorIcon />
+                <Text style={styles.newClientHeaderText}>New client</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* If a client is selected, show their selected card */}
+          {selectedClient ? (
+            <View style={styles.selectedClientCard}>
+              <View style={styles.selectedClientAvatar}>
+                <Text style={styles.selectedClientAvatarText}>
+                  {first(selectedClient).charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={styles.selectedClientInfo}>
+                <View style={styles.selectedClientNameRow}>
+                  <Text style={styles.selectedClientName} numberOfLines={1}>
+                    {selectedClient}
                   </Text>
-                </TouchableOpacity>
-              );
-            })}
-            <TouchableOpacity
-              style={styles.newClientChip}
-              onPress={onStartNewClient}
-              hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
-              activeOpacity={0.8}
-            >
-              <PlusSmallVectorIcon />
-              <Text style={styles.newClientText}>New client</Text>
-            </TouchableOpacity>
-          </ScrollView>
-          {clients.length === 0 && (
-            <Text style={styles.emptyClientHint}>
-              No clients saved yet. Tap "New client" to add one first.
-            </Text>
+                  <View style={styles.selectedBadgePill}>
+                    <CheckVectorIcon />
+                    <Text style={styles.selectedBadgeText}>SELECTED</Text>
+                  </View>
+                </View>
+                {(() => {
+                  const matched = clients.find(
+                    (c) => c.name.toLowerCase() === selectedClient.toLowerCase()
+                  );
+                  return matched?.phone ? (
+                    <Text style={styles.selectedClientMeta}>{matched.phone}</Text>
+                  ) : null;
+                })()}
+              </View>
+              <TouchableOpacity
+                style={styles.changeClientBtn}
+                onPress={() => {
+                  setSelectedClient('');
+                  setClientSearchQuery('');
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.changeClientBtnText}>Change</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            /* Search input box when no client is selected */
+            <View style={styles.searchBoxWrap}>
+              <View style={styles.clientSearchInputBox}>
+                <SearchVectorIcon color={colors.accent} size={18} />
+                <TextInput
+                  style={styles.clientSearchTextInput}
+                  placeholder="Search client by name or phone..."
+                  placeholderTextColor="rgba(18, 18, 18, 0.4)"
+                  value={clientSearchQuery}
+                  onChangeText={setClientSearchQuery}
+                  autoCorrect={false}
+                />
+                {clientSearchQuery.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => setClientSearchQuery('')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <CloseSmallVectorIcon color="rgba(18, 18, 18, 0.5)" size={14} />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Character Search Results */}
+              {clientSearchQuery.trim().length > 0 ? (
+                filteredClients.length > 0 ? (
+                  <View style={styles.clientResultsList}>
+                    {filteredClients.map((c) => (
+                      <TouchableOpacity
+                        key={String(c.id)}
+                        style={styles.clientResultRow}
+                        onPress={() => {
+                          setSelectedClient(c.name);
+                          setClientSearchQuery('');
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.resultAvatarChip}>
+                          <Text style={styles.resultAvatarText}>
+                            {c.name.charAt(0).toUpperCase()}
+                          </Text>
+                        </View>
+                        <View style={styles.resultInfoCol}>
+                          <Text style={styles.resultNameText}>{c.name}</Text>
+                          {c.phone ? (
+                            <Text style={styles.resultMetaText}>{c.phone}</Text>
+                          ) : null}
+                        </View>
+                        <View style={styles.selectArrowPill}>
+                          <Text style={styles.selectArrowText}>Select</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={styles.noResultsBox}>
+                    <Text style={styles.noResultsText}>
+                      No clients found containing "{clientSearchQuery}".
+                    </Text>
+                    {onStartNewClient && (
+                      <TouchableOpacity
+                        style={styles.noResultsAddBtn}
+                        onPress={onStartNewClient}
+                        activeOpacity={0.8}
+                      >
+                        <PlusSmallVectorIcon />
+                        <Text style={styles.noResultsAddText}>
+                          Add "{clientSearchQuery}" as New Client
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )
+              ) : (
+                <View style={styles.searchPromptBox}>
+                  <Text style={styles.searchPromptText}>
+                    Type any character to search clients by name or phone
+                  </Text>
+                </View>
+              )}
+            </View>
           )}
         </View>
 
@@ -887,48 +1003,205 @@ const createStyles = (colors: ThemeColors) =>
     color: '#121212',
     marginBottom: 10,
   },
-  chipsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  clientChip: {
-    backgroundColor: '#f4f4f6',
-    minHeight: 34,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 999,
-    justifyContent: 'center',
-  },
-  clientChipActive: {
-    backgroundColor: colors.accent,
-  },
-  clientChipText: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: '#121212',
-  },
-  clientChipTextActive: {
-    color: '#ffffff',
-  },
-  newClientChip: {
-    backgroundColor: colors.tint,
-    minHeight: 34,
-    paddingVertical: 6,
-    paddingHorizontal: 13,
-    borderRadius: 999,
+  clientHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
-  newClientText: {
-    fontSize: 12.5,
+  newClientHeaderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.tint,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  newClientHeaderText: {
+    fontSize: 12,
     fontWeight: '700',
     color: colors.deep,
   },
-  emptyClientHint: {
-    fontSize: 11.5,
+  selectedClientCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+    borderWidth: 1.5,
+    borderColor: colors.accent,
+    borderRadius: 14,
+    padding: 12,
+    gap: 12,
+  },
+  selectedClientAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.tint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectedClientAvatarText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.deep,
+  },
+  selectedClientInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  selectedClientNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  selectedClientName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#121212',
+    flexShrink: 1,
+  },
+  selectedBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  selectedBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#059669',
+    letterSpacing: 0.5,
+  },
+  selectedClientMeta: {
+    fontSize: 12,
     color: 'rgba(18, 18, 18, 0.55)',
-    marginTop: 10,
+    marginTop: 2,
+  },
+  changeClientBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#f4f4f6',
+  },
+  changeClientBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#121212',
+  },
+  searchBoxWrap: {
+    width: '100%',
+  },
+  clientSearchInputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f4f4f6',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    minHeight: 44,
+    gap: 8,
+  },
+  clientSearchTextInput: {
+    flex: 1,
+    fontSize: 13.5,
+    color: '#121212',
+    paddingVertical: 8,
+  },
+  searchPromptBox: {
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  },
+  searchPromptText: {
+    fontSize: 12,
+    color: 'rgba(18, 18, 18, 0.45)',
+    fontStyle: 'italic',
+  },
+  clientResultsList: {
+    marginTop: 8,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    overflow: 'hidden',
+    maxHeight: 220,
+  },
+  clientResultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    gap: 10,
+  },
+  resultAvatarChip: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.tint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resultAvatarText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.deep,
+  },
+  resultInfoCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  resultNameText: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#121212',
+  },
+  resultMetaText: {
+    fontSize: 11.5,
+    color: 'rgba(18, 18, 18, 0.5)',
+    marginTop: 1,
+  },
+  selectArrowPill: {
+    backgroundColor: colors.tint,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  selectArrowText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.deep,
+  },
+  noResultsBox: {
+    padding: 14,
+    alignItems: 'center',
+    backgroundColor: '#fafafa',
+    borderRadius: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  noResultsText: {
+    fontSize: 12.5,
+    color: 'rgba(18, 18, 18, 0.6)',
+    marginBottom: 8,
+  },
+  noResultsAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.tint,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  noResultsAddText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.deep,
   },
   monthHeaderRow: {
     flexDirection: 'row',
