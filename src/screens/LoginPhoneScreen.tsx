@@ -59,6 +59,12 @@ const ChevronRightVector: React.FC<{ color?: string; size?: number }> = ({ color
   </Svg>
 );
 
+const ChevronLeftVector: React.FC<{ color?: string; size?: number }> = ({ color = '#ffffff', size = 14 }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path d="M15 18l-6-6 6-6" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
 const SecurityShieldVector: React.FC<{ color?: string; size?: number }> = ({ color = '#888899', size = 13 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
@@ -73,10 +79,10 @@ const SecurityShieldVector: React.FC<{ color?: string; size?: number }> = ({ col
 
 interface LoginPhoneScreenProps {
   onOtpSent: (phone: string) => void;
-  onFindNearest?: () => void;
+  onGoBack?: () => void;
 }
 
-export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent, onFindNearest }) => {
+export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent, onGoBack }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -148,13 +154,25 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent, o
         keyboardDismissMode="interactive"
         automaticallyAdjustKeyboardInsets={true}
       >
-        {/* Curved Obsidian Header with Shilpi Branding */}
+        {/* Curved Obsidian Header with Clean Back Button & Shilpi Logo */}
         <View style={styles.headerBlack}>
-          <Image
-            source={require('../../assets/shilpi-lockup-black.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          <View style={styles.headerTopRow}>
+            {onGoBack ? (
+              <TouchableOpacity
+                style={styles.backButtonCircle}
+                onPress={onGoBack}
+                activeOpacity={0.75}
+              >
+                <ChevronLeftVector color="#ffffff" size={18} />
+              </TouchableOpacity>
+            ) : null}
+            <Image
+              source={require('../../assets/shilpi-lockup-black.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            {onGoBack ? <View style={styles.headerSpacer} /> : null}
+          </View>
         </View>
 
         {/* Clean, Focused Input Card */}
@@ -239,36 +257,6 @@ export const LoginPhoneScreen: React.FC<LoginPhoneScreenProps> = ({ onOtpSent, o
               )}
             </TouchableOpacity>
           </View>
-
-          {/* Customer Discovery Luxury Concierge Row */}
-          {onFindNearest && (
-            <View style={styles.customerEntryWrap}>
-              <View style={styles.dividerRow}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerLabel}>OR EXPLORE AS A CLIENT</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
-              <TouchableOpacity
-                style={styles.discoveryBanner}
-                onPress={onFindNearest}
-                activeOpacity={0.85}
-              >
-                <View style={styles.discoveryIconCircle}>
-                  <MapCompassVector color="#ff2d75" size={20} />
-                </View>
-                <View style={styles.discoveryContent}>
-                  <Text style={styles.discoveryTitle}>Find Nearest Beautician</Text>
-                  <Text style={styles.discoverySubtitle}>
-                    Locate registered makeover artists near your PIN code
-                  </Text>
-                </View>
-                <View style={styles.arrowCircle}>
-                  <ChevronRightVector color="#0f172a" size={16} />
-                </View>
-              </TouchableOpacity>
-            </View>
-          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -294,9 +282,26 @@ const createStyles = (colors: ThemeColors) =>
       borderBottomRightRadius: 28,
       alignItems: 'flex-start',
     },
+    headerTopRow: {
+      width: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    backButtonCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: 'rgba(255, 255, 255, 0.15)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerSpacer: {
+      width: 36,
+    },
     logo: {
-      width: 260,
-      height: 104,
+      width: 200,
+      height: 80,
       marginLeft: -8,
     },
     cardContainer: {
