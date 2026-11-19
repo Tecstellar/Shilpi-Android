@@ -1,100 +1,17 @@
-import React, { Component, ReactNode, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import { useVideoPlayer, VideoView } from 'expo-video';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Dimensions, Animated, TouchableOpacity } from 'react-native';
+import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop, Circle } from 'react-native-svg';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface SplashScreenProps {
   onFinish: () => void;
 }
 
-// Error boundary to gracefully catch any native video module issue
-class VideoErrorBoundary extends Component<
-  { onError: () => void; children: ReactNode },
-  { hasError: boolean }
-> {
-  state = { hasError: false };
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: unknown) {
-    console.warn('Video playback warning, proceeding to login:', error);
-    this.props.onError();
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return null;
-    }
-    return this.props.children;
-  }
-}
-
-const IntroVideoPlayer: React.FC<{ onEnd: () => void }> = ({ onEnd }) => {
-  const [hasEnded, setHasEnded] = useState(false);
-  const endedRef = useRef(false);
-  const videoSource = require('../../assets/Shilpi_Splash_Intro.mp4');
-
-  const player = useVideoPlayer(videoSource, (p) => {
-    try {
-      p.loop = false;
-      p.muted = true; // Essential for silent 1080x1920 MP4 to prevent ExoPlayer clock stall
-      p.play();
-    } catch (e) {
-      console.warn('Player init error', e);
-    }
-  });
-
-  const triggerEnd = useRef(() => {
-    if (!endedRef.current) {
-      endedRef.current = true;
-      setHasEnded(true);
-      onEnd();
-    }
-  }).current;
-
-  useEffect(() => {
-    let subEnd: any;
-    let subStatus: any;
-    try {
-      subEnd = player.addListener('playToEnd', () => {
-        triggerEnd();
-      });
-      subStatus = player.addListener('statusChange', ({ status, error }: any) => {
-        if (status === 'error' || error) {
-          triggerEnd();
-        }
-      });
-      // Force play in case autoplay was deferred by platform
-      player.play();
-    } catch {
-      triggerEnd();
-    }
-
-    return () => {
-      try {
-        subEnd?.remove();
-        subStatus?.remove();
-      } catch {}
-    };
-  }, [player, triggerEnd]);
-
-  if (hasEnded) {
-    return null;
-  }
-
-  return (
-    <VideoView
-      style={styles.videoPlayer}
-      player={player}
-      nativeControls={false}
-      contentFit="contain"
-    />
-  );
-};
-
 export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
-  const [videoFinished, setVideoFinished] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const pulseAnim = useRef(new Animated.Value(0.5)).current;
   const finishedRef = useRef(false);
 
   const attemptFinish = () => {
@@ -105,64 +22,170 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
   };
 
   useEffect(() => {
-    if (videoFinished) {
-      attemptFinish();
-    }
-  }, [videoFinished]);
+    // 1. Entrance animation (smooth fade + spring scale)
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 7,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
-  // The video duration is 8.00s. Fallback timer at 8.5s ensures the entire video plays!
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setVideoFinished(true);
-    }, 8500);
-    return () => clearTimeout(timeout);
-  }, []);
+    // 2. Subtle luxury breathing glow pulse
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.5,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // 3. Auto-transition smoothly into onboarding
+    const timer = setTimeout(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 350,
+        useNativeDriver: true,
+      }).start(() => {
+        attemptFinish();
+      });
+    }, 1800);
+
+    return () => clearTimeout(timer);
+  }, [fadeAnim, scaleAnim, pulseAnim]);
 
   return (
-    <View style={styles.container}>
-      {!videoFinished && (
-        <VideoErrorBoundary onError={() => setVideoFinished(true)}>
-          <IntroVideoPlayer onEnd={() => setVideoFinished(true)} />
-        </VideoErrorBoundary>
-      )}
-    </View>
+    <TouchableOpacity
+      style={styles.container}
+      activeOpacity={1}
+      onPress={attemptFinish}
+    >
+      {/* Background Subtle Ambient Rose Glow */}
+      <View style={styles.ambientGlow} pointerEvents="none">
+        <Svg width="100%" height="100%" viewBox="0 0 400 400">
+          <Defs>
+            <SvgLinearGradient id="splashGlow" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0%" stopColor="#e8276b" stopOpacity="0.22" />
+              <Stop offset="55%" stopColor="#ff528c" stopOpacity="0.06" />
+              <Stop offset="100%" stopColor="#08080c" stopOpacity="0" />
+            </SvgLinearGradient>
+          </Defs>
+          <Circle cx="200" cy="200" r="180" fill="url(#splashGlow)" />
+        </Svg>
+      </View>
+
+      <Animated.View
+        style={[
+          styles.contentWrap,
+          {
+            opacity: fadeAnim,
+            transform: [{ scale: scaleAnim }],
+          },
+        ]}
+      >
+        {/* Luxury Shilpi Sparkling Emblem */}
+        <View style={styles.emblemWrap}>
+          <Svg width={76} height={76} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"
+              fill="#e8276b"
+            />
+            <Path
+              d="M19 3L19.8 5.2L22 6L19.8 6.8L19 9L18.2 6.8L16 6L18.2 5.2L19 3Z"
+              fill="#ff7a9e"
+            />
+          </Svg>
+        </View>
+
+        {/* Brand Headline */}
+        <Text style={styles.brandTitle}>SHILPI</Text>
+
+        {/* Editorial Subtitle */}
+        <Text style={styles.brandSubtitle}>BEAUTY & MAKEOVER STUDIO</Text>
+
+        {/* Breathing Status Indicator */}
+        <Animated.View style={[styles.dotPill, { opacity: pulseAnim }]}>
+          <View style={styles.dot} />
+        </Animated.View>
+      </Animated.View>
+    </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#08080c',
+    alignItems: 'center',
+    justifyContent: 'center',
     position: 'relative',
   },
-  videoPlayer: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: '#000000',
+  ambientGlow: {
+    position: 'absolute',
+    width: SCREEN_WIDTH * 1.2,
+    height: SCREEN_WIDTH * 1.2,
   },
-  touchOverlay: {
-    ...StyleSheet.absoluteFill,
-    justifyContent: 'flex-end',
+  contentWrap: {
     alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
   },
-  footerOverlay: {
-    paddingBottom: 48,
+  emblemWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: 'rgba(232, 39, 107, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(232, 39, 107, 0.22)',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    width: '100%',
-    paddingTop: 20,
+    justifyContent: 'center',
+    marginBottom: 24,
+    shadowColor: '#e8276b',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  brandTitle: {
+    fontSize: 40,
+    fontWeight: '900',
+    letterSpacing: 8,
+    color: '#ffffff',
+    marginBottom: 8,
   },
   brandSubtitle: {
-    fontSize: 11.5,
-    letterSpacing: 2,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 3.5,
     textTransform: 'uppercase',
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.55)',
+    marginBottom: 32,
   },
-  tapToContinue: {
-    fontSize: 10,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    color: 'rgba(255, 255, 255, 0.45)',
+  dotPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#e8276b',
   },
 });

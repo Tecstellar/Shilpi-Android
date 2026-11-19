@@ -20,7 +20,6 @@
         "backgroundColor": "#0f172a"
       },
       "package": "com.shilpi.studio",
-      "usesCleartextTraffic": true,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
