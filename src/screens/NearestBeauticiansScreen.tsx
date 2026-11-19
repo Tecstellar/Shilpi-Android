@@ -174,23 +174,17 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
   // Mode: 'map' (default interactive Google map) | 'list' (clean luxury list)
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
 
-  // Location Choice Modal State (Opens centered upon clicking "I'm looking for a beautician")
-  const [locationChoiceModalOpen, setLocationChoiceModalOpen] = useState(true);
+  // Location Choice Modal State
+  const [locationChoiceModalOpen, setLocationChoiceModalOpen] = useState(false);
   const [isDetectingGps, setIsDetectingGps] = useState(false);
-  const [modalPincodeInput, setModalPincodeInput] = useState('628552');
-  const [listPincodeFilter, setListPincodeFilter] = useState('628552');
+  const [modalPincodeInput, setModalPincodeInput] = useState('');
+  const [listPincodeFilter, setListPincodeFilter] = useState('');
 
-  // Active Location Coordinates & Details
-  const [userPincode, setUserPincode] = useState<string>('628552');
-  const [userCity, setUserCity] = useState<string>('Kalugumalai');
-  const [userAddress, setUserAddress] = useState<string>('Main Bazaar, Kalugumalai');
-  const [customerCoords, setCustomerCoords] = useState<{ lat: number; lng: number }>({ lat: 9.1447, lng: 77.7081 });
-
-  // Sync listPincodeFilter and modalPincodeInput whenever userPincode changes
-  useEffect(() => {
-    setListPincodeFilter(userPincode);
-    setModalPincodeInput(userPincode);
-  }, [userPincode]);
+  // Active Location Coordinates & Details (Real Live Data - No dummy prefill)
+  const [userPincode, setUserPincode] = useState<string>('');
+  const [userCity, setUserCity] = useState<string>('Detecting location...');
+  const [userAddress, setUserAddress] = useState<string>('Locating...');
+  const [customerCoords, setCustomerCoords] = useState<{ lat: number; lng: number }>({ lat: 11.0168, lng: 76.9558 });
 
   // Live Database Beauticians (Real Data Only - Zero Mock Fallbacks)
   const [rawDbBeauticians, setRawDbBeauticians] = useState<RegisteredMakeover[]>([]);
@@ -205,9 +199,13 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
   // -------------------------------------------------------------
   // FETCH REAL DATA FROM SHILPI DATABASE API
   // -------------------------------------------------------------
-  const fetchDbBeauticians = useCallback(async (pincodeQuery: string) => {
+  const fetchDbBeauticians = useCallback(async (pincodeQuery?: string, lat?: number, lng?: number) => {
     setIsLoadingDb(true);
-    const endpoint = `/discovery/beauticians?pincode=${encodeURIComponent(pincodeQuery)}&section=all`;
+    const pin = (pincodeQuery || '').trim();
+    const pinParam = pin ? `&pincode=${encodeURIComponent(pin)}` : '';
+    const latParam = typeof lat === 'number' ? `&lat=${lat}` : '';
+    const lngParam = typeof lng === 'number' ? `&lng=${lng}` : '';
+    const endpoint = `/discovery/beauticians?section=all${pinParam}${latParam}${lngParam}`;
 
     try {
       const clientRes = await apiClient.get(endpoint).catch(() => null);
@@ -234,8 +232,8 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
           isExactPincode: Boolean(b.isExactPincode),
           startingPrice: typeof b.startingPrice === 'number' ? b.startingPrice : 3500,
           services: Array.isArray(b.services) && b.services.length > 0 ? b.services : ['Bridal Makeover', 'Party Look'],
-          latitude: typeof b.latitude === 'number' ? b.latitude : 9.1447,
-          longitude: typeof b.longitude === 'number' ? b.longitude : 77.7081,
+          latitude: typeof b.latitude === 'number' ? b.latitude : 11.0168,
+          longitude: typeof b.longitude === 'number' ? b.longitude : 76.9558,
         }));
         setRawDbBeauticians(mapped);
       } else {
@@ -249,59 +247,144 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
     }
   }, []);
 
-  // Fetch when userPincode changes
-  useEffect(() => {
-    fetchDbBeauticians(userPincode);
-  }, [userPincode, fetchDbBeauticians]);
-
   // -------------------------------------------------------------
-  // 1. LIVE GPS DETECTION HANDLER
+  // 1. LIVE GPS DETECTION HANDLER (Real Location Fetching)
   // -------------------------------------------------------------
-  const handleDetectLiveGps = async () => {
+  const handleDetectLiveGps = useCallback(async (isAutoOnMount = false) => {
     setIsDetectingGps(true);
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch {}
+
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setIsDetectingGps(false);
-        Alert.alert(
-          'Location Access Needed',
-          'Please allow location permission in device settings or enter your 6-digit PIN code.',
-          [{ text: 'OK' }]
-        );
+        if (!isAutoOnMount) {
+          Alert.alert(
+            'Location Access Needed',
+            'Please allow location permission in device settings or enter your 6-digit PIN code.',
+            [{ text: 'OK' }]
+          );
+        }
+        setUserCity('Select Location');
+        setUserAddress('Location permission required');
+        setLocationChoiceModalOpen(true);
+        fetchDbBeauticians('');
         return;
       }
 
+      // Fetch precise device coordinates
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const lat = loc.coords.latitude;
       const lng = loc.coords.longitude;
       setCustomerCoords({ lat, lng });
 
-      const geocode = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
-      if (geocode && geocode[0]) {
-        const g = geocode[0];
-        const detectedPin = g.postalCode || '628552';
-        const detectedCity = g.city || g.subregion || g.district || 'Kalugumalai';
-        const streetOrArea = g.street || g.name || g.district || '';
-        const displayAddress = streetOrArea && streetOrArea !== detectedCity
-          ? `${streetOrArea}, ${detectedCity}`
-          : detectedCity;
-
-        setUserPincode(detectedPin);
-        setUserCity(detectedCity);
-        setUserAddress(displayAddress);
-        setListPincodeFilter(detectedPin);
+      // Animate map smoothly to detected position
+      if (mapRef.current) {
+        mapRef.current.animateToRegion(
+          {
+            latitude: lat,
+            longitude: lng,
+            latitudeDelta: 0.06,
+            longitudeDelta: 0.06,
+          },
+          800
+        );
       }
 
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      let detectedPin = '';
+      let detectedCity = '';
+      let displayAddress = '';
+
+      // Primary: Native Reverse Geocoding via device
+      try {
+        const geocode = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+        if (geocode && geocode.length > 0) {
+          const g = geocode[0];
+          detectedPin = (g.postalCode || '').trim();
+          detectedCity = g.city || g.subregion || g.district || g.region || '';
+          const streetOrArea = g.street || g.name || '';
+          displayAddress =
+            streetOrArea && streetOrArea !== detectedCity
+              ? `${streetOrArea}, ${detectedCity}`
+              : (detectedCity || 'Current Location');
+        }
+      } catch (geoErr) {
+        console.warn('Native reverse geocode note:', geoErr);
+      }
+
+      // Secondary: Free online reverse-geocoding fallback if native geocoder omits postalCode
+      if (!detectedPin) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3500);
+          const geoRes = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
+            { signal: controller.signal }
+          );
+          clearTimeout(timeoutId);
+          if (geoRes.ok) {
+            const geoData = await geoRes.json();
+            if (geoData.postcode) {
+              detectedPin = String(geoData.postcode).trim();
+            }
+            if (!detectedCity && (geoData.city || geoData.locality)) {
+              detectedCity = geoData.city || geoData.locality || '';
+            }
+            if (!displayAddress && (geoData.locality || geoData.city)) {
+              displayAddress = `${geoData.locality || ''}, ${geoData.city || ''}`.replace(/^, |, $/g, '');
+            }
+          }
+        } catch (fallbackErr) {
+          console.warn('Fallback reverse geocode note:', fallbackErr);
+        }
+      }
+
+      // Populate real detected location into inputs (Never prefilled with dummy numbers)
+      if (detectedPin) {
+        setUserPincode(detectedPin);
+        setListPincodeFilter(detectedPin);
+        setModalPincodeInput(detectedPin);
+      }
+      if (detectedCity) {
+        setUserCity(detectedCity);
+      } else {
+        setUserCity('Current Location');
+      }
+      if (displayAddress) {
+        setUserAddress(displayAddress);
+      } else {
+        setUserAddress('Current Location');
+      }
+
+      // Fetch beauticians based on detected coordinates and PIN
+      fetchDbBeauticians(detectedPin, lat, lng);
+
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {}
+
+      // Auto-close modal when location is properly fetched
       setLocationChoiceModalOpen(false);
     } catch (e) {
       console.warn('GPS detection notice:', e);
-      Alert.alert('GPS Notice', 'Could not retrieve precise GPS. You can enter your 6-digit PIN code.');
+      if (!isAutoOnMount) {
+        Alert.alert('GPS Notice', 'Could not retrieve precise GPS. You can enter your 6-digit PIN code.');
+      }
+      setUserCity('Select Location');
+      setUserAddress('Enter PIN to discover artists');
+      setLocationChoiceModalOpen(true);
+      fetchDbBeauticians('');
     } finally {
       setIsDetectingGps(false);
     }
-  };
+  }, [fetchDbBeauticians]);
+
+  // Automatically fetch live location on mount
+  useEffect(() => {
+    handleDetectLiveGps(true);
+  }, [handleDetectLiveGps]);
 
   // -------------------------------------------------------------
   // 2. PINCODE SUBMISSION HANDLER (Exact Match with Database)
@@ -320,7 +403,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
     setUserPincode(clean);
     setListPincodeFilter(clean);
     setModalPincodeInput(clean);
-    fetchDbBeauticians(clean);
+    fetchDbBeauticians(clean, customerCoords.lat, customerCoords.lng);
 
     // Look for matching studio in database records to center coordinates
     const match = rawDbBeauticians.find((s) => s.pincode === clean);
@@ -328,6 +411,17 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
       setUserCity(match.city);
       setUserAddress(match.address);
       setCustomerCoords({ lat: match.latitude, lng: match.longitude });
+      if (mapRef.current) {
+        mapRef.current.animateToRegion(
+          {
+            latitude: match.latitude,
+            longitude: match.longitude,
+            latitudeDelta: 0.06,
+            longitudeDelta: 0.06,
+          },
+          800
+        );
+      }
     } else {
       setUserCity(`PIN ${clean}`);
       setUserAddress(`Area PIN ${clean}`);
@@ -353,8 +447,8 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
     }));
 
     // Exact pincode matches
-    const exactMatches = withDist.filter((s) => s.pincode === activePin);
-    const otherStudios = withDist.filter((s) => s.pincode !== activePin);
+    const exactMatches = activePin ? withDist.filter((s) => s.pincode === activePin) : [];
+    const otherStudios = activePin ? withDist.filter((s) => s.pincode !== activePin) : withDist;
 
     // User's Priority Rule:
     const priorityComparator = (a: RegisteredMakeover, b: RegisteredMakeover) => {
@@ -401,10 +495,14 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             <PrecisionTargetVector color="#e8276b" size={15} />
             <View style={styles.locationCapsuleTextWrap}>
               <Text style={styles.capsuleCityText} numberOfLines={1}>
-                {userCity}
+                {userCity || (isDetectingGps ? 'Locating...' : 'Select Location')}
               </Text>
-              <View style={styles.capsuleDot} />
-              <Text style={styles.capsulePinText}>{userPincode}</Text>
+              {userPincode ? (
+                <>
+                  <View style={styles.capsuleDot} />
+                  <Text style={styles.capsulePinText}>{userPincode}</Text>
+                </>
+              ) : null}
             </View>
           </TouchableOpacity>
 
@@ -449,7 +547,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             {/* Customer Location Marker */}
             <Marker
               coordinate={{ latitude: customerCoords.lat, longitude: customerCoords.lng }}
-              title={`You are here (${userPincode})`}
+              title={userPincode ? `You are here (${userPincode})` : 'You are here'}
               description={userAddress}
             >
               <View style={styles.userGpsPinWrap}>
@@ -599,7 +697,9 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={styles.emptyMapTitle}>No Beauticians in this Area</Text>
                   <Text style={styles.emptyMapSub}>
-                    No registered beauticians found for PIN {listPincodeFilter || userPincode}. Real registered beauticians will appear here.
+                    {listPincodeFilter || userPincode
+                      ? `No registered beauticians found for PIN ${listPincodeFilter || userPincode}. Real registered beauticians will appear here as soon as they sign up.`
+                      : 'No registered beauticians found in this area yet. Real registered beauticians will appear here as soon as they sign up.'}
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -647,7 +747,14 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               </TouchableOpacity>
             </View>
             <Text style={styles.listPincodeCaption}>
-              Showing Top 5 Beauticians for PIN <Text style={{ fontWeight: '800', color: '#121212' }}>{listPincodeFilter || userPincode}</Text>
+              {listPincodeFilter || userPincode ? (
+                <>
+                  Showing Top 5 Beauticians for PIN{' '}
+                  <Text style={{ fontWeight: '800', color: '#121212' }}>{listPincodeFilter || userPincode}</Text>
+                </>
+              ) : (
+                'Showing Beauticians in your area'
+              )}
             </Text>
           </View>
 
@@ -736,7 +843,9 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               <PrecisionTargetVector color="#e8276b" size={32} />
               <Text style={styles.emptyListTitle}>No Registered Beauticians Yet</Text>
               <Text style={styles.emptyListSub}>
-                There are no beauticians registered for PIN code {listPincodeFilter || userPincode} yet. Newly registered studios will appear here in real time.
+                {listPincodeFilter || userPincode
+                  ? `There are no beauticians registered for PIN code ${listPincodeFilter || userPincode} yet. Newly registered studios will appear here in real time.`
+                  : 'There are no beauticians registered in this area yet. Newly registered studios will appear here in real time.'}
               </Text>
               <TouchableOpacity
                 style={styles.emptyListChangeBtn}
@@ -784,12 +893,15 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
             {/* Option 1: Compact "Use live GPS" Button */}
             <TouchableOpacity
               style={styles.liveGpsButton}
-              onPress={handleDetectLiveGps}
+              onPress={() => handleDetectLiveGps(false)}
               disabled={isDetectingGps}
               activeOpacity={0.88}
             >
               {isDetectingGps ? (
-                <ActivityIndicator color="#ffffff" size="small" />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <ActivityIndicator color="#ffffff" size="small" />
+                  <Text style={styles.liveGpsButtonText}>Fetching location...</Text>
+                </View>
               ) : (
                 <>
                   <CompassVector color="#ffffff" size={16} />
@@ -810,7 +922,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               <PrecisionTargetVector color="#9ca3af" size={15} />
               <TextInput
                 style={styles.pincodeInput}
-                placeholder="Enter PIN code..."
+                placeholder="Enter 6-digit PIN code..."
                 placeholderTextColor="#9ca3af"
                 value={modalPincodeInput}
                 onChangeText={setModalPincodeInput}
