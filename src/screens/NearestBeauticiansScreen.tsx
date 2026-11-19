@@ -549,14 +549,10 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
               coordinate={{ latitude: customerCoords.lat, longitude: customerCoords.lng }}
               title={userPincode ? `You are here (${userPincode})` : 'You are here'}
               description={userAddress}
-            >
-              <View style={styles.userGpsPinWrap}>
-                <View style={styles.userGpsPulseRing} />
-                <View style={styles.userGpsCenterDot} />
-              </View>
-            </Marker>
+              pinColor="#121212"
+            />
 
-            {/* Beauticians Markers from Database */}
+            {/* Beauticians Markers from Database (Native Pins - 100% Crash-Free) */}
             {topFiveStudios.map((studio, idx) => {
               const isSelected = selectedStudio?.id === studio.id;
               return (
@@ -565,6 +561,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                   coordinate={{ latitude: studio.latitude, longitude: studio.longitude }}
                   title={studio.businessName}
                   description={`${studio.distanceKm} km · ${studio.completedBookingsCount} bookings`}
+                  pinColor={isSelected ? '#e8276b' : '#ff528c'}
                   onPress={() => {
                     try {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -574,24 +571,7 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
                       cardListRef.current.scrollToIndex({ index: idx, animated: true });
                     }
                   }}
-                >
-                  <View style={[styles.mapMarkerWrap, isSelected && styles.mapMarkerWrapSelected]}>
-                    <View style={[styles.markerPill, isSelected && styles.markerPillSelected]}>
-                      <Text style={[styles.markerPillText, isSelected && styles.markerPillTextSelected]} numberOfLines={1}>
-                        {studio.businessName}
-                      </Text>
-                      <View style={styles.pinDistDot} />
-                      <Text style={[styles.markerDistText, isSelected && styles.markerDistTextSelected]}>
-                        {studio.distanceKm} km
-                      </Text>
-                    </View>
-                    <View style={[styles.beaconCircleJewel, isSelected && styles.beaconCircleJewelSelected]}>
-                      <Text style={[styles.beaconJewelText, isSelected && styles.beaconJewelTextSelected]}>
-                        {studio.businessName.charAt(0)}
-                      </Text>
-                    </View>
-                  </View>
-                </Marker>
+                />
               );
             })}
           </MapView>
