@@ -8,7 +8,6 @@
     "build:prod": "eas build --platform android --profile production",
     "build:apk": "eas build --platform android --profile preview",
     "lint": "tsc --noEmit",
-    "postinstall": "patch-package",
     "test": "jest"
   },
   "dependencies": {
