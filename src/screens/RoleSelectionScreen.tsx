@@ -261,11 +261,11 @@ export const RoleSelectionScreen: React.FC<RoleSelectionScreenProps> = ({
               </Svg>
             </View>
 
-            {/* Top Row: 02 and Outlined CLIENT Pill */}
+            {/* Top Row: 02 and Outlined CUSTOMER Pill */}
             <View style={styles.cardTopRow}>
               <Text style={styles.cardIndexNumber}>02</Text>
               <View style={styles.clientPill}>
-                <Text style={styles.clientPillText}>CLIENT</Text>
+                <Text style={styles.clientPillText}>CUSTOMER</Text>
               </View>
             </View>
 
