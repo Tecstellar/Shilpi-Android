@@ -12,9 +12,14 @@ import { LoginOtpScreen } from './src/screens/LoginOtpScreen';
 import { SetupScreen } from './src/screens/SetupScreen';
 import { MainAppContainer } from './src/screens/MainAppContainer';
 import { QrScannerScreen } from './src/screens/QrScannerScreen';
-import { NearestBeauticiansScreen } from './src/screens/NearestBeauticiansScreen';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
+
+const NearestBeauticiansScreen = React.lazy(() =>
+  import('./src/screens/NearestBeauticiansScreen').then((m) => ({
+    default: m.NearestBeauticiansScreen,
+  }))
+);
 
 export type ScreenState =
   | 'splash'
@@ -165,9 +170,11 @@ export default function App() {
         {/* Public Customer Discovery: Nearest Beautician Near You */}
         {screen === 'nearest_beauticians' && (
           <ErrorBoundary fallbackMessage="Unable to load beauticians map. Please check network connection.">
-            <NearestBeauticiansScreen
-              onGoBack={() => setScreen(previousScreen || 'role_selection')}
-            />
+            <React.Suspense fallback={<View style={{ flex: 1, backgroundColor: '#ffffff' }} />}>
+              <NearestBeauticiansScreen
+                onGoBack={() => setScreen(previousScreen || 'role_selection')}
+              />
+            </React.Suspense>
           </ErrorBoundary>
         )}
       </SafeAreaView>
