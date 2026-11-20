@@ -40,6 +40,25 @@ const CARD_INTERVAL = CARD_WIDTH + 12;
 // BESPOKE VECTOR ICONS (Zero emojis, editorial line work)
 // -------------------------------------------------------------
 
+class SafeMapErrorBoundary extends React.Component<
+  { fallback: React.ReactNode; children: React.ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(err: any) {
+    console.warn('[NearestBeauticiansScreen] Map error caught safely:', err);
+  }
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
+
 const BackArrowVector: React.FC<{ color?: string; size?: number }> = ({ color = '#0f172a', size = 18 }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path d="M19 12H5M12 19l-7-7 7-7" stroke={color} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
@@ -526,55 +545,74 @@ export const NearestBeauticiansScreen: React.FC<NearestBeauticiansScreenProps> =
          ------------------------------------------------------------- */}
       {viewMode === 'map' ? (
         <View style={styles.mapContainer}>
-          {/* Real Interactive Google Map */}
-          <MapView
-            ref={mapRef}
-            style={StyleSheet.absoluteFill}
-            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-            region={{
-              latitude: customerCoords.lat,
-              longitude: customerCoords.lng,
-              latitudeDelta: 0.08,
-              longitudeDelta: 0.08,
-            }}
-            scrollEnabled={true}
-            zoomEnabled={true}
-            rotateEnabled={false}
-            pitchEnabled={false}
-            showsUserLocation={false}
-            showsMyLocationButton={false}
+          {/* Real Interactive Google Map Protected with Error Boundary */}
+          <SafeMapErrorBoundary
+            fallback={
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0f172a', alignItems: 'center', justifyContent: 'center', padding: 24 }]}>
+                <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '700', marginBottom: 8, textAlign: 'center' }}>
+                  Interactive Map View
+                </Text>
+                <Text style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', marginBottom: 16, lineHeight: 18 }}>
+                  Switch to the List tab above to view verified beautician studios near you.
+                </Text>
+                <TouchableOpacity
+                  style={{ backgroundColor: '#e8276b', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 }}
+                  onPress={() => setViewMode('list')}
+                >
+                  <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 13 }}>View Studio List</Text>
+                </TouchableOpacity>
+              </View>
+            }
           >
-            {/* Customer Location Marker */}
-            <Marker
-              coordinate={{ latitude: customerCoords.lat, longitude: customerCoords.lng }}
-              title={userPincode ? `You are here (${userPincode})` : 'You are here'}
-              description={userAddress}
-              pinColor="#121212"
-            />
+            <MapView
+              ref={mapRef}
+              style={StyleSheet.absoluteFill}
+              provider={undefined}
+              region={{
+                latitude: customerCoords.lat,
+                longitude: customerCoords.lng,
+                latitudeDelta: 0.08,
+                longitudeDelta: 0.08,
+              }}
+              scrollEnabled={true}
+              zoomEnabled={true}
+              rotateEnabled={false}
+              pitchEnabled={false}
+              showsUserLocation={false}
+              showsMyLocationButton={false}
+            >
+              {/* Customer Location Marker */}
+              <Marker
+                coordinate={{ latitude: customerCoords.lat, longitude: customerCoords.lng }}
+                title={userPincode ? `You are here (${userPincode})` : 'You are here'}
+                description={userAddress}
+                pinColor="#121212"
+              />
 
-            {/* Beauticians Markers from Database (Native Pins - 100% Crash-Free) */}
-            {topFiveStudios.map((studio, idx) => {
-              const isSelected = selectedStudio?.id === studio.id;
-              return (
-                <Marker
-                  key={studio.id}
-                  coordinate={{ latitude: studio.latitude, longitude: studio.longitude }}
-                  title={studio.businessName}
-                  description={`${studio.distanceKm} km · ${studio.completedBookingsCount} bookings`}
-                  pinColor={isSelected ? '#e8276b' : '#ff528c'}
-                  onPress={() => {
-                    try {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    } catch {}
-                    setSelectedStudio(studio);
-                    if (cardListRef.current) {
-                      cardListRef.current.scrollToIndex({ index: idx, animated: true });
-                    }
-                  }}
-                />
-              );
-            })}
-          </MapView>
+              {/* Beauticians Markers from Database (Native Pins - 100% Crash-Free) */}
+              {topFiveStudios.map((studio, idx) => {
+                const isSelected = selectedStudio?.id === studio.id;
+                return (
+                  <Marker
+                    key={studio.id}
+                    coordinate={{ latitude: studio.latitude, longitude: studio.longitude }}
+                    title={studio.businessName}
+                    description={`${studio.distanceKm} km · ${studio.completedBookingsCount} bookings`}
+                    pinColor={isSelected ? '#e8276b' : '#ff528c'}
+                    onPress={() => {
+                      try {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      } catch {}
+                      setSelectedStudio(studio);
+                      if (cardListRef.current) {
+                        cardListRef.current.scrollToIndex({ index: idx, animated: true });
+                      }
+                    }}
+                  />
+                );
+              })}
+            </MapView>
+          </SafeMapErrorBoundary>
 
           {/* Bottom Snapping Studio Carousel */}
           <View style={[styles.carouselContainer, { bottom: insets.bottom + 14 }]}>

@@ -1,7 +1,8 @@
 import { registerRootComponent } from 'expo';
+import * as SplashScreen from 'expo-splash-screen';
 import App from './App';
 
-// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
-// It also ensures that whether you load the app in Expo Go or in a native build,
-// the environment is set up appropriately
+// Prevent splash from auto-hiding immediately before React has mounted
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 registerRootComponent(App);
