@@ -54,7 +54,8 @@
         {
           "android": {
             "enableMinifyInReleaseBuilds": false,
-            "enableShrinkResourcesInReleaseBuilds": false
+            "enableShrinkResourcesInReleaseBuilds": false,
+            "extraProguardRules": "-keep class androidx.work.** { *; }\n-keep class androidx.work.impl.** { *; }\n-keep class androidx.work.impl.WorkDatabase { *; }\n-keep class androidx.work.impl.WorkDatabase_Impl { *; }\n-keep class * extends androidx.room.RoomDatabase { *; }\n-keep class * extends androidx.work.Worker { *; }\n-keep class * extends androidx.work.ListenableWorker { *; }\n-dontwarn androidx.work.**"
           }
         }
       ],
